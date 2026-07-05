@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Store, X, ChevronDown, Undo2, Check, RotateCcw, SlidersHorizontal } from "lucide-react";
+import { Plus, Store, X, ChevronDown, Undo2, Check, RotateCcw, SlidersHorizontal, LayoutGrid, List } from "lucide-react";
 import type { TransactionType, CategoryId, PaymentMethod, Product } from "@/lib/store";
 
 export function RecordPage() {
@@ -696,6 +696,8 @@ function ProductsView() {
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
   const [unit, setUnit] = useState("個");
+  // 顯示模式：grid（格子）或 list（列表）
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
   const handleAdd = () => {
     const p = parseFloat(price);
@@ -741,25 +743,80 @@ function ProductsView() {
           <p className="text-xs text-muted-foreground mt-1">建立商品後即可一鍵記錄銷售</p>
         </Card>
       ) : (
-        <div className="space-y-2">
-          {products.map((p) => (
-            <Card
-              key={p.id}
-              className="p-4 flex items-center justify-between cursor-pointer hover:bg-muted/50 transition"
-              onClick={() => {
-                if (confirm(`刪除商品「${p.name}」？`)) deleteProduct(p.id);
-              }}
-            >
-              <div>
-                <p className="text-sm font-semibold text-foreground">{p.name}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {formatCurrency(p.price, currency)} / {p.unit}
-                </p>
-              </div>
-              <span className="text-xs text-muted-foreground">長按刪除</span>
-            </Card>
-          ))}
-        </div>
+        <>
+          {/* 顯示模式切換 + 商品數量 */}
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground font-medium">
+              共 {products.length} 個商品
+            </span>
+            <div className="flex items-center gap-1 bg-muted p-1 rounded-lg">
+              <button
+                onClick={() => setViewMode("grid")}
+                className={`p-1.5 rounded-md transition ${
+                  viewMode === "grid" ? "bg-card shadow-sm text-primary" : "text-muted-foreground"
+                }`}
+                aria-label="格子顯示"
+                title="格子顯示"
+              >
+                <LayoutGrid className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setViewMode("list")}
+                className={`p-1.5 rounded-md transition ${
+                  viewMode === "list" ? "bg-card shadow-sm text-primary" : "text-muted-foreground"
+                }`}
+                aria-label="列表顯示"
+                title="列表顯示"
+              >
+                <List className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* 格子模式 — 一屏可見多個商品 */}
+          {viewMode === "grid" ? (
+            <div className="grid grid-cols-3 gap-2">
+              {products.map((p) => (
+                <Card
+                  key={p.id}
+                  className="p-2.5 cursor-pointer hover:bg-muted/50 transition relative group"
+                  onClick={() => {
+                    if (confirm(`刪除商品「${p.name}」？`)) deleteProduct(p.id);
+                  }}
+                >
+                  <p className="text-xs font-medium text-foreground leading-tight line-clamp-2 min-h-[28px]">
+                    {p.name}
+                  </p>
+                  <p className="text-sm font-bold text-primary tabular-nums mt-1">
+                    {formatCurrency(p.price, currency)}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">/ {p.unit}</p>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            /* 列表模式 — 詳細資訊 */
+            <div className="space-y-2">
+              {products.map((p) => (
+                <Card
+                  key={p.id}
+                  className="p-3.5 flex items-center justify-between cursor-pointer hover:bg-muted/50 transition"
+                  onClick={() => {
+                    if (confirm(`刪除商品「${p.name}」？`)) deleteProduct(p.id);
+                  }}
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-foreground truncate">{p.name}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {formatCurrency(p.price, currency)} / {p.unit}
+                    </p>
+                  </div>
+                  <span className="text-[10px] text-muted-foreground ml-2 flex-shrink-0">點擊刪除</span>
+                </Card>
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   );

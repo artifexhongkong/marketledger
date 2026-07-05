@@ -11,6 +11,11 @@ export function HomePage() {
   const summary = getDailySummary(transactions);
   const currentMarket = markets.find((m) => m.id === currentMarketId);
 
+  // 今日交易前 5 筆預覽
+  const PREVIEW_COUNT = 5;
+  const todaySorted = summary.todayTransactions.slice().sort((a, b) => b.createdAt - a.createdAt);
+  const previewToday = todaySorted.slice(0, PREVIEW_COUNT);
+
   return (
     <div className="px-5 pb-4 space-y-5">
       {/* Greeting */}
@@ -80,27 +85,73 @@ export function HomePage() {
         </Card>
       </div>
 
-      {/* Quick link to today's transactions page */}
-      {summary.count > 0 && (
-        <button
-          onClick={() => {
-            // 觸發自訂事件通知父層切換到 transactions tab
-            window.dispatchEvent(new CustomEvent("navigate-tab", { detail: "transactions" }));
-          }}
-          className="w-full bg-card border border-border rounded-xl px-4 py-3 flex items-center justify-between text-sm hover:bg-muted/50 transition group"
-        >
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-              <FileText className="w-4 h-4 text-primary" />
-            </div>
-            <div className="text-left">
-              <p className="font-medium text-foreground">今日營業記錄</p>
-              <p className="text-xs text-muted-foreground">{summary.count} 筆交易 · 點擊查看全部</p>
-            </div>
-          </div>
-          <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition" />
-        </button>
-      )}
+      {/* 今日營業記錄 — 前 5 筆預覽 + 查看全部 */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold text-foreground">今日營業記錄</h2>
+          <Badge variant="secondary" className="text-xs font-medium">{summary.count} 筆</Badge>
+        </div>
+        {previewToday.length === 0 ? (
+          <Card className="p-8 text-center border-dashed">
+            <p className="text-3xl mb-2">📊</p>
+            <p className="text-sm font-medium text-foreground">今日還沒有交易記錄</p>
+            <p className="text-xs text-muted-foreground mt-1">前往「記帳」頁面開始記錄</p>
+          </Card>
+        ) : (
+          <>
+            <Card className="divide-y divide-border">
+              {previewToday.map((t) => {
+                const cat = CATEGORIES.find((c) => c.id === t.category);
+                const pay = t.paymentMethod ? PAYMENT_METHODS[t.paymentMethod] : null;
+                return (
+                  <div key={t.id} className="flex items-center gap-3 p-3.5">
+                    <div
+                      className="w-10 h-10 rounded-full flex items-center justify-center text-base flex-shrink-0"
+                      style={{ backgroundColor: (cat?.color || "#6B7280") + "15" }}
+                    >
+                      {cat?.icon || "📝"}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium text-foreground truncate">{cat?.label || t.category}</p>
+                        {pay && (
+                          <Badge variant="outline" className="text-[10px] py-0 px-1.5 font-normal text-muted-foreground">
+                            {pay.label}
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {formatDateTime(t.createdAt)}
+                        {t.note && ` · ${t.note}`}
+                      </p>
+                    </div>
+                    <span
+                      className="text-sm font-semibold tabular-nums flex-shrink-0"
+                      style={{ color: t.type === "income" ? "#059669" : "#E11D48" }}
+                    >
+                      {t.type === "income" ? "+" : "−"}
+                      {t.amount.toLocaleString()}
+                    </span>
+                  </div>
+                );
+              })}
+            </Card>
+            {/* 查看全部按鈕 */}
+            {todaySorted.length > PREVIEW_COUNT && (
+              <button
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent("navigate-tab", { detail: "transactions" }));
+                }}
+                className="w-full mt-2 py-2.5 flex items-center justify-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 bg-card border border-border rounded-lg transition hover:bg-primary/5"
+              >
+                <FileText className="w-3.5 h-3.5" />
+                查看全部 {todaySorted.length} 筆（還有 {todaySorted.length - PREVIEW_COUNT} 筆）
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </>
+        )}
+      </div>
 
       {/* Category breakdown */}
       {Object.keys(summary.byCategory).length > 0 && (
