@@ -74,9 +74,7 @@ export default function Page() {
       {/* Header */}
       <div className="text-center mb-6 max-w-2xl">
         <h1 className="text-3xl lg:text-4xl font-bold tracking-tight text-slate-900">
-          MarketLedger
-          <span className="text-primary"> · </span>
-          <span className="text-lg lg:text-xl font-medium text-slate-600">市集記賬本</span>
+          市集記賬本
         </h1>
         <p className="text-sm text-slate-500 mt-2">
           全球市集攤商的隨身營業助理 · 3 秒記一筆 · 收攤即結算

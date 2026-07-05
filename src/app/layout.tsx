@@ -10,10 +10,10 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "MarketLedger — 市集記賬本",
+  title: "市集記賬本",
   description: "全球市集攤商的隨身營業助理 · 3 秒記一筆 · 收攤即結算",
-  keywords: ["MarketLedger", "市集", "記帳", "攤商", "香港", "全球"],
-  authors: [{ name: "MarketLedger Team" }],
+  keywords: ["市集", "記帳", "攤商", "香港", "全球"],
+  authors: [{ name: "市集記賬本團隊" }],
 };
 
 export default function RootLayout({

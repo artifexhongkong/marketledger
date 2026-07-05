@@ -55,15 +55,6 @@ export function SettingsPage() {
     <div className="px-5 pb-4 space-y-6">
       <h1 className="text-2xl font-semibold tracking-tight pt-2 text-foreground">設定</h1>
 
-      {/* App info */}
-      <Card className="p-5 text-center">
-        <div className="w-14 h-14 mx-auto rounded-2xl bg-primary flex items-center justify-center text-2xl text-primary-foreground font-bold">
-          M
-        </div>
-        <h2 className="text-lg font-semibold mt-3 text-foreground">MarketLedger</h2>
-        <p className="text-xs text-muted-foreground mt-0.5">v1.0.1 · 全球市集攤販記帳工具</p>
-      </Card>
-
       {/* Google 登入與雲端備份 */}
       <section>
         <AuthSection />
@@ -181,7 +172,7 @@ export function SettingsPage() {
         <Card className="divide-y divide-border">
           <div className="flex justify-between items-center p-4">
             <span className="text-sm text-muted-foreground">開發者</span>
-            <span className="text-sm font-medium text-foreground">MarketLedger Team</span>
+            <span className="text-sm font-medium text-foreground">市集記賬本團隊</span>
           </div>
           <div className="flex justify-between items-center p-4">
             <span className="text-sm text-muted-foreground">版本</span>
@@ -189,7 +180,7 @@ export function SettingsPage() {
           </div>
           <div className="flex justify-between items-center p-4">
             <span className="text-sm text-muted-foreground">技術棧</span>
-            <span className="text-sm font-medium text-foreground text-right">React Native<br/>Expo + Zustand</span>
+            <span className="text-sm font-medium text-foreground text-right">Next.js<br/>TypeScript + Zustand</span>
           </div>
         </Card>
       </section>
