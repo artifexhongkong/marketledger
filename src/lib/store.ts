@@ -126,7 +126,7 @@ interface AppStore {
   // Actions
   setCurrency: (c: CurrencyCode) => void;
   setCurrentMarket: (id: string | null) => void;
-  addTransaction: (t: Omit<Transaction, "id" | "createdAt">) => void;
+  addTransaction: (t: Omit<Transaction, "id" | "createdAt">) => string;
   deleteTransaction: (id: string) => void;
   clearAll: () => void;
   addProduct: (p: Omit<Product, "id">) => void;
@@ -147,13 +147,16 @@ export const useAppStore = create<AppStore>()(
       setCurrency: (c) => set({ currency: c }),
       setCurrentMarket: (id) => set({ currentMarketId: id }),
 
-      addTransaction: (t) =>
+      addTransaction: (t) => {
+        const id = `tx_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
         set((s) => ({
           transactions: [
-            { ...t, id: `tx_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, createdAt: Date.now() },
+            { ...t, id, createdAt: Date.now() },
             ...s.transactions,
           ],
-        })),
+        }));
+        return id;
+      },
 
       deleteTransaction: (id) =>
         set((s) => ({ transactions: s.transactions.filter((t) => t.id !== id) })),

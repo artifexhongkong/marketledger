@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useAppStore, CATEGORIES, PAYMENT_METHODS, formatCurrency } from "@/lib/store";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Store, X, ChevronDown } from "lucide-react";
-import type { TransactionType, CategoryId, PaymentMethod } from "@/lib/store";
+import { Plus, Store, X, ChevronDown, Undo2, Check, RotateCcw } from "lucide-react";
+import type { TransactionType, CategoryId, PaymentMethod, Transaction } from "@/lib/store";
 
 export function RecordPage() {
   const [mode, setMode] = useState<"record" | "products">("record");
@@ -40,8 +40,18 @@ export function RecordPage() {
   );
 }
 
+// ── Toast 通知型別 ──
+interface ToastState {
+  id: string;
+  txId: string;
+  productName: string;
+  amount: number;
+  currency: string;
+  timestamp: number;
+}
+
 function RecordView() {
-  const { currency, products, currentMarketId, markets, addTransaction, setCurrentMarket } = useAppStore();
+  const { currency, products, currentMarketId, markets, addTransaction, setCurrentMarket, deleteTransaction } = useAppStore();
   const [txType, setTxType] = useState<TransactionType>("expense");
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState<CategoryId | "">("");
@@ -49,11 +59,28 @@ function RecordView() {
   const [note, setNote] = useState("");
   const [showMarketPicker, setShowMarketPicker] = useState(false);
 
+  // ── 點擊回饋相關 state ──
+  const [toast, setToast] = useState<ToastState | null>(null);
+  const [lastTx, setLastTx] = useState<{ txId: string; productName: string; amount: number } | null>(null);
+  const [pressedId, setPressedId] = useState<string | null>(null);
+  const [confirmId, setConfirmId] = useState<string | null>(null);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const filteredCats = CATEGORIES.filter((c) => c.type === txType);
   const currentMarket = markets.find((m) => m.id === currentMarketId);
 
+  // 清理 timer 避免記憶體洩漏
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+      if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    };
+  }, []);
+
   const handleQuickProduct = (p: { id: string; name: string; price: number }) => {
-    addTransaction({
+    // 1. 立即加入交易，取得真實 txId
+    const txId = addTransaction({
       type: "income",
       amount: p.price,
       currency,
@@ -63,8 +90,47 @@ function RecordView() {
       note: p.name,
       marketId: currentMarketId || undefined,
     });
+
+    // 2. 設定按鈕確認動畫
+    setPressedId(p.id);
+    setConfirmId(p.id);
+    setTimeout(() => setConfirmId(null), 600);
+
+    // 3. 顯示 Toast 通知（含撤銷按鈕）
+    const toastData: ToastState = {
+      id: `toast_${Date.now()}`,
+      txId,
+      productName: p.name,
+      amount: p.price,
+      currency,
+      timestamp: Date.now(),
+    };
+    setToast(toastData);
+    setLastTx({ txId, productName: p.name, amount: p.price });
+
+    // 4. 5 秒後自動隱藏 Toast
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => setToast(null), 5000);
+
+    // 清空手動記帳欄位
     setNote("");
     setAmount("");
+  };
+
+  // 撤銷最後一筆商品記錄
+  const handleUndo = () => {
+    if (!lastTx) return;
+    // 直接用儲存的 txId 刪除（可靠，不需比對）
+    deleteTransaction(lastTx.txId);
+    setToast(null);
+    setLastTx(null);
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+  };
+
+  // 清除 Toast
+  const handleDismissToast = () => {
+    setToast(null);
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
   };
 
   const handleSubmit = () => {
@@ -87,22 +153,91 @@ function RecordView() {
 
   return (
     <div className="space-y-5">
+      {/* Toast 通知 — 從頂部滑入 */}
+      {toast && (
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 animate-[slideIn_0.3s_ease-out]">
+          <div className="bg-card border border-emerald-200 shadow-lg rounded-2xl px-4 py-3 flex items-center gap-3 min-w-[280px] max-w-[340px]">
+            <div className="w-9 h-9 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+              <Check className="w-4 h-4 text-emerald-600" strokeWidth={3} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-muted-foreground">已記錄銷售</p>
+              <p className="text-sm font-semibold text-foreground truncate">
+                {toast.productName} · {formatCurrency(toast.amount, currency)}
+              </p>
+            </div>
+            <button
+              onClick={handleUndo}
+              className="flex items-center gap-1 text-xs font-medium text-primary hover:text-primary/80 px-2 py-1.5 rounded-lg hover:bg-primary/8 transition flex-shrink-0"
+            >
+              <Undo2 className="w-3.5 h-3.5" />
+              撤銷
+            </button>
+            <button
+              onClick={handleDismissToast}
+              className="text-muted-foreground hover:text-foreground p-1 flex-shrink-0"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Quick product buttons */}
       {products.length > 0 && (
         <div>
-          <p className="text-xs text-muted-foreground mb-2 font-medium">⚡ 點商品即記錄銷售</p>
-          <div className="grid grid-cols-2 gap-2">
-            {products.slice(0, 6).map((p) => (
-              <button
-                key={p.id}
-                onClick={() => handleQuickProduct(p)}
-                className="bg-card border-2 border-primary/20 hover:border-primary rounded-xl p-3 text-left transition active:scale-[0.98]"
-              >
-                <p className="text-sm font-medium text-foreground truncate">{p.name}</p>
-                <p className="text-lg font-bold text-primary tabular-nums mt-0.5">{formatCurrency(p.price, currency)}</p>
-              </button>
-            ))}
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs text-muted-foreground font-medium">⚡ 點商品即記錄銷售</p>
+            <p className="text-[10px] text-muted-foreground/70">點錯可立即撤銷</p>
           </div>
+          <div className="grid grid-cols-2 gap-2">
+            {products.slice(0, 6).map((p) => {
+              const isConfirming = confirmId === p.id;
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => handleQuickProduct(p)}
+                  className={`relative bg-card border-2 rounded-xl p-3 text-left transition-all overflow-hidden ${
+                    isConfirming
+                      ? "border-emerald-500 bg-emerald-50 scale-[0.97]"
+                      : "border-primary/20 hover:border-primary active:scale-[0.98]"
+                  }`}
+                >
+                  {/* 確認狀態：顯示勾選覆蓋 */}
+                  {isConfirming && (
+                    <div className="absolute inset-0 bg-emerald-50/95 flex flex-col items-center justify-center gap-1 animate-[fadeIn_0.2s_ease-out]">
+                      <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center">
+                        <Check className="w-4 h-4 text-white" strokeWidth={3} />
+                      </div>
+                      <p className="text-[10px] font-semibold text-emerald-700">已記錄</p>
+                    </div>
+                  )}
+                  <p className="text-sm font-medium text-foreground truncate">{p.name}</p>
+                  <p className="text-lg font-bold text-primary tabular-nums mt-0.5">
+                    {formatCurrency(p.price, currency)}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* 最近記錄提示條 */}
+          {lastTx && (
+            <div className="mt-2 bg-muted/60 rounded-lg px-3 py-2 flex items-center justify-between gap-2 text-xs">
+              <div className="flex items-center gap-1.5 text-muted-foreground min-w-0">
+                <RotateCcw className="w-3 h-3 flex-shrink-0" />
+                <span className="truncate">
+                  最近：{lastTx.productName} · {formatCurrency(lastTx.amount, currency)}
+                </span>
+              </div>
+              <button
+                onClick={handleUndo}
+                className="text-primary hover:text-primary/80 font-medium flex-shrink-0"
+              >
+                撤銷
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -236,6 +371,18 @@ function RecordView() {
       <Button onClick={handleSubmit} size="lg" className="w-full h-12 text-base font-semibold">
         ✓ 完成記帳
       </Button>
+
+      {/* 動畫 keyframes */}
+      <style jsx>{`
+        @keyframes slideIn {
+          from { opacity: 0; transform: translate(-50%, -10px); }
+          to { opacity: 1; transform: translate(-50%, 0); }
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+      `}</style>
     </div>
   );
 }
