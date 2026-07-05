@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useAppStore, getDailySummary, formatCurrency, formatDateTime, CATEGORIES, PAYMENT_METHODS } from "@/lib/store";
+import { useAppStore, getDailySummary, formatCurrency, formatDateTime, CATEGORIES, PAYMENT_METHODS, getPaymentMethodInfo } from "@/lib/store";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, MapPin, FileText, ChevronRight } from "lucide-react";
@@ -102,7 +102,7 @@ export function HomePage() {
             <Card className="divide-y divide-border">
               {previewToday.map((t) => {
                 const cat = CATEGORIES.find((c) => c.id === t.category);
-                const pay = t.paymentMethod ? PAYMENT_METHODS[t.paymentMethod] : null;
+                const pay = t.paymentMethod ? getPaymentMethodInfo(t.paymentMethod, useAppStore.getState().customPaymentMethods) : null;
                 return (
                   <div key={t.id} className="flex items-center gap-3 p-3.5">
                     <div

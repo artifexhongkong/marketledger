@@ -8,7 +8,16 @@ export type CurrencyCode = "HKD" | "TWD" | "THB" | "MYR" | "SGD" | "USD";
 export type TransactionType = "income" | "expense";
 export type PaymentMethod =
   | "cash" | "payme" | "alipayhk" | "wechat_pay" | "fps"
-  | "line_pay" | "truemoney" | "tng" | "stripe" | "other";
+  | "line_pay" | "truemoney" | "tng" | "stripe" | "other"
+  | `custom_${string}`;
+
+// 自訂支付方式資料結構
+export interface CustomPaymentMethod {
+  id: string;
+  label: string;
+  icon: string;
+  color: string;
+}
 export type CategoryId =
   | "sales" | "ingredients" | "packaging" | "rent" | "utilities"
   | "transport" | "marketing" | "equipment" | "other_income" | "other_expense";
@@ -83,6 +92,24 @@ export const PAYMENT_METHODS: Record<PaymentMethod, { label: string; icon: strin
   other: { label: "其他", icon: "📋" },
 };
 
+/**
+ * 取得支付方式的顯示資訊（支援自訂支付方式）
+ */
+export function getPaymentMethodInfo(
+  method: PaymentMethod | string | undefined,
+  customMethods: CustomPaymentMethod[] = []
+): { label: string; icon: string } {
+  if (!method) return { label: "未知", icon: "💳" };
+  const m = method as string;
+  if (m.startsWith("custom_")) {
+    const custom = customMethods.find((c) => `custom_${c.id}` === m);
+    if (custom) return { label: custom.label, icon: custom.icon };
+    return { label: "自訂", icon: "💳" };
+  }
+  const info = PAYMENT_METHODS[m as keyof typeof PAYMENT_METHODS];
+  return info || { label: m, icon: "💳" };
+}
+
 export const DEFAULT_MARKETS: MarketData[] = [
   { id: "pmq", name: "PMQ 週末市集", nameEn: "PMQ Weekend Market", type: "weekend", city: "HK", location: "香港中環 PMQ", schedule: "週六-日 14:00-22:00", boothCount: 25, feeRange: "HK$30-50/天", description: "元創方文創市集" },
   { id: "jfflux", name: "JFFLUX 創意市集", nameEn: "JFFLUX Creative Market", type: "pop-up", city: "HK", location: "香港西九文化區", schedule: "每月不定", boothCount: 30, feeRange: "HK$20-40/天", description: "西九文化區創意市集" },
@@ -123,6 +150,7 @@ interface AppStore {
   transactions: Transaction[];
   products: Product[];
   markets: MarketData[];
+  customPaymentMethods: CustomPaymentMethod[];
   // Actions
   setCurrency: (c: CurrencyCode) => void;
   setCurrentMarket: (id: string | null) => void;
@@ -131,6 +159,8 @@ interface AppStore {
   clearAll: () => void;
   addProduct: (p: Omit<Product, "id">) => void;
   deleteProduct: (id: string) => void;
+  addCustomPaymentMethod: (m: Omit<CustomPaymentMethod, "id">) => void;
+  deleteCustomPaymentMethod: (id: string) => void;
   seedDemo: () => void;
 }
 
@@ -143,6 +173,7 @@ export const useAppStore = create<AppStore>()(
       transactions: [],
       products: [],
       markets: DEFAULT_MARKETS,
+      customPaymentMethods: [],
 
       setCurrency: (c) => set({ currency: c }),
       setCurrentMarket: (id) => set({ currentMarketId: id }),
@@ -170,6 +201,19 @@ export const useAppStore = create<AppStore>()(
 
       deleteProduct: (id) =>
         set((s) => ({ products: s.products.filter((p) => p.id !== id) })),
+
+      addCustomPaymentMethod: (m) =>
+        set((s) => ({
+          customPaymentMethods: [
+            ...s.customPaymentMethods,
+            { ...m, id: `pay_${Date.now()}_${Math.random().toString(36).slice(2, 8)}` },
+          ],
+        })),
+
+      deleteCustomPaymentMethod: (id) =>
+        set((s) => ({
+          customPaymentMethods: s.customPaymentMethods.filter((m) => m.id !== id),
+        })),
 
       seedDemo: () => {
         const { demoSeeded, transactions, currency } = get();

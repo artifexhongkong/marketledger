@@ -273,7 +273,7 @@ export function DailyPage() {
             <Card className="divide-y divide-border">
               {selectedTxs.map((t) => {
                 const cat = CATEGORIES.find((c) => c.id === t.category);
-                const pay = t.paymentMethod ? PAYMENT_METHODS[t.paymentMethod] : null;
+                const pay = t.paymentMethod ? getPaymentMethodInfo(t.paymentMethod, useAppStore.getState().customPaymentMethods) : null;
                 return (
                   <div key={t.id} className="flex items-center gap-3 p-3.5">
                     <div

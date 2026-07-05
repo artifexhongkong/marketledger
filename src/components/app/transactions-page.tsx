@@ -1,6 +1,6 @@
 "use client";
 
-import { useAppStore, getDailySummary, formatCurrency, formatDateTime, CATEGORIES, PAYMENT_METHODS } from "@/lib/store";
+import { useAppStore, getDailySummary, formatCurrency, formatDateTime, CATEGORIES, PAYMENT_METHODS, getPaymentMethodInfo } from "@/lib/store";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowUpRight, ArrowDownRight, Inbox } from "lucide-react";
@@ -76,7 +76,7 @@ export function TransactionsPage() {
           <Card className="divide-y divide-border">
             {todayTx.map((t) => {
               const cat = CATEGORIES.find((c) => c.id === t.category);
-              const pay = t.paymentMethod ? PAYMENT_METHODS[t.paymentMethod] : null;
+              const pay = t.paymentMethod ? getPaymentMethodInfo(t.paymentMethod, useAppStore.getState().customPaymentMethods) : null;
               return (
                 <div key={t.id} className="flex items-center gap-3 p-3.5">
                   <div
