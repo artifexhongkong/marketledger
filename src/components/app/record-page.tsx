@@ -792,7 +792,25 @@ function ProductsView() {
   };
 
   return (
-    <div className="px-5 space-y-4">
+    <div
+      className="px-5 space-y-4"
+      onClick={(e) => {
+        // 點擊空白處（非商品、非工具列、非按鈕）取消多選模式
+        if (multiSelectModeRef.current) {
+          const target = e.target as HTMLElement;
+          // 排除：商品卡片、工具列、按鈕、輸入框
+          if (
+            !target.closest("[data-product-id]") &&
+            !target.closest(".bg-rose-50") &&  // 工具列
+            !target.closest("button") &&
+            !target.closest("input") &&
+            !target.closest("textarea")
+          ) {
+            handleCancelMultiSelect();
+          }
+        }
+      }}
+    >
       {/* 多選模式工具列 */}
       {multiSelectMode && (
         <div className="bg-rose-50 border border-rose-200 rounded-xl p-3 flex items-center justify-between animate-[fadeIn_0.2s_ease-out]">
@@ -801,24 +819,16 @@ function ProductsView() {
               已選 {selectedIds.size} 個商品
             </p>
             <p className="text-xs text-rose-600 mt-0.5">
-              點擊其他商品加入選擇 · 長按商品也可選擇
+              點擊其他商品加入選擇 · 點擊空白處取消
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleDeleteSelected}
-              disabled={selectedIds.size === 0}
-              className="px-3 py-1.5 bg-rose-600 text-white text-xs font-semibold rounded-lg hover:bg-rose-700 transition disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              刪除 ({selectedIds.size})
-            </button>
-            <button
-              onClick={handleCancelMultiSelect}
-              className="px-3 py-1.5 bg-white border border-rose-300 text-rose-600 text-xs font-medium rounded-lg hover:bg-rose-50 transition"
-            >
-              取消
-            </button>
-          </div>
+          <button
+            onClick={handleDeleteSelected}
+            disabled={selectedIds.size === 0}
+            className="px-3 py-1.5 bg-rose-600 text-white text-xs font-semibold rounded-lg hover:bg-rose-700 transition disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            刪除 ({selectedIds.size})
+          </button>
         </div>
       )}
 
@@ -903,6 +913,7 @@ function ProductsView() {
                 return (
                   <div
                     key={p.id}
+                    data-product-id={p.id}
                     onMouseDown={() => handleProductLongPress(p.id)}
                     onMouseUp={handleProductPressEnd}
                     onMouseLeave={handleProductPressEnd}
@@ -911,7 +922,7 @@ function ProductsView() {
                     onClick={() => handleProductClick(p.id)}
                     className={`relative bg-card border-2 rounded-xl p-2.5 cursor-pointer transition-all select-none ${
                       isSelected || isLongPressing
-                        ? "border-rose-500 bg-rose-50 shake-animation"
+                        ? "border-rose-500 bg-rose-50 shake-once"
                         : "border-border hover:border-primary/40"
                     } ${multiSelectMode && isSelected ? "ring-2 ring-rose-300" : ""}`}
                   >
@@ -945,6 +956,7 @@ function ProductsView() {
                 return (
                   <div
                     key={p.id}
+                    data-product-id={p.id}
                     onMouseDown={() => handleProductLongPress(p.id)}
                     onMouseUp={handleProductPressEnd}
                     onMouseLeave={handleProductPressEnd}
@@ -953,7 +965,7 @@ function ProductsView() {
                     onClick={() => handleProductClick(p.id)}
                     className={`bg-card border-2 rounded-xl p-3.5 flex items-center justify-between cursor-pointer transition-all select-none ${
                       isSelected || isLongPressing
-                        ? "border-rose-500 bg-rose-50 shake-animation"
+                        ? "border-rose-500 bg-rose-50 shake-once"
                         : "border-border hover:border-primary/40"
                     } ${multiSelectMode && isSelected ? "ring-2 ring-rose-300" : ""}`}
                   >
@@ -987,17 +999,17 @@ function ProductsView() {
       <style jsx>{`
         @keyframes shake {
           0%, 100% { transform: translateX(0); }
-          20% { transform: translateX(-3px); }
-          40% { transform: translateX(3px); }
-          60% { transform: translateX(-2px); }
-          80% { transform: translateX(2px); }
+          20% { transform: translateX(-4px); }
+          40% { transform: translateX(4px); }
+          60% { transform: translateX(-3px); }
+          80% { transform: translateX(3px); }
         }
         @keyframes fadeIn {
           from { opacity: 0; }
           to { opacity: 1; }
         }
-        :global(.shake-animation) {
-          animation: shake 0.4s ease-in-out infinite;
+        :global(.shake-once) {
+          animation: shake 0.5s ease-in-out;
         }
       `}</style>
     </div>
