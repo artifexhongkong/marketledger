@@ -819,16 +819,24 @@ function ProductsView() {
               已選 {selectedIds.size} 個商品
             </p>
             <p className="text-xs text-rose-600 mt-0.5">
-              點擊其他商品加入選擇 · 點擊空白處取消
+              點擊其他商品加入選擇 · 點擊空白處或取消鍵退出
             </p>
           </div>
-          <button
-            onClick={handleDeleteSelected}
-            disabled={selectedIds.size === 0}
-            className="px-3 py-1.5 bg-rose-600 text-white text-xs font-semibold rounded-lg hover:bg-rose-700 transition disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            刪除 ({selectedIds.size})
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleDeleteSelected}
+              disabled={selectedIds.size === 0}
+              className="px-3 py-1.5 bg-rose-600 text-white text-xs font-semibold rounded-lg hover:bg-rose-700 transition disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              刪除 ({selectedIds.size})
+            </button>
+            <button
+              onClick={handleCancelMultiSelect}
+              className="px-3 py-1.5 bg-white border border-rose-300 text-rose-600 text-xs font-medium rounded-lg hover:bg-rose-50 transition"
+            >
+              取消
+            </button>
+          </div>
         </div>
       )}
 
@@ -836,7 +844,7 @@ function ProductsView() {
       {!multiSelectMode && products.length > 0 && (
         <div className="bg-muted/60 rounded-lg px-3 py-2 text-xs text-muted-foreground flex items-center gap-1.5">
           <span className="text-sm">💡</span>
-          <span>長按任一商品進入多選刪除模式 · 可一次選擇多個商品刪除</span>
+          <span>長按任一商品進入多選刪除模式 · 可一次選擇多個商品刪除 · 點擊空白處或取消鍵退出</span>
         </div>
       )}
 
