@@ -115,7 +115,7 @@ export function AuthSection() {
       <Card className="p-4">
         <div className="flex items-center gap-2 mb-3">
           <CloudOff className="w-4 h-4 text-muted-foreground" />
-          <h3 className="text-sm font-semibold text-foreground">雲端帳號</h3>
+          <h3 className="text-sm font-semibold text-foreground">賬號登入</h3>
         </div>
         <p className="text-xs text-muted-foreground mb-3">
           登入 Google 帳號後，可將資料備份到 Google Drive，跨裝置同步。
@@ -144,14 +144,6 @@ export function AuthSection() {
             <AlertCircle className="w-3 h-3" />
             {error}
           </p>
-        )}
-        {!GOOGLE_CLIENT_ID && (
-          <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-            <p className="text-xs text-amber-800 font-medium mb-1">⚠️ 需要設定 Google Client ID</p>
-            <p className="text-xs text-amber-700 leading-relaxed">
-              請見下方「Google OAuth 設定說明」，設定後才能使用 Google 登入與雲端備份。
-            </p>
-          </div>
         )}
       </Card>
     );

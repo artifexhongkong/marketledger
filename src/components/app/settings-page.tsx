@@ -5,7 +5,6 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Globe, Download, Trash2, Info, Coins } from "lucide-react";
 import { AuthSection } from "./auth-section";
-import { GoogleSetupGuide } from "./google-setup-guide";
 
 export function SettingsPage() {
   const {
@@ -68,11 +67,6 @@ export function SettingsPage() {
       {/* Google 登入與雲端備份 */}
       <section>
         <AuthSection />
-      </section>
-
-      {/* Google OAuth 設定說明（未登入時顯示） */}
-      <section>
-        <GoogleSetupGuide />
       </section>
 
       {/* Currency */}
