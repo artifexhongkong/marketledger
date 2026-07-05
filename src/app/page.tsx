@@ -1,19 +1,21 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Home, PencilLine, FileText, MapPin, Settings as SettingsIcon } from "lucide-react";
+import { Home, PencilLine, FileText, ClipboardList, MapPin, Settings as SettingsIcon } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { HomePage } from "@/components/app/home-page";
 import { RecordPage } from "@/components/app/record-page";
+import { TransactionsPage } from "@/components/app/transactions-page";
 import { DailyPage } from "@/components/app/daily-page";
 import { MarketsPage } from "@/components/app/markets-page";
 import { SettingsPage } from "@/components/app/settings-page";
 
-type TabId = "home" | "record" | "daily" | "markets" | "settings";
+type TabId = "home" | "record" | "transactions" | "daily" | "markets" | "settings";
 
 const TABS: { id: TabId; label: string; icon: typeof Home }[] = [
   { id: "home", label: "首頁", icon: Home },
   { id: "record", label: "記帳", icon: PencilLine },
+  { id: "transactions", label: "記錄", icon: ClipboardList },
   { id: "daily", label: "日報", icon: FileText },
   { id: "markets", label: "市集", icon: MapPin },
   { id: "settings", label: "設定", icon: SettingsIcon },
@@ -42,6 +44,18 @@ export default function Page() {
     setHydrated(true);
     seedDemo();
   }, [seedDemo]);
+
+  // 監聽從其他頁面發出的導航事件（例如首頁「查看全部」按鈕）
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail as TabId;
+      if (detail && TABS.some((t) => t.id === detail)) {
+        setTab(detail);
+      }
+    };
+    window.addEventListener("navigate-tab", handler as EventListener);
+    return () => window.removeEventListener("navigate-tab", handler as EventListener);
+  }, []);
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-100 to-slate-200 flex flex-col items-center justify-center p-4 lg:p-8">
@@ -98,6 +112,7 @@ export default function Page() {
                 <>
                   {tab === "home" && <HomePage />}
                   {tab === "record" && <RecordPage />}
+                  {tab === "transactions" && <TransactionsPage />}
                   {tab === "daily" && <DailyPage />}
                   {tab === "markets" && <MarketsPage />}
                   {tab === "settings" && <SettingsPage />}
@@ -105,22 +120,22 @@ export default function Page() {
               )}
             </div>
 
-            {/* Tab bar */}
-            <div className="bg-card border-t border-border flex items-center justify-around px-2 pt-2 pb-5 flex-shrink-0">
+            {/* Tab bar — 6 個 tab，緊湊排列 */}
+            <div className="bg-card border-t border-border flex items-stretch justify-between px-1 pt-2 pb-5 flex-shrink-0">
               {TABS.map(({ id, label, icon: Icon }) => {
                 const active = tab === id;
                 return (
                   <button
                     key={id}
                     onClick={() => setTab(id)}
-                    className="flex flex-col items-center gap-1 px-3 py-1.5 transition"
+                    className="flex-1 flex flex-col items-center gap-1 py-1 transition min-w-0"
                   >
                     <Icon
                       className={`w-5 h-5 transition ${active ? "text-primary" : "text-muted-foreground"}`}
                       strokeWidth={active ? 2.5 : 2}
                     />
                     <span
-                      className={`text-[10px] transition ${active ? "text-primary font-semibold" : "text-muted-foreground"}`}
+                      className={`text-[10px] transition truncate ${active ? "text-primary font-semibold" : "text-muted-foreground"}`}
                     >
                       {label}
                     </span>
