@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Store, X, ChevronDown, Undo2, Check, RotateCcw, SlidersHorizontal } from "lucide-react";
-import type { TransactionType, CategoryId, PaymentMethod } from "@/lib/store";
+import type { TransactionType, CategoryId, PaymentMethod, Product } from "@/lib/store";
 
 export function RecordPage() {
   const [mode, setMode] = useState<"record" | "products">("record");
@@ -206,49 +206,67 @@ function RecordView() {
           </div>
         </div>
 
-        {/* ── 2. 商品快捷按鈕：3 列緊湊網格，更多商品一屏可見 ── */}
+        {/* ── 2. 商品快捷按鈕：3 列緊湊網格 + 長按手勢調數量 ── */}
         {products.length > 0 ? (
           <div className="mt-5">
             <div className="flex items-center justify-between mb-2">
               <p className="text-xs text-muted-foreground font-medium">⚡ 點商品即記錄銷售</p>
-              {lastTx && (
-                <button
-                  onClick={handleUndo}
-                  className="text-[10px] text-primary hover:text-primary/80 font-medium flex items-center gap-1"
-                >
-                  <RotateCcw className="w-3 h-3" />
-                  撤銷上筆
-                </button>
-              )}
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-muted-foreground/70">長按 ↑+1 ↓−1</span>
+                {lastTx && (
+                  <button
+                    onClick={handleUndo}
+                    className="text-[10px] text-primary hover:text-primary/80 font-medium flex items-center gap-1"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    撤銷上筆
+                  </button>
+                )}
+              </div>
             </div>
             <div className="grid grid-cols-3 gap-2">
-              {products.map((p) => {
-                const isConfirming = confirmId === p.id;
-                return (
-                  <button
-                    key={p.id}
-                    onClick={() => handleQuickProduct(p)}
-                    className={`relative bg-card border-2 rounded-xl p-2.5 text-center transition-all overflow-hidden min-h-[68px] flex flex-col justify-center ${
-                      isConfirming
-                        ? "border-emerald-500 bg-emerald-50 scale-[0.97]"
-                        : "border-primary/20 hover:border-primary active:scale-[0.95]"
-                    }`}
-                  >
-                    {isConfirming && (
-                      <div className="absolute inset-0 bg-emerald-50/95 flex items-center justify-center toast-fade-in">
-                        <div className="w-7 h-7 rounded-full bg-emerald-500 flex items-center justify-center">
-                          <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />
-                        </div>
-                      </div>
-                    )}
-                    <p className="text-xs font-medium text-foreground leading-tight line-clamp-2">{p.name}</p>
-                    <p className="text-sm font-bold text-primary tabular-nums mt-1 leading-none">
-                      {formatCurrency(p.price, currency)}
-                    </p>
-                  </button>
-                );
-              })}
+              {products.map((p) => (
+                <ProductButton
+                  key={p.id}
+                  product={p}
+                  currency={currency}
+                  payment={payment}
+                  currentMarketId={currentMarketId}
+                  confirming={confirmId === p.id}
+                  onConfirm={(id) => { setConfirmId(id); setTimeout(() => setConfirmId(null), 600); }}
+                  onRecord={(txId, productName, amount) => {
+                    setToast({
+                      id: `toast_${Date.now()}`,
+                      txId,
+                      productName,
+                      amount,
+                      currency,
+                      timestamp: Date.now(),
+                    });
+                    setLastTx({ txId, productName, amount });
+                    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+                    toastTimerRef.current = setTimeout(() => setToast(null), 5000);
+                  }}
+                  onUndo={handleUndo}
+                />
+              ))}
             </div>
+            {lastTx && (
+              <div className="mt-2 bg-muted/60 rounded-lg px-3 py-2 flex items-center justify-between gap-2 text-xs">
+                <div className="flex items-center gap-1.5 text-muted-foreground min-w-0">
+                  <RotateCcw className="w-3 h-3 flex-shrink-0" />
+                  <span className="truncate">
+                    最近：{lastTx.productName} · {formatCurrency(lastTx.amount, currency)}
+                  </span>
+                </div>
+                <button
+                  onClick={handleUndo}
+                  className="text-primary hover:text-primary/80 font-medium flex-shrink-0"
+                >
+                  撤銷
+                </button>
+              </div>
+            )}
           </div>
         ) : (
           <div className="mt-5 bg-muted/50 rounded-xl p-6 text-center border border-dashed border-border">
@@ -410,6 +428,203 @@ function RecordView() {
 const CURRENCIES_SYMBOL: Record<string, string> = {
   HKD: "HK$", TWD: "NT$", THB: "฿", MYR: "RM", SGD: "S$", USD: "US$",
 };
+
+// ─────────────────────────────────────────────────────────────
+// ProductButton — 支援「點擊記 1 筆 / 長按向上滑 +1 / 向下滑 −1」
+// ─────────────────────────────────────────────────────────────
+interface ProductButtonProps {
+  product: Product;
+  currency: string;
+  payment: PaymentMethod;
+  currentMarketId: string | null;
+  confirming: boolean;
+  onConfirm: (id: string) => void;
+  onRecord: (txId: string, productName: string, amount: number) => void;
+  onUndo: () => void;
+}
+
+function ProductButton({
+  product, currency, payment, currentMarketId,
+  confirming, onConfirm, onRecord,
+}: ProductButtonProps) {
+  const addTransaction = useAppStore((s) => s.addTransaction);
+  const deleteTransaction = useAppStore((s) => s.deleteTransaction);
+
+  // 數量與手勢狀態
+  const [quantity, setQuantity] = useState(1);
+  const [gestureMode, setGestureMode] = useState(false);
+  const [showSwipeHint, setShowSwipeHint] = useState(false);
+  const [lastSwipeDir, setLastSwipeDir] = useState<"up" | "down" | null>(null);
+
+  // 手勢追蹤 refs
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
+  const touchMoveRef = useRef<{ x: number; y: number } | null>(null);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
+
+  // 動態記錄的 txId 陣列（用於 −1 時撤銷最後一筆）
+  const recentTxIdsRef = useRef<string[]>([]);
+
+  // 清理 timer
+  useEffect(() => {
+    return () => {
+      if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+    };
+  }, []);
+
+  // 真正記錄交易（quantity 筆）
+  const recordTransaction = (qty: number) => {
+    const txIds: string[] = [];
+    for (let i = 0; i < qty; i++) {
+      const txId = addTransaction({
+        type: "income",
+        amount: product.price,
+        currency: currency as any,
+        category: "sales",
+        paymentMethod: payment,
+        productId: product.id,
+        note: qty > 1 ? `${product.name} x${qty}` : product.name,
+        marketId: currentMarketId || undefined,
+      });
+      txIds.push(txId);
+    }
+    recentTxIdsRef.current = [...recentTxIdsRef.current, ...txIds].slice(-20);
+    onConfirm(product.id);
+    onRecord(txIds[0], qty > 1 ? `${product.name} x${qty}` : product.name, product.price * qty);
+  };
+
+  // ── 觸控事件 ──
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    swipeStartRef.current = { x: t.clientX, y: t.clientY };
+    touchMoveRef.current = { x: t.clientX, y: t.clientY };
+    // 啟動長按計時器（400ms）
+    longPressTimerRef.current = setTimeout(() => {
+      setGestureMode(true);
+      setShowSwipeHint(true);
+      // 觸覺回饋（支援的裝置）
+      if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+        (navigator as any).vibrate?.(30);
+      }
+      // 3 秒後隱藏提示
+      setTimeout(() => setShowSwipeHint(false), 3000);
+    }, 400);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    touchMoveRef.current = { x: t.clientX, y: t.clientY };
+    if (!gestureMode || !swipeStartRef.current) return;
+
+    const deltaY = t.clientY - swipeStartRef.current.y;
+    const SWIPE_THRESHOLD = 25; // 滑動 25px 觸發一次
+
+    if (Math.abs(deltaY) >= SWIPE_THRESHOLD) {
+      if (deltaY < 0) {
+        // 向上滑 +1
+        setQuantity((q) => q + 1);
+        setLastSwipeDir("up");
+      } else {
+        // 向下滑 −1（最低 1）
+        setQuantity((q) => Math.max(1, q - 1));
+        setLastSwipeDir("down");
+      }
+      // 重置起點，實現連續滑動
+      swipeStartRef.current = { x: t.clientX, y: t.clientY };
+      // 觸覺回饋
+      if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+        (navigator as any).vibrate?.(15);
+      }
+      // 提示動畫
+      setTimeout(() => setLastSwipeDir(null), 200);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+
+    if (gestureMode) {
+      // 手勢模式結束 → 記錄 quantity 筆
+      recordTransaction(quantity);
+      setGestureMode(false);
+      setShowSwipeHint(false);
+      setQuantity(1);
+      swipeStartRef.current = null;
+      touchMoveRef.current = null;
+    }
+    // 非 gestureMode：不做任何事（onClick 會處理）
+  };
+
+  const handleClick = () => {
+    // 只有非手勢模式才觸發（避免長按手勢結束後又重複記錄）
+    if (gestureMode) return;
+    recordTransaction(1);
+  };
+
+  return (
+    <button
+      ref={buttonRef}
+      onClick={handleClick}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      className={`relative bg-card border-2 rounded-xl p-2.5 text-center transition-all overflow-hidden min-h-[68px] flex flex-col justify-center select-none touch-none ${
+        gestureMode
+          ? "border-primary bg-primary/5 scale-[1.03] shadow-lg"
+          : confirming
+          ? "border-emerald-500 bg-emerald-50 scale-[0.97]"
+          : "border-primary/20 hover:border-primary active:scale-[0.95]"
+      }`}
+    >
+      {/* 確認狀態覆蓋 */}
+      {confirming && !gestureMode && (
+        <div className="absolute inset-0 bg-emerald-50/95 flex items-center justify-center toast-fade-in">
+          <div className="w-7 h-7 rounded-full bg-emerald-500 flex items-center justify-center">
+            <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />
+          </div>
+        </div>
+      )}
+
+      {/* 手勢模式覆蓋 */}
+      {gestureMode && (
+        <div className="absolute inset-0 bg-primary/5 flex flex-col items-center justify-center px-1">
+          {/* 數量大字 */}
+          <div className={`text-2xl font-bold tabular-nums transition-transform ${lastSwipeDir ? "scale-125" : "scale-100"} ${lastSwipeDir === "up" ? "text-emerald-600" : lastSwipeDir === "down" ? "text-rose-600" : "text-primary"}`}>
+            ×{quantity}
+          </div>
+          {/* 總金額 */}
+          <div className="text-[10px] text-muted-foreground tabular-nums mt-0.5">
+            {formatCurrency(product.price * quantity, currency as any)}
+          </div>
+          {/* 滑動方向指示 */}
+          {showSwipeHint && (
+            <div className="absolute inset-0 flex flex-col items-center justify-between py-1 pointer-events-none">
+              <div className={`text-[10px] font-medium transition ${lastSwipeDir === "up" ? "text-emerald-600 scale-110" : "text-muted-foreground/60"}`}>
+                ↑ +1
+              </div>
+              <div className={`text-[10px] font-medium transition ${lastSwipeDir === "down" ? "text-rose-600 scale-110" : "text-muted-foreground/60"}`}>
+                ↓ −1
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 預設狀態內容 */}
+      {!gestureMode && (
+        <>
+          <p className="text-xs font-medium text-foreground leading-tight line-clamp-2">{product.name}</p>
+          <p className="text-sm font-bold text-primary tabular-nums mt-1 leading-none">
+            {formatCurrency(product.price, currency as any)}
+          </p>
+        </>
+      )}
+    </button>
+  );
+}
 
 function ProductsView() {
   const { products, currency, addProduct, deleteProduct } = useAppStore();

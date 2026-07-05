@@ -80,43 +80,10 @@ export function HomePage() {
         </Card>
       </div>
 
-      {/* Category breakdown */}
-      {Object.keys(summary.byCategory).length > 0 && (
-        <div>
-          <h2 className="text-sm font-semibold mb-3 text-foreground">分類明細</h2>
-          <Card className="divide-y divide-border">
-            {Object.entries(summary.byCategory).map(([catId, amount]) => {
-              const cat = CATEGORIES.find((c) => c.id === catId);
-              if (!cat) return null;
-              return (
-                <div key={catId} className="flex items-center justify-between p-4">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-9 h-9 rounded-full flex items-center justify-center text-base"
-                      style={{ backgroundColor: cat.color + "15" }}
-                    >
-                      {cat.icon}
-                    </div>
-                    <span className="text-sm font-medium text-foreground">{cat.label}</span>
-                  </div>
-                  <span
-                    className="text-sm font-semibold tabular-nums"
-                    style={{ color: cat.type === "income" ? "#059669" : "#E11D48" }}
-                  >
-                    {cat.type === "income" ? "+" : "−"}
-                    {formatCurrency(amount, currency)}
-                  </span>
-                </div>
-              );
-            })}
-          </Card>
-        </div>
-      )}
-
-      {/* Recent transactions */}
+      {/* Today's transactions (moved up — primary focus) */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-foreground">最近交易</h2>
+          <h2 className="text-sm font-semibold text-foreground">今天交易</h2>
           <Badge variant="secondary" className="text-xs font-medium">{summary.count} 筆</Badge>
         </div>
         {recent.length === 0 ? (
@@ -165,6 +132,39 @@ export function HomePage() {
           </Card>
         )}
       </div>
+
+      {/* Category breakdown (moved down — secondary info) */}
+      {Object.keys(summary.byCategory).length > 0 && (
+        <div>
+          <h2 className="text-sm font-semibold mb-3 text-foreground">分類明細</h2>
+          <Card className="divide-y divide-border">
+            {Object.entries(summary.byCategory).map(([catId, amount]) => {
+              const cat = CATEGORIES.find((c) => c.id === catId);
+              if (!cat) return null;
+              return (
+                <div key={catId} className="flex items-center justify-between p-4">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="w-9 h-9 rounded-full flex items-center justify-center text-base"
+                      style={{ backgroundColor: cat.color + "15" }}
+                    >
+                      {cat.icon}
+                    </div>
+                    <span className="text-sm font-medium text-foreground">{cat.label}</span>
+                  </div>
+                  <span
+                    className="text-sm font-semibold tabular-nums"
+                    style={{ color: cat.type === "income" ? "#059669" : "#E11D48" }}
+                  >
+                    {cat.type === "income" ? "+" : "−"}
+                    {formatCurrency(amount, currency)}
+                  </span>
+                </div>
+              );
+            })}
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
