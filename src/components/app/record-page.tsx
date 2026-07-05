@@ -698,6 +698,30 @@ function ProductsView() {
   const [unit, setUnit] = useState("個");
   // 顯示模式：grid（格子）或 list（列表）
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  // 多選刪除模式
+  const [multiSelectMode, setMultiSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  // 長按觸發的單個商品（用於動畫過渡）
+  const [longPressTarget, setLongPressTarget] = useState<string | null>(null);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // 用 ref 追蹤多選模式狀態，避免 onClick 時 state 還沒更新
+  const multiSelectModeRef = useRef(false);
+  const longPressTargetRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    multiSelectModeRef.current = multiSelectMode;
+  }, [multiSelectMode]);
+
+  useEffect(() => {
+    longPressTargetRef.current = longPressTarget;
+  }, [longPressTarget]);
+
+  // 清理 timer
+  useEffect(() => {
+    return () => {
+      if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+    };
+  }, []);
 
   const handleAdd = () => {
     const p = parseFloat(price);
@@ -707,8 +731,105 @@ function ProductsView() {
     setName(""); setPrice(""); setUnit("個"); setShowForm(false);
   };
 
+  // 長按商品 → 進入多選模式 + 選中該商品
+  const handleProductLongPress = (productId: string) => {
+    longPressTimerRef.current = setTimeout(() => {
+      // 立即更新 ref，避免 onClick 時 state 還沒更新
+      multiSelectModeRef.current = true;
+      longPressTargetRef.current = productId;
+      setMultiSelectMode(true);
+      setLongPressTarget(productId);
+      setSelectedIds(new Set([productId]));
+      // 0.6 秒後清除 longPressTarget（動畫過渡完成），但保留多選模式
+      setTimeout(() => {
+        setLongPressTarget(null);
+        longPressTargetRef.current = null;
+      }, 600);
+    }, 500);
+  };
+
+  const handleProductPressEnd = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
+  // 點擊商品：
+  // - 非多選模式 → 不做事
+  // - 多選模式 → 切換選中狀態
+  // - 但若剛結束長按（longPressTarget 還在），忽略這次 click 避免取消選中
+  const handleProductClick = (productId: string) => {
+    // 用 ref 取最新狀態
+    if (!multiSelectModeRef.current) return;
+    if (longPressTargetRef.current) return; // 長按剛結束，忽略
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(productId)) {
+        next.delete(productId);
+      } else {
+        next.add(productId);
+      }
+      return next;
+    });
+  };
+
+  // 取消多選模式
+  const handleCancelMultiSelect = () => {
+    multiSelectModeRef.current = false;
+    setMultiSelectMode(false);
+    setSelectedIds(new Set());
+  };
+
+  // 確認刪除所有選中商品
+  const handleDeleteSelected = () => {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`確定要刪除選中的 ${selectedIds.size} 個商品？`)) return;
+    selectedIds.forEach((id) => deleteProduct(id));
+    multiSelectModeRef.current = false;
+    setMultiSelectMode(false);
+    setSelectedIds(new Set());
+  };
+
   return (
     <div className="px-5 space-y-4">
+      {/* 多選模式工具列 */}
+      {multiSelectMode && (
+        <div className="bg-rose-50 border border-rose-200 rounded-xl p-3 flex items-center justify-between animate-[fadeIn_0.2s_ease-out]">
+          <div>
+            <p className="text-sm font-semibold text-rose-700">
+              已選 {selectedIds.size} 個商品
+            </p>
+            <p className="text-xs text-rose-600 mt-0.5">
+              點擊其他商品加入選擇 · 長按商品也可選擇
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleDeleteSelected}
+              disabled={selectedIds.size === 0}
+              className="px-3 py-1.5 bg-rose-600 text-white text-xs font-semibold rounded-lg hover:bg-rose-700 transition disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              刪除 ({selectedIds.size})
+            </button>
+            <button
+              onClick={handleCancelMultiSelect}
+              className="px-3 py-1.5 bg-white border border-rose-300 text-rose-600 text-xs font-medium rounded-lg hover:bg-rose-50 transition"
+            >
+              取消
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 操作提示（僅非多選模式顯示） */}
+      {!multiSelectMode && products.length > 0 && (
+        <div className="bg-muted/60 rounded-lg px-3 py-2 text-xs text-muted-foreground flex items-center gap-1.5">
+          <span className="text-sm">💡</span>
+          <span>長按任一商品進入多選刪除模式 · 可一次選擇多個商品刪除</span>
+        </div>
+      )}
+
       {!showForm ? (
         <Button
           onClick={() => setShowForm(true)}
@@ -776,48 +897,109 @@ function ProductsView() {
           {/* 格子模式 — 一屏可見多個商品 */}
           {viewMode === "grid" ? (
             <div className="grid grid-cols-3 gap-2">
-              {products.map((p) => (
-                <Card
-                  key={p.id}
-                  className="p-2.5 cursor-pointer hover:bg-muted/50 transition relative group"
-                  onClick={() => {
-                    if (confirm(`刪除商品「${p.name}」？`)) deleteProduct(p.id);
-                  }}
-                >
-                  <p className="text-xs font-medium text-foreground leading-tight line-clamp-2 min-h-[28px]">
-                    {p.name}
-                  </p>
-                  <p className="text-sm font-bold text-primary tabular-nums mt-1">
-                    {formatCurrency(p.price, currency)}
-                  </p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">/ {p.unit}</p>
-                </Card>
-              ))}
+              {products.map((p) => {
+                const isSelected = selectedIds.has(p.id);
+                const isLongPressing = longPressTarget === p.id;
+                return (
+                  <div
+                    key={p.id}
+                    onMouseDown={() => handleProductLongPress(p.id)}
+                    onMouseUp={handleProductPressEnd}
+                    onMouseLeave={handleProductPressEnd}
+                    onTouchStart={() => handleProductLongPress(p.id)}
+                    onTouchEnd={handleProductPressEnd}
+                    onClick={() => handleProductClick(p.id)}
+                    className={`relative bg-card border-2 rounded-xl p-2.5 cursor-pointer transition-all select-none ${
+                      isSelected || isLongPressing
+                        ? "border-rose-500 bg-rose-50 shake-animation"
+                        : "border-border hover:border-primary/40"
+                    } ${multiSelectMode && isSelected ? "ring-2 ring-rose-300" : ""}`}
+                  >
+                    {/* 選中標記 */}
+                    {(isSelected || isLongPressing) && (
+                      <div className="absolute top-1 right-1 w-5 h-5 rounded-full bg-rose-500 flex items-center justify-center z-10 animate-[fadeIn_0.2s_ease-out]">
+                        <Check className="w-3 h-3 text-white" strokeWidth={3} />
+                      </div>
+                    )}
+                    <p className={`text-xs font-medium leading-tight line-clamp-2 min-h-[28px] ${
+                      isSelected || isLongPressing ? "text-rose-700" : "text-foreground"
+                    }`}>
+                      {p.name}
+                    </p>
+                    <p className={`text-sm font-bold tabular-nums mt-1 ${
+                      isSelected || isLongPressing ? "text-rose-600" : "text-primary"
+                    }`}>
+                      {formatCurrency(p.price, currency)}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">/ {p.unit}</p>
+                  </div>
+                );
+              })}
             </div>
           ) : (
             /* 列表模式 — 詳細資訊 */
             <div className="space-y-2">
-              {products.map((p) => (
-                <Card
-                  key={p.id}
-                  className="p-3.5 flex items-center justify-between cursor-pointer hover:bg-muted/50 transition"
-                  onClick={() => {
-                    if (confirm(`刪除商品「${p.name}」？`)) deleteProduct(p.id);
-                  }}
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-foreground truncate">{p.name}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {formatCurrency(p.price, currency)} / {p.unit}
-                    </p>
+              {products.map((p) => {
+                const isSelected = selectedIds.has(p.id);
+                const isLongPressing = longPressTarget === p.id;
+                return (
+                  <div
+                    key={p.id}
+                    onMouseDown={() => handleProductLongPress(p.id)}
+                    onMouseUp={handleProductPressEnd}
+                    onMouseLeave={handleProductPressEnd}
+                    onTouchStart={() => handleProductLongPress(p.id)}
+                    onTouchEnd={handleProductPressEnd}
+                    onClick={() => handleProductClick(p.id)}
+                    className={`bg-card border-2 rounded-xl p-3.5 flex items-center justify-between cursor-pointer transition-all select-none ${
+                      isSelected || isLongPressing
+                        ? "border-rose-500 bg-rose-50 shake-animation"
+                        : "border-border hover:border-primary/40"
+                    } ${multiSelectMode && isSelected ? "ring-2 ring-rose-300" : ""}`}
+                  >
+                    <div className="flex-1 min-w-0 flex items-center gap-3">
+                      {/* 選中標記 */}
+                      {(isSelected || isLongPressing) && (
+                        <div className="w-5 h-5 rounded-full bg-rose-500 flex items-center justify-center flex-shrink-0 animate-[fadeIn_0.2s_ease-out]">
+                          <Check className="w-3 h-3 text-white" strokeWidth={3} />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm font-semibold truncate ${
+                          isSelected || isLongPressing ? "text-rose-700" : "text-foreground"
+                        }`}>
+                          {p.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {formatCurrency(p.price, currency)} / {p.unit}
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                  <span className="text-[10px] text-muted-foreground ml-2 flex-shrink-0">點擊刪除</span>
-                </Card>
-              ))}
+                );
+              })}
             </div>
           )}
         </>
       )}
+
+      {/* 動畫樣式 */}
+      <style jsx>{`
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          20% { transform: translateX(-3px); }
+          40% { transform: translateX(3px); }
+          60% { transform: translateX(-2px); }
+          80% { transform: translateX(2px); }
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        :global(.shake-animation) {
+          animation: shake 0.4s ease-in-out infinite;
+        }
+      `}</style>
     </div>
   );
 }
