@@ -7,10 +7,8 @@ import {
   TouchableOpacity,
   Alert,
   TextInput,
-  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
 import { useTransactionStore } from '../../src/stores/transactionStore';
 import { useProductStore } from '../../src/stores/productStore';
 import { useMarketStore } from '../../src/stores/marketStore';
@@ -71,7 +69,6 @@ export default function ExpensePage() {
 }
 
 function RecordView() {
-  const router = useRouter();
   const { currency, products, currentMarketId, markets, addTransaction, setCurrentMarket } = useStores();
   const [payment, setPayment] = React.useState<PaymentMethod>('cash');
   const [showAdvanced, setShowAdvanced] = React.useState(false);

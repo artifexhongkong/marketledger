@@ -33,11 +33,16 @@ export function ProductButton({ product, payment, currentMarketId, onRecorded }:
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
   const gestureModeRef = useRef(false);
+  const quantityRef = useRef(1);
 
-  // 保持 ref 同步
+  // 保持 refs 同步（PanResponder 閉包用）
   useEffect(() => {
     gestureModeRef.current = gestureMode;
   }, [gestureMode]);
+
+  useEffect(() => {
+    quantityRef.current = quantity;
+  }, [quantity]);
 
   // 清理
   useEffect(() => {
@@ -66,12 +71,11 @@ export function ProductButton({ product, payment, currentMarketId, onRecorded }:
     onRecorded(txIds[0], qty > 1 ? `${product.name} x${qty}` : product.name, product.price * qty, qty);
   };
 
-  // PanResponder — 處理手勢模式的滑動
+  // PanResponder — 處理手勢模式的滑動（用 ref 取最新值避免閉包過時）
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => false,
       onMoveShouldSetPanResponder: (_, gestureState) => {
-        // 只有在手勢模式才接管
         return gestureModeRef.current && Math.abs(gestureState.dy) > 5;
       },
       onPanResponderGrant: (e) => {
@@ -84,15 +88,12 @@ export function ProductButton({ product, payment, currentMarketId, onRecorded }:
 
         if (Math.abs(deltaY) >= SWIPE_THRESHOLD) {
           if (deltaY < 0) {
-            // 向上滑 +1
             setQuantity((q) => q + 1);
             setLastSwipeDir('up');
           } else {
-            // 向下滑 −1
             setQuantity((q) => Math.max(1, q - 1));
             setLastSwipeDir('down');
           }
-          // 重置起點
           swipeStartRef.current = { x: e.nativeEvent.pageX, y: e.nativeEvent.pageY };
           Vibration.vibrate(15);
           setTimeout(() => setLastSwipeDir(null), 200);
@@ -100,8 +101,8 @@ export function ProductButton({ product, payment, currentMarketId, onRecorded }:
       },
       onPanResponderRelease: () => {
         if (gestureModeRef.current) {
-          // 放開 → 記錄
-          recordTransaction(quantity);
+          // 用 ref 取最新 quantity，避免閉包捕獲舊值
+          recordTransaction(quantityRef.current);
           setGestureMode(false);
           setQuantity(1);
           swipeStartRef.current = null;
