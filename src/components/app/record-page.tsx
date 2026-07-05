@@ -193,7 +193,7 @@ function RecordView() {
             <div className="flex items-center justify-between mb-2">
               <p className="text-xs text-muted-foreground font-medium">⚡ 點商品即記錄銷售</p>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] text-muted-foreground/70">長按 ↑+1 ↓−1</span>
+                <span className="text-[10px] text-muted-foreground/70">長按調數量 · →取消</span>
                 {lastTx && (
                   <button
                     onClick={handleUndo}
@@ -734,7 +734,8 @@ const CURRENCIES_SYMBOL: Record<string, string> = {
 };
 
 // ─────────────────────────────────────────────────────────────
-// ProductButton — 支援「點擊記 1 筆 / 長按向上滑 +1 / 向下滑 −1」
+// ProductButton — 點擊記 1 筆 / 長按進入手勢模式
+// ↑+1  ↓−1  →取消（不記錄）
 // ─────────────────────────────────────────────────────────────
 interface ProductButtonProps {
   product: Product;
@@ -752,187 +753,123 @@ function ProductButton({
   confirming, onConfirm, onRecord,
 }: ProductButtonProps) {
   const addTransaction = useAppStore((s) => s.addTransaction);
-  const deleteTransaction = useAppStore((s) => s.deleteTransaction);
 
-  // 數量與手勢狀態
   const [quantity, setQuantity] = useState(1);
   const [gestureMode, setGestureMode] = useState(false);
   const [showSwipeHint, setShowSwipeHint] = useState(false);
-  const [lastSwipeDir, setLastSwipeDir] = useState<"up" | "down" | null>(null);
+  const [lastSwipeDir, setLastSwipeDir] = useState<"up" | "down" | "cancel" | null>(null);
+  const [cancelled, setCancelled] = useState(false);
 
-  // 手勢追蹤 refs
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
-  const touchMoveRef = useRef<{ x: number; y: number } | null>(null);
-  const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const gestureModeRef = useRef(false);
+  const cancelledRef = useRef(false);
+  const quantityRef = useRef(1);
 
-  // 動態記錄的 txId 陣列（用於 −1 時撤銷最後一筆）
-  const recentTxIdsRef = useRef<string[]>([]);
-
-  // 清理 timer
+  useEffect(() => { gestureModeRef.current = gestureMode; }, [gestureMode]);
+  useEffect(() => { quantityRef.current = quantity; }, [quantity]);
   useEffect(() => {
-    return () => {
-      if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
-    };
+    return () => { if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current); };
   }, []);
 
-  // 真正記錄交易（quantity 筆）
   const recordTransaction = (qty: number) => {
     const txIds: string[] = [];
     for (let i = 0; i < qty; i++) {
       const txId = addTransaction({
-        type: "income",
-        amount: product.price,
-        currency: currency as any,
-        category: "sales",
-        paymentMethod: payment,
-        productId: product.id,
+        type: "income", amount: product.price, currency: currency as any,
+        category: "sales", paymentMethod: payment, productId: product.id,
         note: qty > 1 ? `${product.name} x${qty}` : product.name,
         marketId: currentMarketId || undefined,
       });
       txIds.push(txId);
     }
-    recentTxIdsRef.current = [...recentTxIdsRef.current, ...txIds].slice(-20);
     onConfirm(product.id);
     onRecord(txIds[0], qty > 1 ? `${product.name} x${qty}` : product.name, product.price * qty);
   };
 
-  // ── 觸控事件 ──
-  const handleTouchStart = (e: React.TouchEvent) => {
-    const t = e.touches[0];
-    swipeStartRef.current = { x: t.clientX, y: t.clientY };
-    touchMoveRef.current = { x: t.clientX, y: t.clientY };
-    // 啟動長按計時器（400ms）
-    longPressTimerRef.current = setTimeout(() => {
-      setGestureMode(true);
-      setShowSwipeHint(true);
-      // 觸覺回饋（支援的裝置）
-      if (typeof navigator !== "undefined" && "vibrate" in navigator) {
-        (navigator as any).vibrate?.(30);
-      }
-      // 3 秒後隱藏提示
-      setTimeout(() => setShowSwipeHint(false), 3000);
-    }, 400);
+  const enterGestureMode = () => {
+    gestureModeRef.current = true;
+    cancelledRef.current = false;
+    setGestureMode(true);
+    setShowSwipeHint(true);
+    setCancelled(false);
+    setQuantity(1);
+    quantityRef.current = 1;
+    if (typeof navigator !== "undefined" && "vibrate" in navigator) (navigator as any).vibrate?.(30);
+    setTimeout(() => setShowSwipeHint(false), 4000);
   };
 
-  const handleTouchMove = (e: React.TouchEvent) => {
-    const t = e.touches[0];
-    touchMoveRef.current = { x: t.clientX, y: t.clientY };
-    if (!gestureMode || !swipeStartRef.current) return;
+  const exitGestureMode = (wasCancelled: boolean) => {
+    if (wasCancelled) {
+      cancelledRef.current = true;
+      setCancelled(true);
+      if (typeof navigator !== "undefined" && "vibrate" in navigator) (navigator as any).vibrate?.([30, 30, 30]);
+      setTimeout(() => {
+        gestureModeRef.current = false; cancelledRef.current = false;
+        setGestureMode(false); setCancelled(false); setShowSwipeHint(false);
+        setQuantity(1); quantityRef.current = 1; swipeStartRef.current = null;
+      }, 600);
+    } else {
+      gestureModeRef.current = false;
+      setGestureMode(false); setShowSwipeHint(false);
+      setQuantity(1); quantityRef.current = 1; swipeStartRef.current = null;
+    }
+  };
 
-    const deltaY = t.clientY - swipeStartRef.current.y;
-    const SWIPE_THRESHOLD = 25; // 滑動 25px 觸發一次
-
-    if (Math.abs(deltaY) >= SWIPE_THRESHOLD) {
-      if (deltaY < 0) {
-        // 向上滑 +1
-        setQuantity((q) => q + 1);
-        setLastSwipeDir("up");
-      } else {
-        // 向下滑 −1（最低 1）
-        setQuantity((q) => Math.max(1, q - 1));
-        setLastSwipeDir("down");
-      }
-      // 重置起點，實現連續滑動
-      swipeStartRef.current = { x: t.clientX, y: t.clientY };
-      // 觸覺回饋
-      if (typeof navigator !== "undefined" && "vibrate" in navigator) {
-        (navigator as any).vibrate?.(15);
-      }
-      // 提示動畫
+  const handleSwipeMove = (clientX: number, clientY: number) => {
+    if (!gestureModeRef.current || !swipeStartRef.current) return;
+    const deltaX = clientX - swipeStartRef.current.x;
+    const deltaY = clientY - swipeStartRef.current.y;
+    const THRESHOLD = 25;
+    // 向右滑 → 取消
+    if (deltaX >= THRESHOLD && Math.abs(deltaX) > Math.abs(deltaY)) { exitGestureMode(true); return; }
+    // 垂直滑動
+    if (Math.abs(deltaY) >= THRESHOLD && Math.abs(deltaY) > Math.abs(deltaX)) {
+      if (deltaY < 0) { quantityRef.current += 1; setQuantity(quantityRef.current); setLastSwipeDir("up"); }
+      else { quantityRef.current = Math.max(1, quantityRef.current - 1); setQuantity(quantityRef.current); setLastSwipeDir("down"); }
+      swipeStartRef.current = { x: clientX, y: clientY };
+      if (typeof navigator !== "undefined" && "vibrate" in navigator) (navigator as any).vibrate?.(15);
       setTimeout(() => setLastSwipeDir(null), 200);
     }
   };
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    swipeStartRef.current = { x: t.clientX, y: t.clientY };
+    longPressTimerRef.current = setTimeout(() => enterGestureMode(), 400);
+  };
+  const handleTouchMove = (e: React.TouchEvent) => { handleSwipeMove(e.touches[0].clientX, e.touches[0].clientY); };
   const handleTouchEnd = () => {
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
-
-    if (gestureMode) {
-      // 手勢模式結束 → 記錄 quantity 筆
-      recordTransaction(quantity);
-      setGestureMode(false);
-      setShowSwipeHint(false);
-      setQuantity(1);
-      swipeStartRef.current = null;
-      touchMoveRef.current = null;
-    }
-    // 非 gestureMode：不做任何事（onClick 會處理）
+    if (longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null; }
+    if (gestureModeRef.current && !cancelledRef.current) { recordTransaction(quantityRef.current); exitGestureMode(false); }
   };
 
-  // ── 滑鼠事件（桌面版模擬手勢）──
-  // 由於拖動時滑鼠可能離開按鈕，需用全域 mousemove/mouseup 監聽
   const handleMouseDown = (e: React.MouseEvent) => {
     if (e.button !== 0) return;
     swipeStartRef.current = { x: e.clientX, y: e.clientY };
-    // 啟動長按計時器
     longPressTimerRef.current = setTimeout(() => {
-      setGestureMode(true);
-      setShowSwipeHint(true);
-      setTimeout(() => setShowSwipeHint(false), 3000);
-      // 進入手勢模式後，挂載全域 mousemove/mouseup 監聽
-      const onGlobalMove = (ev: MouseEvent) => {
-        if (!swipeStartRef.current) return;
-        const deltaY = ev.clientY - swipeStartRef.current.y;
-        const SWIPE_THRESHOLD = 25;
-        if (Math.abs(deltaY) >= SWIPE_THRESHOLD) {
-          if (deltaY < 0) {
-            setQuantity((q) => q + 1);
-            setLastSwipeDir("up");
-          } else {
-            setQuantity((q) => Math.max(1, q - 1));
-            setLastSwipeDir("down");
-          }
-          swipeStartRef.current = { x: ev.clientX, y: ev.clientY };
-          setTimeout(() => setLastSwipeDir(null), 200);
-        }
-      };
-      const onGlobalUp = (ev: MouseEvent) => {
+      enterGestureMode();
+      const onGlobalMove = (ev: MouseEvent) => handleSwipeMove(ev.clientX, ev.clientY);
+      const onGlobalUp = () => {
         document.removeEventListener("mousemove", onGlobalMove);
         document.removeEventListener("mouseup", onGlobalUp);
-        if (longPressTimerRef.current) {
-          clearTimeout(longPressTimerRef.current);
-          longPressTimerRef.current = null;
-        }
-        // 用 functional update 確保拿到最新 quantity
-        setQuantity((currentQty) => {
-          recordTransaction(currentQty);
-          return 1;
-        });
-        setGestureMode(false);
-        setShowSwipeHint(false);
-        swipeStartRef.current = null;
+        if (longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null; }
+        if (gestureModeRef.current && !cancelledRef.current) { recordTransaction(quantityRef.current); exitGestureMode(false); }
       };
       document.addEventListener("mousemove", onGlobalMove);
       document.addEventListener("mouseup", onGlobalUp);
     }, 400);
   };
-
   const handleMouseLeave = () => {
-    // 滑鼠離開但還沒進入手勢模式 → 取消計時器
-    // （進入手勢模式後由全域 listener 接手，不受 onMouseLeave 影響）
-    if (!gestureMode && longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
+    if (!gestureModeRef.current && longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null; }
   };
-
   const handleClick = (e: React.MouseEvent) => {
-    // 手勢模式不觸發 click
-    if (gestureMode) {
-      e.preventDefault();
-      return;
-    }
-    // 如果剛結束手勢模式（longPressTimerRef 剛被清掉但 gestureMode 還沒重置）
-    // 用一個 flag 避免重複記錄
+    if (gestureModeRef.current) { e.preventDefault(); return; }
     recordTransaction(1);
   };
 
   return (
     <button
-      ref={buttonRef}
       onClick={handleClick}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
@@ -940,49 +877,43 @@ function ProductButton({
       onMouseDown={handleMouseDown}
       onMouseLeave={handleMouseLeave}
       className={`relative bg-card border-2 rounded-xl p-2.5 text-center transition-all overflow-hidden min-h-[68px] flex flex-col justify-center select-none ${
-        gestureMode
-          ? "border-primary bg-primary/5 scale-[1.03] shadow-lg cursor-ns-resize"
-          : confirming
-          ? "border-emerald-500 bg-emerald-50 scale-[0.97]"
-          : "border-primary/20 hover:border-primary active:scale-[0.95] cursor-pointer"
+        cancelled ? "border-rose-500 bg-rose-50"
+        : gestureMode ? "border-primary bg-primary/5 scale-[1.03] shadow-lg cursor-ns-resize"
+        : confirming ? "border-emerald-500 bg-emerald-50 scale-[0.97]"
+        : "border-primary/20 hover:border-primary active:scale-[0.95] cursor-pointer"
       }`}
     >
-      {/* 確認狀態覆蓋 */}
-      {confirming && !gestureMode && (
+      {confirming && !gestureMode && !cancelled && (
         <div className="absolute inset-0 bg-emerald-50/95 flex items-center justify-center toast-fade-in">
           <div className="w-7 h-7 rounded-full bg-emerald-500 flex items-center justify-center">
             <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />
           </div>
         </div>
       )}
-
-      {/* 手勢模式覆蓋 */}
-      {gestureMode && (
+      {cancelled && (
+        <div className="absolute inset-0 bg-rose-50/95 flex flex-col items-center justify-center toast-fade-in">
+          <X className="w-6 h-6 text-rose-500" strokeWidth={3} />
+          <p className="text-[10px] font-semibold text-rose-600 mt-1">已取消</p>
+        </div>
+      )}
+      {gestureMode && !cancelled && (
         <div className="absolute inset-0 bg-primary/5 flex flex-col items-center justify-center px-1">
-          {/* 數量大字 */}
           <div className={`text-2xl font-bold tabular-nums transition-transform ${lastSwipeDir ? "scale-125" : "scale-100"} ${lastSwipeDir === "up" ? "text-emerald-600" : lastSwipeDir === "down" ? "text-rose-600" : "text-primary"}`}>
             ×{quantity}
           </div>
-          {/* 總金額 */}
           <div className="text-[10px] text-muted-foreground tabular-nums mt-0.5">
             {formatCurrency(product.price * quantity, currency as any)}
           </div>
-          {/* 滑動方向指示 */}
           {showSwipeHint && (
             <div className="absolute inset-0 flex flex-col items-center justify-between py-1 pointer-events-none">
-              <div className={`text-[10px] font-medium transition ${lastSwipeDir === "up" ? "text-emerald-600 scale-110" : "text-muted-foreground/60"}`}>
-                ↑ +1
-              </div>
-              <div className={`text-[10px] font-medium transition ${lastSwipeDir === "down" ? "text-rose-600 scale-110" : "text-muted-foreground/60"}`}>
-                ↓ −1
-              </div>
+              <div className={`text-[10px] font-medium transition ${lastSwipeDir === "up" ? "text-emerald-600 scale-110" : "text-muted-foreground/60"}`}>↑ +1</div>
+              <div className="text-[9px] text-muted-foreground/50 leading-tight text-center">↑+1 ↓−1<br/>→取消</div>
+              <div className={`text-[10px] font-medium transition ${lastSwipeDir === "down" ? "text-rose-600 scale-110" : "text-muted-foreground/60"}`}>↓ −1</div>
             </div>
           )}
         </div>
       )}
-
-      {/* 預設狀態內容 */}
-      {!gestureMode && (
+      {!gestureMode && !cancelled && (
         <>
           <p className="text-xs font-medium text-foreground leading-tight line-clamp-2">{product.name}</p>
           <p className="text-sm font-bold text-primary tabular-nums mt-1 leading-none">
