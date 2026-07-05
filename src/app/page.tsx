@@ -70,16 +70,16 @@ export default function Page() {
   }, []);
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-100 to-slate-200 flex flex-col items-center justify-center p-4 lg:p-8 overflow-hidden">
-      {/* Phone Frame */}
-      <div className="relative">
-        {/* Phone shell */}
-        <div className="relative w-[390px] h-[780px] bg-slate-900 rounded-[3rem] p-3 shadow-2xl shadow-slate-900/30">
-          {/* Notch */}
-          <div className="absolute top-3 left-1/2 -translate-x-1/2 w-32 h-7 bg-slate-900 rounded-b-2xl z-30" />
+    <main className="min-h-screen bg-slate-200 flex items-center justify-center overflow-hidden">
+      {/* 手機框架 — 在手機上填滿整個螢幕，在電腦上顯示固定大小 */}
+      <div className="relative w-full h-screen md:w-[390px] md:h-[780px] md:max-h-[calc(100vh-4rem)] md:rounded-[2.5rem] md:bg-slate-900 md:p-3 md:shadow-2xl md:shadow-slate-900/30"
+        style={{ maxHeight: "100dvh" }}
+      >
+        {/* Notch — 只在 md 以上顯示 */}
+        <div className="hidden md:block absolute top-3 left-1/2 -translate-x-1/2 w-32 h-7 bg-slate-900 rounded-b-2xl z-30" />
 
-          {/* Screen */}
-          <div className="w-full h-full bg-background rounded-[2.5rem] overflow-hidden flex flex-col relative">
+        {/* Screen */}
+        <div className="w-full h-full bg-background md:rounded-[2rem] overflow-hidden flex flex-col relative">
             {/* Status bar */}
             <div className="h-11 bg-background flex items-end justify-between px-6 pb-1 text-xs font-semibold text-foreground flex-shrink-0">
               <StatusBarClock />
@@ -155,7 +155,6 @@ export default function Page() {
             <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-32 h-1 bg-foreground/80 rounded-full" />
           </div>
         </div>
-      </div>
     </main>
   );
 }
