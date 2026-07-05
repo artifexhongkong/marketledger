@@ -1,15 +1,20 @@
 "use client";
 
+import { useState } from "react";
 import { useAppStore, getDailySummary, formatCurrency, formatDateTime, CATEGORIES, PAYMENT_METHODS } from "@/lib/store";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, MapPin } from "lucide-react";
+import { TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, MapPin, ChevronDown, ChevronUp } from "lucide-react";
 
 export function HomePage() {
   const { transactions, currency, currentMarketId, markets } = useAppStore();
   const summary = getDailySummary(transactions);
   const currentMarket = markets.find((m) => m.id === currentMarketId);
-  const recent = summary.todayTransactions.slice(0, 8);
+  const [showAllToday, setShowAllToday] = useState(false);
+  const PREVIEW_COUNT = 5;
+  const todaySorted = summary.todayTransactions.slice().sort((a, b) => b.createdAt - a.createdAt);
+  const visibleToday = showAllToday ? todaySorted : todaySorted.slice(0, PREVIEW_COUNT);
+  const hiddenCount = todaySorted.length - PREVIEW_COUNT;
 
   return (
     <div className="px-5 pb-4 space-y-5">
@@ -83,53 +88,74 @@ export function HomePage() {
       {/* Today's transactions (moved up — primary focus) */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-foreground">今天交易</h2>
+          <h2 className="text-sm font-semibold text-foreground">今日營業記錄</h2>
           <Badge variant="secondary" className="text-xs font-medium">{summary.count} 筆</Badge>
         </div>
-        {recent.length === 0 ? (
+        {visibleToday.length === 0 ? (
           <Card className="p-8 text-center border-dashed">
             <p className="text-3xl mb-2">📊</p>
             <p className="text-sm font-medium text-foreground">今日還沒有交易記錄</p>
             <p className="text-xs text-muted-foreground mt-1">前往「記帳」頁面開始記錄</p>
           </Card>
         ) : (
-          <Card className="divide-y divide-border">
-            {recent.map((t) => {
-              const cat = CATEGORIES.find((c) => c.id === t.category);
-              const pay = t.paymentMethod ? PAYMENT_METHODS[t.paymentMethod] : null;
-              return (
-                <div key={t.id} className="flex items-center gap-3 p-3.5">
-                  <div
-                    className="w-10 h-10 rounded-full flex items-center justify-center text-base flex-shrink-0"
-                    style={{ backgroundColor: (cat?.color || "#6B7280") + "15" }}
-                  >
-                    {cat?.icon || "📝"}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium text-foreground truncate">{cat?.label || t.category}</p>
-                      {pay && (
-                        <Badge variant="outline" className="text-[10px] py-0 px-1.5 font-normal text-muted-foreground">
-                          {pay.label}
-                        </Badge>
-                      )}
+          <>
+            <Card className="divide-y divide-border">
+              {visibleToday.map((t) => {
+                const cat = CATEGORIES.find((c) => c.id === t.category);
+                const pay = t.paymentMethod ? PAYMENT_METHODS[t.paymentMethod] : null;
+                return (
+                  <div key={t.id} className="flex items-center gap-3 p-3.5">
+                    <div
+                      className="w-10 h-10 rounded-full flex items-center justify-center text-base flex-shrink-0"
+                      style={{ backgroundColor: (cat?.color || "#6B7280") + "15" }}
+                    >
+                      {cat?.icon || "📝"}
                     </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {formatDateTime(t.createdAt)}
-                      {t.note && ` · ${t.note}`}
-                    </p>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium text-foreground truncate">{cat?.label || t.category}</p>
+                        {pay && (
+                          <Badge variant="outline" className="text-[10px] py-0 px-1.5 font-normal text-muted-foreground">
+                            {pay.label}
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {formatDateTime(t.createdAt)}
+                        {t.note && ` · ${t.note}`}
+                      </p>
+                    </div>
+                    <span
+                      className="text-sm font-semibold tabular-nums flex-shrink-0"
+                      style={{ color: t.type === "income" ? "#059669" : "#E11D48" }}
+                    >
+                      {t.type === "income" ? "+" : "−"}
+                      {t.amount.toLocaleString()}
+                    </span>
                   </div>
-                  <span
-                    className="text-sm font-semibold tabular-nums flex-shrink-0"
-                    style={{ color: t.type === "income" ? "#059669" : "#E11D48" }}
-                  >
-                    {t.type === "income" ? "+" : "−"}
-                    {t.amount.toLocaleString()}
-                  </span>
-                </div>
-              );
-            })}
-          </Card>
+                );
+              })}
+            </Card>
+            {/* 查看全部 / 收起 按鈕 */}
+            {todaySorted.length > PREVIEW_COUNT && (
+              <button
+                onClick={() => setShowAllToday(!showAllToday)}
+                className="w-full mt-2 py-2.5 flex items-center justify-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 bg-card border border-border rounded-lg transition hover:bg-primary/5"
+              >
+                {showAllToday ? (
+                  <>
+                    <ChevronUp className="w-3.5 h-3.5" />
+                    收起，只顯示前 {PREVIEW_COUNT} 筆
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown className="w-3.5 h-3.5" />
+                    查看全部 {todaySorted.length} 筆（還有 {hiddenCount} 筆）
+                  </>
+                )}
+              </button>
+            )}
+          </>
         )}
       </div>
 

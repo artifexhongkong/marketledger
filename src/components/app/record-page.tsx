@@ -558,9 +558,71 @@ function ProductButton({
     // 非 gestureMode：不做任何事（onClick 會處理）
   };
 
-  const handleClick = () => {
-    // 只有非手勢模式才觸發（避免長按手勢結束後又重複記錄）
-    if (gestureMode) return;
+  // ── 滑鼠事件（桌面版模擬手勢）──
+  // 由於拖動時滑鼠可能離開按鈕，需用全域 mousemove/mouseup 監聽
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    swipeStartRef.current = { x: e.clientX, y: e.clientY };
+    // 啟動長按計時器
+    longPressTimerRef.current = setTimeout(() => {
+      setGestureMode(true);
+      setShowSwipeHint(true);
+      setTimeout(() => setShowSwipeHint(false), 3000);
+      // 進入手勢模式後，挂載全域 mousemove/mouseup 監聽
+      const onGlobalMove = (ev: MouseEvent) => {
+        if (!swipeStartRef.current) return;
+        const deltaY = ev.clientY - swipeStartRef.current.y;
+        const SWIPE_THRESHOLD = 25;
+        if (Math.abs(deltaY) >= SWIPE_THRESHOLD) {
+          if (deltaY < 0) {
+            setQuantity((q) => q + 1);
+            setLastSwipeDir("up");
+          } else {
+            setQuantity((q) => Math.max(1, q - 1));
+            setLastSwipeDir("down");
+          }
+          swipeStartRef.current = { x: ev.clientX, y: ev.clientY };
+          setTimeout(() => setLastSwipeDir(null), 200);
+        }
+      };
+      const onGlobalUp = (ev: MouseEvent) => {
+        document.removeEventListener("mousemove", onGlobalMove);
+        document.removeEventListener("mouseup", onGlobalUp);
+        if (longPressTimerRef.current) {
+          clearTimeout(longPressTimerRef.current);
+          longPressTimerRef.current = null;
+        }
+        // 用 functional update 確保拿到最新 quantity
+        setQuantity((currentQty) => {
+          recordTransaction(currentQty);
+          return 1;
+        });
+        setGestureMode(false);
+        setShowSwipeHint(false);
+        swipeStartRef.current = null;
+      };
+      document.addEventListener("mousemove", onGlobalMove);
+      document.addEventListener("mouseup", onGlobalUp);
+    }, 400);
+  };
+
+  const handleMouseLeave = () => {
+    // 滑鼠離開但還沒進入手勢模式 → 取消計時器
+    // （進入手勢模式後由全域 listener 接手，不受 onMouseLeave 影響）
+    if (!gestureMode && longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
+  const handleClick = (e: React.MouseEvent) => {
+    // 手勢模式不觸發 click
+    if (gestureMode) {
+      e.preventDefault();
+      return;
+    }
+    // 如果剛結束手勢模式（longPressTimerRef 剛被清掉但 gestureMode 還沒重置）
+    // 用一個 flag 避免重複記錄
     recordTransaction(1);
   };
 
@@ -571,12 +633,14 @@ function ProductButton({
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
-      className={`relative bg-card border-2 rounded-xl p-2.5 text-center transition-all overflow-hidden min-h-[68px] flex flex-col justify-center select-none touch-none ${
+      onMouseDown={handleMouseDown}
+      onMouseLeave={handleMouseLeave}
+      className={`relative bg-card border-2 rounded-xl p-2.5 text-center transition-all overflow-hidden min-h-[68px] flex flex-col justify-center select-none ${
         gestureMode
-          ? "border-primary bg-primary/5 scale-[1.03] shadow-lg"
+          ? "border-primary bg-primary/5 scale-[1.03] shadow-lg cursor-ns-resize"
           : confirming
           ? "border-emerald-500 bg-emerald-50 scale-[0.97]"
-          : "border-primary/20 hover:border-primary active:scale-[0.95]"
+          : "border-primary/20 hover:border-primary active:scale-[0.95] cursor-pointer"
       }`}
     >
       {/* 確認狀態覆蓋 */}
