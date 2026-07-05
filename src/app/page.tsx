@@ -70,7 +70,7 @@ export default function Page() {
   }, []);
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-100 to-slate-200 flex flex-col items-center justify-center p-4 lg:p-8">
+    <main className="min-h-screen bg-gradient-to-br from-slate-100 to-slate-200 flex flex-col items-center justify-center p-4 lg:p-8 overflow-hidden">
       {/* Header */}
       <div className="text-center mb-6 max-w-2xl">
         <h1 className="text-3xl lg:text-4xl font-bold tracking-tight text-slate-900">
@@ -95,7 +95,7 @@ export default function Page() {
           {/* Screen */}
           <div className="w-full h-full bg-background rounded-[2.5rem] overflow-hidden flex flex-col relative">
             {/* Status bar */}
-            <div className="h-11 bg-background flex items-end justify-between px-6 pb-1 text-xs font-semibold text-foreground">
+            <div className="h-11 bg-background flex items-end justify-between px-6 pb-1 text-xs font-semibold text-foreground flex-shrink-0">
               <StatusBarClock />
               <span className="flex items-center gap-1">
                 <span>5G</span>
@@ -117,7 +117,14 @@ export default function Page() {
             </div>
 
             {/* Content area */}
-            <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin">
+            <div
+              className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide"
+              style={{
+                WebkitOverflowScrolling: "touch",
+                overscrollBehavior: "contain",
+                touchAction: "pan-y",
+              }}
+            >
               {!hydrated ? (
                 <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
                   載入中...

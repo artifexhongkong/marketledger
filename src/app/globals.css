@@ -121,4 +121,17 @@
   body {
     @apply bg-background text-foreground;
   }
+  /* 觸控滾動：讓所有可滾動區域在手機上用手指滑動 */
+  * {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+  /* 隱藏滾動條但保留滾動功能（手機 App 風格） */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
 }
