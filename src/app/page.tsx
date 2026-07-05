@@ -71,20 +71,6 @@ export default function Page() {
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-100 to-slate-200 flex flex-col items-center justify-center p-4 lg:p-8 overflow-hidden">
-      {/* Header */}
-      <div className="text-center mb-6 max-w-2xl">
-        <h1 className="text-3xl lg:text-4xl font-bold tracking-tight text-slate-900">
-          市集記賬本
-        </h1>
-        <p className="text-sm text-slate-500 mt-2">
-          全球市集攤商的隨身營業助理 · 3 秒記一筆 · 收攤即結算
-        </p>
-        <div className="inline-flex items-center gap-2 mt-3 px-3 py-1 bg-amber-100/60 text-amber-700 text-xs rounded-full">
-          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-          即時 UI 預覽 · 重新設計版本
-        </div>
-      </div>
-
       {/* Phone Frame */}
       <div className="relative">
         {/* Phone shell */}
@@ -169,37 +155,7 @@ export default function Page() {
             <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-32 h-1 bg-foreground/80 rounded-full" />
           </div>
         </div>
-
-        {/* Side annotations (visible on desktop) */}
-        <div className="hidden xl:block absolute -right-80 top-12 w-72 space-y-3">
-          <div className="bg-card rounded-xl p-4 shadow-lg border border-border">
-            <p className="text-xs font-semibold text-primary mb-1">🎨 設計風格</p>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              現代專業金融風：深藍主色 (#0F1F3D)、溫暖留白、Inter 字體、tabular-nums 數字對齊。捨棄原本的珊瑚橘，改為更國際化、可信賴的視覺語言。
-            </p>
-          </div>
-          <div className="bg-card rounded-xl p-4 shadow-lg border border-border">
-            <p className="text-xs font-semibold text-emerald-600 mb-1">✨ 即時互動</p>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              5 個 Tab 全部可點擊切換，記帳、商品管理、市集選擇、CSV/JSON 匯出皆可真實操作。資料使用 localStorage 持久化。
-            </p>
-          </div>
-          <div className="bg-card rounded-xl p-4 shadow-lg border border-border">
-            <p className="text-xs font-semibold text-amber-600 mb-1">💡 試試看</p>
-            <ul className="text-xs text-muted-foreground space-y-1 leading-relaxed">
-              <li>· 點「記帳」→ 點商品按鈕一鍵記帳</li>
-              <li>· 點「市集」→ 選 PMQ 設為當前市集</li>
-              <li>· 點「設定」→ 匯出 CSV 試試</li>
-              <li>· 點「日報」看分類/支付/市集統計</li>
-            </ul>
-          </div>
-        </div>
       </div>
-
-      {/* Footer */}
-      <p className="text-xs text-slate-400 mt-6 text-center max-w-md">
-        這是網頁預覽版，實際 App 會在手機上以原生效能運行 · React Native + Expo
-      </p>
     </main>
   );
 }
