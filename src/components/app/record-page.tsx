@@ -502,15 +502,6 @@ function PaymentSelector({
           );
         })}
 
-        {/* 新增按鈕 */}
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="flex flex-col items-center justify-center gap-0.5 py-2.5 rounded-xl border-2 border-dashed border-primary/40 bg-primary/5 text-primary hover:bg-primary/10 transition"
-        >
-          <Plus className="w-4 h-4" />
-          <span className="text-[10px] font-medium">新增</span>
-        </button>
-
         {/* 更多按鈕 */}
         <button
           onClick={() => setExpandedCategory(expandedCategory ? null : "all")}
@@ -525,7 +516,7 @@ function PaymentSelector({
         </button>
       </div>
 
-      {/* 展開的地區分類 */}
+      {/* 展開的地區分類 + 新增按鈕 */}
       {expandedCategory && (
         <div className="mt-2 space-y-2 animate-[fadeIn_0.2s_ease-out]">
           {PAYMENT_CATEGORIES.slice(1).map((cat) => (
@@ -553,6 +544,20 @@ function PaymentSelector({
               </div>
             </div>
           ))}
+
+          {/* 新增自訂支付方式按鈕（放在更多展開區底部） */}
+          <div>
+            <p className="text-[10px] font-medium text-muted-foreground px-1 mb-1">自訂</p>
+            <div className="grid grid-cols-5 gap-1.5">
+              <button
+                onClick={() => setShowAddModal(true)}
+                className="flex flex-col items-center justify-center gap-0.5 py-2.5 rounded-xl border-2 border-dashed border-primary/40 bg-primary/5 text-primary hover:bg-primary/10 transition"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="text-[10px] font-medium">新增</span>
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
