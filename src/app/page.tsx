@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Home, PencilLine, FileText, ClipboardList, MapPin, Settings as SettingsIcon } from "lucide-react";
+import { Home, PencilLine, FileText, ClipboardList, MapPin, Settings as SettingsIcon, Cloud, CloudOff } from "lucide-react";
 import { useAppStore } from "@/lib/store";
+import { useAuthStore } from "@/lib/auth-store";
 import { HomePage } from "@/components/app/home-page";
 import { RecordPage } from "@/components/app/record-page";
 import { TransactionsPage } from "@/components/app/transactions-page";
@@ -33,6 +34,17 @@ function StatusBarClock() {
   }, []);
   // 伺服器渲染與首次客戶端渲染都先留白，等挂載後再填入時間
   return <span className="tabular-nums min-w-[44px]">{time ?? ""}</span>;
+}
+
+/** 頂部儲存模式指示器（雲端/本機） */
+function StorageIndicator() {
+  const { user, storageMode } = useAuthStore();
+  if (!user) return null;
+  return storageMode === "drive" ? (
+    <Cloud className="w-4 h-4 text-primary-foreground" fill="currentColor" />
+  ) : (
+    <CloudOff className="w-4 h-4 text-primary-foreground/70" />
+  );
 }
 
 export default function Page() {
@@ -96,10 +108,14 @@ export default function Page() {
             </div>
 
             {/* Top app bar */}
-            <div className="h-12 bg-primary text-primary-foreground flex items-center justify-center px-4 flex-shrink-0">
+            <div className="h-12 bg-primary text-primary-foreground flex items-center justify-between px-4 flex-shrink-0">
+              <div className="w-6" />
               <h2 className="text-base font-semibold">
                 {TABS.find((t) => t.id === tab)?.label}
               </h2>
+              <div className="w-6 flex justify-end">
+                <StorageIndicator />
+              </div>
             </div>
 
             {/* Content area */}

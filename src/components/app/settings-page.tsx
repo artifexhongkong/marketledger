@@ -4,6 +4,8 @@ import { useAppStore, CURRENCIES, type CurrencyCode, type LanguageCode } from "@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Globe, Download, Trash2, Info, Coins } from "lucide-react";
+import { AuthSection } from "./auth-section";
+import { GoogleSetupGuide } from "./google-setup-guide";
 
 export function SettingsPage() {
   const {
@@ -62,6 +64,16 @@ export function SettingsPage() {
         <h2 className="text-lg font-semibold mt-3 text-foreground">MarketLedger</h2>
         <p className="text-xs text-muted-foreground mt-0.5">v1.0.1 · 全球市集攤販記帳工具</p>
       </Card>
+
+      {/* Google 登入與雲端備份 */}
+      <section>
+        <AuthSection />
+      </section>
+
+      {/* Google OAuth 設定說明（未登入時顯示） */}
+      <section>
+        <GoogleSetupGuide />
+      </section>
 
       {/* Currency */}
       <section>
