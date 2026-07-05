@@ -53,7 +53,7 @@ export const CURRENCIES: Record<CurrencyCode, { symbol: string; locale: string }
   TWD: { symbol: "NT$", locale: "zh-TW" },
   THB: { symbol: "฿", locale: "th-TH" },
   MYR: { symbol: "RM", locale: "ms-MY" },
-  SGD: { symbol: "S$", locale: "en-SG" },
+  SGD: { symbol: "$", locale: "en-SG" },
   USD: { symbol: "US$", locale: "en-US" },
 };
 
