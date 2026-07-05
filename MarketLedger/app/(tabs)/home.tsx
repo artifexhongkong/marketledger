@@ -1,49 +1,26 @@
 import React from 'react';
-import { ScrollView, StyleSheet, View, Text } from 'react-native';
+import { ScrollView, StyleSheet, View, Text, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useTransactionStore } from '../../src/stores/transactionStore';
 import { useSettingsStore } from '../../src/stores/settingsStore';
 import { useMarketStore } from '../../src/stores/marketStore';
 import { SummaryCard } from '../../src/components/SummaryCard';
-import { TransactionRow } from '../../src/components/TransactionRow';
 import { formatCurrency } from '../../src/utils/formatCurrency';
 import { calculateDailySummary } from '../../src/utils/calculateProfit';
 import { CATEGORIES } from '../../src/constants';
 import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZE, FONT_WEIGHT } from '../../src/constants/colors';
 
-/** 首頁儀表板 — 今日摘要 + 最近交易 */
+/** 首頁儀表板 — 今日摘要 + 記錄入口 + 分類明細 */
 export default function HomePage() {
+  const router = useRouter();
   const currency = useSettingsStore((s) => s.currency);
   const transactions = useTransactionStore((s) => s.transactions);
-  const addTransaction = useTransactionStore((s) => s.addTransaction);
-  const demoSeeded = useSettingsStore((s) => s.demoSeeded);
-  const setDemoSeeded = useSettingsStore((s) => s.setDemoSeeded);
   const currentMarketId = useMarketStore((s) => s.currentMarketId);
   const markets = useMarketStore((s) => s.markets);
 
   const summary = calculateDailySummary(transactions, currency);
-
-  // 示範資料：僅在「未曾植入」時加入一次
-  React.useEffect(() => {
-    if (!demoSeeded && transactions.length === 0) {
-      // 今日範例：銷售收入
-      addTransaction({ type: 'income', amount: 2500, currency, category: 'sales', paymentMethod: 'cash', note: '賣手作餅乾', marketId: 'pmq' });
-      addTransaction({ type: 'income', amount: 1800, currency, category: 'sales', paymentMethod: 'payme', note: '賣手工飾品', marketId: 'pmq' });
-      // 今日範例：支出
-      addTransaction({ type: 'expense', amount: 800, currency, category: 'ingredients', paymentMethod: 'cash', note: '進貨麵粉、奶油', marketId: 'pmq' });
-      addTransaction({ type: 'expense', amount: 350, currency, category: 'packaging', paymentMethod: 'fps', note: '包裝盒', marketId: 'pmq' });
-      addTransaction({ type: 'expense', amount: 200, currency, category: 'rent', paymentMethod: 'cash', note: 'PMQ 攤位費', marketId: 'pmq' });
-      // 標記為已植入，避免重複
-      setDemoSeeded(true);
-    }
-  }, [demoSeeded, transactions.length]);
-
-  // 最近 10 筆（今日）
-  const recent = summary.todayTransactions
-    .slice()
-    .sort((a, b) => b.createdAt - a.createdAt)
-    .slice(0, 10);
-
   const currentMarket = markets.find((m) => m.id === currentMarketId);
 
   return (
@@ -54,6 +31,7 @@ export default function HomePage() {
           <Text style={styles.dateText}>
             {new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}
           </Text>
+          <Text style={styles.title}>今日營業概況</Text>
           {currentMarket && (
             <View style={styles.marketBadge}>
               <Text style={styles.marketBadgeText}>📍 {currentMarket.name}</Text>
@@ -61,13 +39,59 @@ export default function HomePage() {
           )}
         </View>
 
-        {/* 今日摘要卡片 */}
-        <SummaryCard
-          income={summary.income}
-          expense={summary.expense}
-          profit={summary.profit}
-          currency={currency}
-        />
+        {/* Hero 摘要卡 */}
+        <View style={styles.heroCard}>
+          <Text style={styles.heroLabel}>淨利潤</Text>
+          <Text style={styles.heroAmount}>
+            {summary.profit >= 0 ? '+' : '−'}
+            {formatCurrency(Math.abs(summary.profit), currency)}
+          </Text>
+          <View style={styles.heroStats}>
+            <View style={styles.heroStatItem}>
+              <Text style={styles.heroStatLabel}>↑ 收入</Text>
+              <Text style={styles.heroStatValue}>{formatCurrency(summary.income, currency)}</Text>
+            </View>
+            <View style={styles.heroStatDivider} />
+            <View style={styles.heroStatItem}>
+              <Text style={styles.heroStatLabel}>↓ 支出</Text>
+              <Text style={styles.heroStatValue}>{formatCurrency(summary.expense, currency)}</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* 統計小卡 */}
+        <View style={styles.statRow}>
+          <View style={styles.statCard}>
+            <Text style={styles.statLabel}>交易筆數</Text>
+            <Text style={styles.statValue}>{summary.transactionCount}</Text>
+            <Text style={styles.statHint}>筆交易</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={styles.statLabel}>平均客單</Text>
+            <Text style={styles.statValue}>
+              {summary.transactionCount > 0 ? formatCurrency(Math.round(summary.income / summary.transactionCount), currency) : '—'}
+            </Text>
+            <Text style={styles.statHint}>每筆平均</Text>
+          </View>
+        </View>
+
+        {/* 今日營業記錄入口卡片 */}
+        {summary.transactionCount > 0 && (
+          <TouchableOpacity
+            style={styles.linkCard}
+            onPress={() => router.push('/(tabs)/transactions')}
+            activeOpacity={0.7}
+          >
+            <View style={styles.linkIcon}>
+              <Ionicons name="list" size={18} color={COLORS.primary} />
+            </View>
+            <View style={styles.linkContent}>
+              <Text style={styles.linkTitle}>今日營業記錄</Text>
+              <Text style={styles.linkHint}>{summary.transactionCount} 筆交易 · 點擊查看全部</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={COLORS.textTertiary} />
+          </TouchableOpacity>
+        )}
 
         {/* 分類明細 */}
         {Object.keys(summary.byCategory).length > 0 && (
@@ -76,14 +100,18 @@ export default function HomePage() {
             <View style={styles.categoryList}>
               {Object.entries(summary.byCategory).map(([catId, amount]) => {
                 const cat = CATEGORIES.find((c) => c.id === catId);
+                if (!cat) return null;
                 return (
                   <View key={catId} style={styles.categoryRow}>
                     <View style={styles.categoryLeft}>
-                      <Text style={styles.categoryEmoji}>{cat?.icon ?? '📝'}</Text>
-                      <Text style={styles.categoryLabel}>{cat?.label ?? catId}</Text>
+                      <View style={[styles.categoryIcon, { backgroundColor: cat.color + '15' }]}>
+                        <Text style={styles.categoryEmoji}>{cat.icon}</Text>
+                      </View>
+                      <Text style={styles.categoryLabel}>{cat.label}</Text>
                     </View>
-                    <Text style={[styles.categoryAmount, { color: cat?.type === 'income' ? COLORS.income : COLORS.expense }]}>
-                      {cat?.type === 'income' ? '+' : '-'}{formatCurrency(amount, currency)}
+                    <Text style={[styles.categoryAmount, { color: cat.type === 'income' ? COLORS.income : COLORS.expense }]}>
+                      {cat.type === 'income' ? '+' : '−'}
+                      {formatCurrency(amount, currency)}
                     </Text>
                   </View>
                 );
@@ -91,23 +119,6 @@ export default function HomePage() {
             </View>
           </View>
         )}
-
-        {/* 最近交易 */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>今日交易</Text>
-            <Text style={styles.countText}>{summary.transactionCount} 筆</Text>
-          </View>
-          {recent.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyEmoji}>📊</Text>
-              <Text style={styles.emptyText}>今日還沒有交易記錄</Text>
-              <Text style={styles.emptySubtext}>前往「記帳」頁面開始記錄吧！</Text>
-            </View>
-          ) : (
-            recent.map((t) => <TransactionRow key={t.id} transaction={t} />)
-          )}
-        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -127,17 +138,20 @@ const styles = StyleSheet.create({
     gap: SPACING.lg,
   },
   dateHeader: {
-    alignItems: 'center',
-    paddingVertical: SPACING.sm,
     gap: SPACING.xs,
   },
   dateText: {
-    fontSize: FONT_SIZE.sm,
+    fontSize: FONT_SIZE.xs,
     color: COLORS.textSecondary,
-    fontWeight: FONT_WEIGHT.medium,
+  },
+  title: {
+    fontSize: FONT_SIZE.xxxl,
+    fontWeight: FONT_WEIGHT.bold,
+    color: COLORS.text,
   },
   marketBadge: {
-    backgroundColor: COLORS.primary + '20',
+    alignSelf: 'flex-start',
+    backgroundColor: COLORS.primary + '15',
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.xs,
     borderRadius: BORDER_RADIUS.full,
@@ -147,22 +161,122 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     fontWeight: FONT_WEIGHT.semibold,
   },
+  // Hero 卡
+  heroCard: {
+    backgroundColor: COLORS.primary,
+    borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.xl,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  heroLabel: {
+    fontSize: FONT_SIZE.xs,
+    color: 'rgba(255,255,255,0.7)',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  heroAmount: {
+    fontSize: 36,
+    fontWeight: FONT_WEIGHT.bold,
+    color: COLORS.textInverse,
+    marginTop: SPACING.xs,
+  },
+  heroStats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: SPACING.lg,
+    gap: SPACING.md,
+  },
+  heroStatItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+  },
+  heroStatLabel: {
+    fontSize: FONT_SIZE.xs,
+    color: 'rgba(255,255,255,0.7)',
+  },
+  heroStatValue: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.textInverse,
+    fontWeight: FONT_WEIGHT.semibold,
+  },
+  heroStatDivider: {
+    width: 1,
+    height: 12,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  // 統計小卡
+  statRow: {
+    flexDirection: 'row',
+    gap: SPACING.md,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: COLORS.card,
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.lg,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  statLabel: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.textSecondary,
+  },
+  statValue: {
+    fontSize: FONT_SIZE.xxl,
+    fontWeight: FONT_WEIGHT.semibold,
+    color: COLORS.text,
+    marginTop: SPACING.xs,
+  },
+  statHint: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.textSecondary,
+    marginTop: 2,
+  },
+  // 記錄入口卡片
+  linkCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.card,
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    gap: SPACING.md,
+  },
+  linkIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: BORDER_RADIUS.sm,
+    backgroundColor: COLORS.primary + '15',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  linkContent: {
+    flex: 1,
+  },
+  linkTitle: {
+    fontSize: FONT_SIZE.md,
+    fontWeight: FONT_WEIGHT.medium,
+    color: COLORS.text,
+  },
+  linkHint: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.textSecondary,
+    marginTop: 2,
+  },
+  // 分類明細
   section: {
     gap: SPACING.sm,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
   },
   sectionTitle: {
     fontSize: FONT_SIZE.lg,
     fontWeight: FONT_WEIGHT.semibold,
     color: COLORS.text,
-  },
-  countText: {
-    fontSize: FONT_SIZE.sm,
-    color: COLORS.textSecondary,
   },
   categoryList: {
     backgroundColor: COLORS.card,
@@ -185,8 +299,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: SPACING.sm,
   },
+  categoryIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   categoryEmoji: {
-    fontSize: 20,
+    fontSize: 18,
   },
   categoryLabel: {
     fontSize: FONT_SIZE.md,
@@ -195,23 +316,5 @@ const styles = StyleSheet.create({
   categoryAmount: {
     fontSize: FONT_SIZE.md,
     fontWeight: FONT_WEIGHT.semibold,
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: SPACING.xxl,
-  },
-  emptyEmoji: {
-    fontSize: 48,
-    marginBottom: SPACING.md,
-  },
-  emptyText: {
-    fontSize: FONT_SIZE.lg,
-    color: COLORS.textSecondary,
-    fontWeight: FONT_WEIGHT.semibold,
-  },
-  emptySubtext: {
-    fontSize: FONT_SIZE.sm,
-    color: COLORS.textTertiary,
-    marginTop: SPACING.xs,
   },
 });

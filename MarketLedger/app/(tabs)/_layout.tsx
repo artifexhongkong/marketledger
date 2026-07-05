@@ -3,7 +3,7 @@ import { Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../src/constants/colors';
 
-/** 底部 Tab 導航佈局 */
+/** 底部 Tab 導航佈局 — 6 個 tab */
 export default function TabsLayout() {
   return (
     <Tabs
@@ -27,6 +27,10 @@ export default function TabsLayout() {
           paddingTop: 8,
         },
         headerShadowVisible: false,
+        tabBarLabelStyle: {
+          fontSize: 10,
+          fontWeight: '500',
+        },
       }}
     >
       <Tabs.Screen
@@ -41,6 +45,13 @@ export default function TabsLayout() {
         options={{
           title: '記帳',
           tabBarIcon: ({ color, size }) => <Ionicons name="create" size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="transactions"
+        options={{
+          title: '記錄',
+          tabBarIcon: ({ color, size }) => <Ionicons name="list" size={size} color={color} />,
         }}
       />
       <Tabs.Screen

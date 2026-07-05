@@ -15,40 +15,24 @@ interface SummaryCardProps {
 export function SummaryCard({ income, expense, profit, currency }: SummaryCardProps) {
   return (
     <View style={styles.container}>
-      {/* 收入 */}
       <View style={styles.column}>
         <Text style={styles.label}>收入</Text>
         <Text style={[styles.amount, { color: COLORS.income }]}>
           {formatCurrency(income, currency)}
         </Text>
       </View>
-
-      {/* 分隔線 */}
       <View style={styles.divider} />
-
-      {/* 支出 */}
       <View style={styles.column}>
         <Text style={styles.label}>支出</Text>
         <Text style={[styles.amount, { color: COLORS.expense }]}>
           {formatCurrency(expense, currency)}
         </Text>
       </View>
-
-      {/* 分隔線 */}
       <View style={styles.divider} />
-
-      {/* 利潤 */}
       <View style={styles.column}>
         <Text style={styles.label}>利潤</Text>
-        <Text
-          style={[
-            styles.amount,
-            {
-              color: profit >= 0 ? COLORS.income : COLORS.expense,
-            },
-          ]}
-        >
-          {profit >= 0 ? '+' : ''}
+        <Text style={[styles.amount, { color: profit >= 0 ? COLORS.income : COLORS.expense }]}>
+          {profit >= 0 ? '+' : '−'}
           {formatCurrency(Math.abs(profit), currency)}
         </Text>
       </View>
@@ -68,23 +52,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.borderLight,
   },
-  column: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  label: {
-    fontSize: FONT_SIZE.sm,
-    color: COLORS.textSecondary,
-    marginBottom: SPACING.xs,
-  },
-  amount: {
-    fontSize: FONT_SIZE.xl,
-    fontWeight: FONT_WEIGHT.semibold,
-    color: COLORS.text,
-  },
-  divider: {
-    width: 1,
-    height: 40,
-    backgroundColor: COLORS.divider,
-  },
+  column: { alignItems: 'center', flex: 1 },
+  label: { fontSize: FONT_SIZE.xs, color: COLORS.textSecondary, marginBottom: SPACING.xs },
+  amount: { fontSize: FONT_SIZE.xl, fontWeight: FONT_WEIGHT.semibold },
+  divider: { width: 1, height: 40, backgroundColor: COLORS.divider },
 });

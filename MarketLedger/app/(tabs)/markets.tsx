@@ -1,279 +1,183 @@
 import React from 'react';
-import { ScrollView, StyleSheet, View, Text, TouchableOpacity, Alert } from 'react-native';
+import { ScrollView, StyleSheet, View, Text, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useMarketStore } from '../../src/stores/marketStore';
-import { useTransactionStore } from '../../src/stores/transactionStore';
-import { useSettingsStore } from '../../src/stores/settingsStore';
-import { MarketCard } from '../../src/components/MarketCard';
-import { MarketData } from '../../src/constants';
-import { formatCurrency } from '../../src/utils/formatCurrency';
-import { calculateMarketSummary } from '../../src/utils/calculateProfit';
 import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZE, FONT_WEIGHT } from '../../src/constants/colors';
 
-/** 市集頁面 — 全球市集列表 + 設定當前市集 */
+/** 市集頁面 — 功能開發中（與市集主辦方洽談中） */
 export default function MarketsPage() {
-  const markets = useMarketStore((s) => s.markets);
-  const currentMarketId = useMarketStore((s) => s.currentMarketId);
-  const setCurrentMarket = useMarketStore((s) => s.setCurrentMarket);
-  const transactions = useTransactionStore((s) => s.transactions);
-  const currency = useSettingsStore((s) => s.currency);
+  const [showPreview, setShowPreview] = React.useState(false);
 
-  const [filterCity, setFilterCity] = React.useState<string>('all');
-  const [filterType, setFilterType] = React.useState<string>('all');
-
-  // 過濾
-  const filtered = markets.filter((m) => {
-    if (filterCity !== 'all' && m.city !== filterCity) return false;
-    if (filterType !== 'all' && m.type !== filterType) return false;
-    return true;
-  });
-
-  const handleSelectMarket = (market: MarketData) => {
-    if (currentMarketId === market.id) {
-      Alert.alert(
-        '取消市集',
-        `目前選中：${market.name}\n要取消選擇嗎？`,
-        [
-          { text: '取消', style: 'cancel' },
-          { text: '取消選擇', onPress: () => setCurrentMarket(null) },
-        ]
-      );
-    } else {
-      setCurrentMarket(market.id);
-      Alert.alert('✓ 已切換市集', `目前市集：${market.name}\n之後記帳會自動帶入此市集`);
-    }
-  };
+  const futureFeatures = [
+    { icon: '🗺️', text: '全球市集行事曆與報名' },
+    { icon: '📊', text: '各市集營業額情報' },
+    { icon: '🤝', text: '線上攤位申請' },
+    { icon: '💡', text: '市集比較與建議' },
+  ];
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
         {/* 標題 */}
-        <Text style={styles.pageTitle}>🌏 全球市集</Text>
-        <Text style={styles.pageSubtitle}>
-          點擊市集設為「當前市集」，記帳時會自動帶入
-        </Text>
-
-        {/* 當前市集 */}
-        {currentMarketId && (
-          <View style={styles.currentBox}>
-            <Text style={styles.currentLabel}>📍 當前市集</Text>
-            <Text style={styles.currentName}>
-              {markets.find((m) => m.id === currentMarketId)?.name ?? ''}
-            </Text>
-          </View>
-        )}
-
-        {/* 城市篩選 */}
-        <View style={styles.filterRow}>
-          <Text style={styles.filterLabel}>城市：</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {[
-              { key: 'all', label: '全部' },
-              { key: 'HK', label: '香港' },
-              { key: 'TW', label: '台灣' },
-              { key: 'TH', label: '泰國' },
-              { key: 'MY', label: '馬來西亞' },
-              { key: 'SG', label: '新加坡' },
-            ].map((c) => (
-              <TouchableOpacity
-                key={c.key}
-                style={[styles.filterChip, filterCity === c.key && styles.filterChipActive]}
-                onPress={() => setFilterCity(c.key)}
-              >
-                <Text style={[styles.filterChipText, filterCity === c.key && { color: '#FFF' }]}>
-                  {c.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+        <View style={styles.header}>
+          <Text style={styles.title}>🌏 全球市集</Text>
+          <Text style={styles.subtitle}>探索世界各地的市集機會</Text>
         </View>
 
-        {/* 類型篩選 */}
-        <View style={styles.filterRow}>
-          <Text style={styles.filterLabel}>類型：</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {[
-              { key: 'all', label: '全部' },
-              { key: 'night', label: '夜市' },
-              { key: 'weekend', label: '週末' },
-              { key: 'pop-up', label: '快閃' },
-              { key: 'festival', label: '節慶' },
-            ].map((t) => (
-              <TouchableOpacity
-                key={t.key}
-                style={[styles.filterChip, filterType === t.key && styles.filterChipActive]}
-                onPress={() => setFilterType(t.key)}
-              >
-                <Text style={[styles.filterChipText, filterType === t.key && { color: '#FFF' }]}>
-                  {t.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-
-        {/* 市集列表 */}
-        {filtered.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyEmoji}>🗺️</Text>
-            <Text style={styles.emptyText}>沒有符合條件的市集</Text>
+        {/* Coming soon 主卡片 */}
+        <View style={styles.comingSoonCard}>
+          {/* 裝飾光點效果用簡單的背景色模擬 */}
+          <View style={styles.comingSoonIcon}>
+            <Text style={styles.comingSoonIconEmoji}>🤝</Text>
           </View>
-        ) : (
-          <View style={styles.list}>
-            {filtered.map((market) => {
-              const summary = calculateMarketSummary(transactions, market.id);
-              const isCurrent = currentMarketId === market.id;
-              return (
-                <View key={market.id} style={styles.marketWrap}>
-                  <MarketCard
-                    market={market}
-                    onPress={() => handleSelectMarket(market)}
-                  />
-                  {/* 營業額小卡 */}
-                  {summary.transactionCount > 0 && (
-                    <View style={styles.marketStats}>
-                      <Text style={styles.marketStatsLabel}>
-                        已記錄 {summary.transactionCount} 筆 · 營業額：
-                      </Text>
-                      <Text style={[styles.marketStatsValue, { color: summary.profit >= 0 ? COLORS.income : COLORS.expense }]}>
-                        {formatCurrency(summary.profit, currency)}
-                      </Text>
-                    </View>
-                  )}
-                  {/* 選中標記 */}
-                  {isCurrent && (
-                    <View style={styles.selectedBadge}>
-                      <Text style={styles.selectedBadgeText}>✓ 目前選中</Text>
-                    </View>
-                  )}
+          <View style={styles.comingSoonBadge}>
+            <Text style={styles.comingSoonBadgeText}>✨ 功能開發中</Text>
+          </View>
+          <Text style={styles.comingSoonTitle}>
+            全球市集功能{'\n'}正在與各國市集主辦方洽談
+          </Text>
+          <Text style={styles.comingSoonDesc}>
+            我們正積極與香港 PMQ、JFFLUX、台灣簡單生活節、泰國 Chatuchak、馬來西亞 Pasar Malam 等市集主辦方接洽合作。完成後將提供：
+          </Text>
+
+          {/* 未來功能清單 */}
+          <View style={styles.featureList}>
+            {futureFeatures.map((f, i) => (
+              <View key={i} style={styles.featureItem}>
+                <View style={styles.featureIcon}>
+                  <Text style={styles.featureIconText}>{f.icon}</Text>
                 </View>
-              );
-            })}
+                <Text style={styles.featureText}>{f.text}</Text>
+                <Text style={styles.featureLock}>🔒</Text>
+              </View>
+            ))}
           </View>
-        )}
+
+          {/* 預計上線 */}
+          <View style={styles.timeline}>
+            <View>
+              <Text style={styles.timelineLabel}>預計上線</Text>
+              <Text style={styles.timelineValue}>V3 版本 · 2026 Q4</Text>
+            </View>
+            <TouchableOpacity onPress={() => setShowPreview(!showPreview)}>
+              <Text style={styles.timelineLink}>
+                {showPreview ? '收起預覽' : '查看設計草圖 →'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Beta 等候名單 */}
+        <View style={styles.betaCard}>
+          <View style={styles.betaIcon}>
+            <Text style={styles.betaIconText}>💡</Text>
+          </View>
+          <View style={styles.betaContent}>
+            <Text style={styles.betaTitle}>想搶先體驗？</Text>
+            <Text style={styles.betaDesc}>
+              我們正在徵求 50 位種子用戶參與 Beta 測試，並優先獲得市集情報。如果你是市集主辦方或常態攤商，也歡迎與我們接洽合作。
+            </Text>
+            <View style={styles.betaActions}>
+              <TouchableOpacity style={styles.betaBtnPrimary}>
+                <Text style={styles.betaBtnPrimaryText}>加入 Beta 等候名單</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.betaBtnSecondary}>
+                <Text style={styles.betaBtnSecondaryText}>了解合作方案</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  content: {
-    padding: SPACING.lg,
-    gap: SPACING.lg,
-  },
-  pageTitle: {
-    fontSize: FONT_SIZE.xxxl,
-    fontWeight: FONT_WEIGHT.bold,
-    color: COLORS.text,
-  },
-  pageSubtitle: {
-    fontSize: FONT_SIZE.md,
-    color: COLORS.textSecondary,
-  },
-  currentBox: {
-    backgroundColor: COLORS.primary + '15',
-    borderRadius: BORDER_RADIUS.md,
-    padding: SPACING.md,
-    borderWidth: 1.5,
-    borderColor: COLORS.primary,
-    gap: 4,
-  },
-  currentLabel: {
-    fontSize: FONT_SIZE.xs,
-    color: COLORS.primary,
-    fontWeight: FONT_WEIGHT.semibold,
-  },
-  currentName: {
-    fontSize: FONT_SIZE.lg,
-    color: COLORS.text,
-    fontWeight: FONT_WEIGHT.bold,
-  },
-  filterRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.sm,
-  },
-  filterLabel: {
-    fontSize: FONT_SIZE.sm,
-    color: COLORS.textSecondary,
-    fontWeight: FONT_WEIGHT.semibold,
-  },
-  filterChip: {
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.xs,
-    borderRadius: BORDER_RADIUS.full,
-    backgroundColor: COLORS.card,
+  safe: { flex: 1, backgroundColor: COLORS.background },
+  container: { flex: 1, backgroundColor: COLORS.background },
+  content: { padding: SPACING.lg, gap: SPACING.lg },
+  header: { gap: SPACING.xs },
+  title: { fontSize: FONT_SIZE.xxxl, fontWeight: FONT_WEIGHT.bold, color: COLORS.text },
+  subtitle: { fontSize: FONT_SIZE.md, color: COLORS.textSecondary },
+  // Coming soon
+  comingSoonCard: {
+    backgroundColor: COLORS.primary + '08',
+    borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.xl,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    marginRight: SPACING.xs,
-  },
-  filterChipActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  filterChipText: {
-    fontSize: FONT_SIZE.sm,
-    color: COLORS.text,
-    fontWeight: '500',
-  },
-  list: {
+    borderColor: COLORS.primary + '30',
     gap: SPACING.md,
   },
-  marketWrap: {
-    position: 'relative',
-    gap: SPACING.xs,
+  comingSoonIcon: {
+    width: 40, height: 40, borderRadius: 12,
+    backgroundColor: COLORS.primary + '15',
+    alignItems: 'center', justifyContent: 'center',
   },
-  marketStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    backgroundColor: COLORS.card,
-    borderRadius: BORDER_RADIUS.sm,
-    borderWidth: 1,
-    borderColor: COLORS.borderLight,
-  },
-  marketStatsLabel: {
-    fontSize: FONT_SIZE.xs,
-    color: COLORS.textSecondary,
-  },
-  marketStatsValue: {
-    fontSize: FONT_SIZE.md,
-    fontWeight: FONT_WEIGHT.bold,
-  },
-  selectedBadge: {
-    position: 'absolute',
-    top: SPACING.sm,
-    right: SPACING.sm,
-    backgroundColor: COLORS.primary,
+  comingSoonIconEmoji: { fontSize: 22 },
+  comingSoonBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: COLORS.accent + '25',
     paddingHorizontal: SPACING.sm,
     paddingVertical: 4,
     borderRadius: BORDER_RADIUS.full,
   },
-  selectedBadgeText: {
-    fontSize: FONT_SIZE.xs,
-    color: '#FFF',
-    fontWeight: FONT_WEIGHT.bold,
+  comingSoonBadgeText: { fontSize: FONT_SIZE.xs, fontWeight: '600', color: COLORS.accent },
+  comingSoonTitle: {
+    fontSize: FONT_SIZE.lg, fontWeight: '600', color: COLORS.text, lineHeight: 26,
   },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: SPACING.xxl,
+  comingSoonDesc: {
+    fontSize: FONT_SIZE.xs, color: COLORS.textSecondary, lineHeight: 18,
   },
-  emptyEmoji: {
-    fontSize: 48,
-    marginBottom: SPACING.md,
+  featureList: { gap: SPACING.sm, marginTop: SPACING.xs },
+  featureItem: {
+    flexDirection: 'row', alignItems: 'center', gap: SPACING.sm,
+    backgroundColor: COLORS.card + 'CC',
+    borderRadius: BORDER_RADIUS.sm,
+    paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm,
   },
-  emptyText: {
-    fontSize: FONT_SIZE.md,
-    color: COLORS.textSecondary,
+  featureIcon: {
+    width: 24, height: 24, borderRadius: 6,
+    backgroundColor: COLORS.muted,
+    alignItems: 'center', justifyContent: 'center',
   },
+  featureIconText: { fontSize: 14 },
+  featureText: { flex: 1, fontSize: FONT_SIZE.xs, color: COLORS.text },
+  featureLock: { fontSize: 12, color: COLORS.textTertiary },
+  timeline: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingTop: SPACING.md, borderTopWidth: 1, borderTopColor: COLORS.border,
+  },
+  timelineLabel: { fontSize: 10, color: COLORS.textSecondary, textTransform: 'uppercase', letterSpacing: 1 },
+  timelineValue: { fontSize: FONT_SIZE.sm, fontWeight: '600', color: COLORS.text, marginTop: 2 },
+  timelineLink: { fontSize: FONT_SIZE.xs, fontWeight: '600', color: COLORS.primary },
+  // Beta card
+  betaCard: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.card,
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.lg,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: COLORS.border,
+    gap: SPACING.md,
+  },
+  betaIcon: {
+    width: 32, height: 32, borderRadius: 16,
+    backgroundColor: COLORS.accent + '20',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  betaIconText: { fontSize: 16 },
+  betaContent: { flex: 1, gap: SPACING.xs },
+  betaTitle: { fontSize: FONT_SIZE.md, fontWeight: '600', color: COLORS.text },
+  betaDesc: { fontSize: FONT_SIZE.xs, color: COLORS.textSecondary, lineHeight: 18 },
+  betaActions: { flexDirection: 'row', gap: SPACING.sm, marginTop: SPACING.sm },
+  betaBtnPrimary: {
+    flex: 1, backgroundColor: COLORS.primary, borderRadius: BORDER_RADIUS.sm,
+    paddingVertical: SPACING.sm, alignItems: 'center',
+  },
+  betaBtnPrimaryText: { color: '#FFFFFF', fontSize: FONT_SIZE.xs, fontWeight: '600' },
+  betaBtnSecondary: {
+    flex: 1, borderWidth: 1, borderColor: COLORS.border, borderRadius: BORDER_RADIUS.sm,
+    paddingVertical: SPACING.sm, alignItems: 'center',
+  },
+  betaBtnSecondaryText: { color: COLORS.primary, fontSize: FONT_SIZE.xs, fontWeight: '600' },
 });

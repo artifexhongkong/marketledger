@@ -1,52 +1,63 @@
-// 設計系統色板
+// 設計系統色板 — v2 現代專業金融風格
 
 export const COLORS = {
-  // 主色 — 暖橘（市集活力感）
-  primary: '#FF6B35',
-  primaryLight: '#FF8C5A',
-  primaryDark: '#E55A25',
+  // 主色 — 深藍（取代原本的珊瑚橘）
+  primary: '#0F1F3D',
+  primaryLight: '#1E3A5F',
+  primaryDark: '#0A1530',
 
-  // 收入／利潤 — 深綠
-  income: '#2D6A4F',
-  incomeLight: '#40916C',
+  // 收入／利潤 — 翡翠綠
+  income: '#059669',
+  incomeLight: '#10B981',
+  incomeBg: '#D1FAE5',
 
-  // 支出 — 珊瑚紅
-  expense: '#E63946',
-  expenseLight: '#FF6B6B',
+  // 支出 — 玫瑰紅
+  expense: '#E11D48',
+  expenseLight: '#F43F5E',
+  expenseBg: '#FFE4E6',
+
+  // 強調色 — 暖金
+  accent: '#D4A574',
+  accentLight: '#E5C9A0',
+  accentBg: '#FEF3C7',
 
   // 背景
-  background: '#F8F9FA',
+  background: '#FAFAF7',
   card: '#FFFFFF',
-  cardPressed: '#F0F0F0',
+  cardPressed: '#F5F5F0',
+  muted: '#F5F5F0',
 
   // 文字
-  text: '#1D3557',
-  textSecondary: '#6C757D',
-  textTertiary: '#ADB5BD',
+  text: '#1A1F2E',
+  textSecondary: '#6B7280',
+  textTertiary: '#9CA3AF',
   textInverse: '#FFFFFF',
 
   // 邊框
-  border: '#E0E0E0',
-  borderLight: '#F0F0F0',
+  border: '#E5E7EB',
+  borderLight: '#F3F4F6',
 
   // 分割線
-  divider: '#EEEEEE',
+  divider: '#F3F4F6',
 
   // 警示
-  warning: '#F4A261',
-  success: '#2A9D8F',
-  error: '#E63946',
+  warning: '#F59E0B',
+  warningBg: '#FEF3C7',
+  success: '#10B981',
+  successBg: '#D1FAE5',
+  error: '#E11D48',
+  errorBg: '#FFE4E6',
 
   // 陰影
-  shadow: 'rgba(0, 0, 0, 0.08)',
+  shadow: 'rgba(15, 31, 61, 0.08)',
 } as const;
 
 // 圓角
 export const BORDER_RADIUS = {
-  sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 24,
+  sm: 6,
+  md: 10,
+  lg: 14,
+  xl: 20,
   full: 999,
 } as const;
 
@@ -62,10 +73,10 @@ export const SPACING = {
 
 // 字體大小
 export const FONT_SIZE = {
-  xs: 12,
-  sm: 14,
-  md: 16,
-  lg: 18,
+  xs: 11,
+  sm: 13,
+  md: 15,
+  lg: 17,
   xl: 22,
   xxl: 28,
   xxxl: 36,

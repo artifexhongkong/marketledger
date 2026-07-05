@@ -8,20 +8,19 @@ import {
   Alert,
   TextInput,
   Modal,
-  FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { useTransactionStore } from '../../src/stores/transactionStore';
 import { useProductStore } from '../../src/stores/productStore';
 import { useMarketStore } from '../../src/stores/marketStore';
 import { useSettingsStore } from '../../src/stores/settingsStore';
+import { ProductButton } from '../../src/components/ProductButton';
 import { AmountInput } from '../../src/components/AmountInput';
 import { CategoryChip } from '../../src/components/CategoryChip';
 import {
   CATEGORIES,
-  CURRENCIES,
   PAYMENT_METHODS,
-  DEFAULT_MARKETS,
 } from '../../src/constants';
 import {
   COLORS,
@@ -31,18 +30,17 @@ import {
   FONT_WEIGHT,
 } from '../../src/constants/colors';
 import {
-  Transaction,
   TransactionType,
   CategoryId,
   PaymentMethod,
-  CurrencyCode,
-  Product,
 } from '../../src/types';
 
-/** 記帳頁面 — 快速記帳 + 商品管理 */
+/** 主要支付方式（前 5 個，置頂大按鈕） */
+const TOP_PAYMENTS: PaymentMethod[] = ['cash', 'payme', 'fps', 'alipayhk', 'wechat_pay'];
+
+/** 記帳頁面 */
 export default function ExpensePage() {
   const [mode, setMode] = React.useState<'record' | 'products'>('record');
-
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -72,805 +70,533 @@ export default function ExpensePage() {
   );
 }
 
-// ─────────────────────────────────────────────────────────────
-// 記帳視圖
-// ─────────────────────────────────────────────────────────────
-
 function RecordView() {
-  const currency = useSettingsStore((s) => s.currency);
-  const addTransaction = useTransactionStore((s) => s.addTransaction);
-  const products = useProductStore((s) => s.products);
-  const currentMarketId = useMarketStore((s) => s.currentMarketId);
-  const markets = useMarketStore((s) => s.markets);
-  const setCurrentMarket = useMarketStore((s) => s.setCurrentMarket);
-
+  const router = useRouter();
+  const { currency, products, currentMarketId, markets, addTransaction, setCurrentMarket } = useStores();
+  const [payment, setPayment] = React.useState<PaymentMethod>('cash');
+  const [showAdvanced, setShowAdvanced] = React.useState(false);
   const [txType, setTxType] = React.useState<TransactionType>('expense');
-  const [selectedCategory, setSelectedCategory] = React.useState<CategoryId | ''>('');
-  const [amountStr, setAmountStr] = React.useState('');
-  const [paymentMethod, setPaymentMethod] = React.useState<PaymentMethod>('cash');
+  const [amount, setAmount] = React.useState('');
+  const [category, setCategory] = React.useState<CategoryId | ''>('');
   const [note, setNote] = React.useState('');
   const [showMarketPicker, setShowMarketPicker] = React.useState(false);
 
-  const filteredCategories = CATEGORIES.filter((c) => c.type === txType);
+  // Toast 狀態
+  const [toast, setToast] = React.useState<{ txId: string; name: string; amount: number } | null>(null);
+  const [lastTx, setLastTx] = React.useState<{ txId: string; name: string; amount: number } | null>(null);
+  const toastTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { deleteTransaction } = useTransactionStore();
+
   const currentMarket = markets.find((m) => m.id === currentMarketId);
 
-  // 切換收入/支出時清空分類
-  const handleTypeSwitch = (type: TransactionType) => {
-    if (type !== txType) {
-      setTxType(type);
-      setSelectedCategory('');
-    }
+  React.useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    };
+  }, []);
+
+  const handleRecorded = (txId: string, name: string, amount: number, qty: number) => {
+    setToast({ txId, name, amount });
+    setLastTx({ txId, name, amount });
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => setToast(null), 5000);
   };
 
-  // 商品快捷記帳（一鍵記錄該商品的銷售）
-  const handleQuickProduct = (product: Product) => {
-    addTransaction({
-      type: 'income',
-      amount: product.price,
-      currency,
-      category: 'sales',
-      paymentMethod,
-      productId: product.id,
-      note: product.name,
-      marketId: currentMarketId ?? undefined,
-    });
-    Alert.alert('✓ 已記錄', `${product.name} ${formatMoney(product.price, currency)}`);
+  const handleUndo = () => {
+    if (!lastTx) return;
+    deleteTransaction(lastTx.txId);
+    setToast(null);
+    setLastTx(null);
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
   };
 
-  const handleRecord = () => {
-    const amount = parseFloat(amountStr);
-    if (!amount || amount <= 0) {
-      Alert.alert('請輸入金額');
-      return;
-    }
-    if (!selectedCategory) {
-      Alert.alert('請選擇分類');
-      return;
-    }
-
+  const handleSubmit = () => {
+    const amt = parseFloat(amount);
+    if (!amt || amt <= 0) { Alert.alert('請輸入金額'); return; }
+    if (!category) { Alert.alert('請選擇分類'); return; }
     addTransaction({
       type: txType,
-      amount,
+      amount: amt,
       currency,
-      category: selectedCategory as CategoryId,
-      paymentMethod,
+      category: category as CategoryId,
+      paymentMethod: payment,
       note: note.trim() || undefined,
-      marketId: currentMarketId ?? undefined,
+      marketId: currentMarketId || undefined,
     });
-
-    // 重置
-    setAmountStr('');
-    setSelectedCategory('');
+    setAmount('');
+    setCategory('');
     setNote('');
-    Alert.alert(
-      '✓ 已記錄',
-      `${txType === 'income' ? '收入' : '支出'} ${formatMoney(amount, currency)} 已加入`
-    );
+    setShowAdvanced(false);
+  };
+
+  const paymentLabels: Record<string, string> = {
+    cash: '現金', payme: 'PayMe', fps: 'FPS', alipayhk: 'AlipayHK', wechat_pay: 'WeChat',
   };
 
   return (
-    <>
-      {/* 商品快捷按鈕（收銀機風格） */}
-      {products.length > 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>⚡ 快速記帳（點商品即記錄銷售）</Text>
-          <View style={styles.productGrid}>
-            {products.slice(0, 8).map((p) => (
-              <TouchableOpacity
-                key={p.id}
-                style={styles.quickProductBtn}
-                onPress={() => handleQuickProduct(p)}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.quickProductName} numberOfLines={1}>{p.name}</Text>
-                <Text style={styles.quickProductPrice}>{formatMoney(p.price, currency)}</Text>
-              </TouchableOpacity>
-            ))}
+    <View style={styles.recordWrap}>
+      {/* Toast */}
+      {toast && (
+        <View style={styles.toast}>
+          <View style={styles.toastIcon}>
+            <Text style={styles.toastCheck}>✓</Text>
           </View>
+          <View style={styles.toastContent}>
+            <Text style={styles.toastLabel}>已記錄銷售 · {paymentLabels[payment] || payment}</Text>
+            <Text style={styles.toastText}>{toast.name} · {formatMoney(toast.amount, currency)}</Text>
+          </View>
+          <TouchableOpacity onPress={handleUndo} style={styles.toastUndo}>
+            <Text style={styles.toastUndoText}>↩ 撤銷</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setToast(null)} style={styles.toastClose}>
+            <Text style={styles.toastCloseText}>✕</Text>
+          </TouchableOpacity>
         </View>
       )}
 
-      {/* 收入 / 支出切換 */}
-      <View style={styles.typeToggle}>
-        <TouchableOpacity
-          style={[styles.typeBtn, txType === 'expense' && styles.typeBtnExpense]}
-          onPress={() => handleTypeSwitch('expense')}
-        >
-          <Text style={[styles.typeBtnText, txType === 'expense' && { color: '#FFF' }]}>
-            💸 支出
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.typeBtn, txType === 'income' && styles.typeBtnIncome]}
-          onPress={() => handleTypeSwitch('income')}
-        >
-          <Text style={[styles.typeBtnText, txType === 'income' && { color: '#FFF' }]}>
-            💰 收入
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* 金額輸入 */}
-      <AmountInput
-        displayValue={amountStr}
-        onAmountChange={setAmountStr}
-        placeholder="0.00"
-      />
-
-      {/* 分類選擇 */}
+      {/* 支付方式 — 5 大按鈕 */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>分類</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll}>
-          {filteredCategories.map((cat) => (
-            <CategoryChip
-              key={cat.id}
-              category={cat}
-              selected={selectedCategory === cat.id}
-              onPress={() => setSelectedCategory(cat.id)}
-            />
-          ))}
-        </ScrollView>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>💳 支付方式</Text>
+          <Text style={styles.sectionHint}>點選後套用至所有記帳</Text>
+        </View>
+        <View style={styles.paymentGrid}>
+          {TOP_PAYMENTS.map((m) => {
+            const active = payment === m;
+            const info = PAYMENT_METHODS[m];
+            return (
+              <TouchableOpacity
+                key={m}
+                style={[styles.paymentBtn, active && styles.paymentBtnActive]}
+                onPress={() => setPayment(m)}
+              >
+                <Text style={styles.paymentIcon}>{info.icon}</Text>
+                <Text style={[styles.paymentLabel, active && styles.paymentLabelActive]}>
+                  {paymentLabels[m] || info.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
       </View>
 
-      {/* 支付方式 */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>支付方式</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll}>
-          {(Object.keys(PAYMENT_METHODS) as PaymentMethod[]).map((method) => (
-            <TouchableOpacity
-              key={method}
-              style={[
-                styles.paymentChip,
-                paymentMethod === method && styles.paymentChipActive,
-              ]}
-              onPress={() => setPaymentMethod(method)}
-            >
-              <Text style={[styles.paymentChipText, paymentMethod === method && { color: '#FFF' }]}>
-                {PAYMENT_METHODS[method].icon} {PAYMENT_METHODS[method].label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
+      {/* 商品快捷按鈕 */}
+      {products.length > 0 ? (
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>⚡ 點商品即記錄銷售</Text>
+            <View style={styles.sectionHintRow}>
+              <Text style={styles.sectionHint}>長按 ↑+1 ↓−1</Text>
+              {lastTx && (
+                <TouchableOpacity onPress={handleUndo}>
+                  <Text style={styles.undoLink}>↩ 撤銷上筆</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+          <View style={styles.productGrid}>
+            {products.map((p) => (
+              <ProductButton
+                key={p.id}
+                product={p}
+                payment={payment}
+                currentMarketId={currentMarketId}
+                onRecorded={handleRecorded}
+              />
+            ))}
+          </View>
+        </View>
+      ) : (
+        <View style={styles.emptyProducts}>
+          <Text style={styles.emptyProductsEmoji}>📦</Text>
+          <Text style={styles.emptyProductsText}>尚無商品</Text>
+          <Text style={styles.emptyProductsHint}>切換到「商品管理」建立商品目錄</Text>
+        </View>
+      )}
 
-      {/* 市集選擇 */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>市集</Text>
-        <TouchableOpacity
-          style={styles.marketPicker}
-          onPress={() => setShowMarketPicker(true)}
-        >
-          <Text style={styles.marketPickerText}>
-            {currentMarket ? `🏪 ${currentMarket.name}` : '🌐 不指定市集'}
-          </Text>
-          <Text style={styles.marketPickerArrow}>▼</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* 備註 */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>備註（選填）</Text>
-        <TextInput
-          style={styles.noteInput}
-          value={note}
-          onChangeText={setNote}
-          placeholder="例如：客人買兩份、補貨..."
-          placeholderTextColor={COLORS.textTertiary}
-          multiline
-          maxLength={100}
-        />
-      </View>
-
-      {/* 確認按鈕 */}
-      <TouchableOpacity style={styles.recordBtn} onPress={handleRecord} activeOpacity={0.8}>
-        <Text style={styles.recordBtnText}>✓ 完成記帳</Text>
+      {/* 手動記帳 */}
+      <TouchableOpacity
+        style={styles.advancedToggle}
+        onPress={() => setShowAdvanced(!showAdvanced)}
+      >
+        <Text style={styles.advancedToggleText}>⚙️ 手動記帳（自訂金額 / 支出 / 分類）</Text>
+        <Text style={styles.advancedToggleArrow}>{showAdvanced ? '▲' : '▼'}</Text>
       </TouchableOpacity>
 
-      {/* 市集選擇 Modal */}
-      <Modal visible={showMarketPicker} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>選擇市集</Text>
-            <ScrollView style={styles.modalList}>
+      {showAdvanced && (
+        <View style={styles.advancedCard}>
+          {/* 收入/支出 */}
+          <View style={styles.typeToggle}>
+            <TouchableOpacity
+              style={[styles.typeBtn, txType === 'expense' && styles.typeBtnExpense]}
+              onPress={() => { setTxType('expense'); setCategory(''); }}
+            >
+              <Text style={[styles.typeBtnText, txType === 'expense' && styles.typeBtnTextActive]}>💸 支出</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.typeBtn, txType === 'income' && styles.typeBtnIncome]}
+              onPress={() => { setTxType('income'); setCategory(''); }}
+            >
+              <Text style={[styles.typeBtnText, txType === 'income' && styles.typeBtnTextActive]}>💰 收入</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* 金額 */}
+          <Text style={styles.fieldLabel}>金額</Text>
+          <AmountInput displayValue={amount} onAmountChange={setAmount} placeholder="0.00" />
+
+          {/* 分類 */}
+          <Text style={styles.fieldLabel}>分類</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={styles.chipRow}>
+              {CATEGORIES.filter((c) => c.type === txType).map((c) => (
+                <CategoryChip
+                  key={c.id}
+                  category={c}
+                  selected={category === c.id}
+                  onPress={() => setCategory(c.id)}
+                />
+              ))}
+            </View>
+          </ScrollView>
+
+          {/* 市集 */}
+          <Text style={styles.fieldLabel}>市集</Text>
+          <TouchableOpacity
+            style={styles.marketPicker}
+            onPress={() => setShowMarketPicker(!showMarketPicker)}
+          >
+            <Text style={styles.marketPickerText}>
+              {currentMarket ? `🏪 ${currentMarket.name}` : '🌐 不指定市集'}
+            </Text>
+            <Text style={styles.marketPickerArrow}>▼</Text>
+          </TouchableOpacity>
+          {showMarketPicker && (
+            <View style={styles.marketList}>
               <TouchableOpacity
-                style={[
-                  styles.modalItem,
-                  currentMarketId === null && styles.modalItemActive,
-                ]}
-                onPress={() => {
-                  setCurrentMarket(null);
-                  setShowMarketPicker(false);
-                }}
+                style={styles.marketItem}
+                onPress={() => { setCurrentMarket(null); setShowMarketPicker(false); }}
               >
-                <Text style={styles.modalItemText}>🌐 不指定市集</Text>
+                <Text style={styles.marketItemText}>🌐 不指定市集</Text>
               </TouchableOpacity>
               {markets.map((m) => (
                 <TouchableOpacity
                   key={m.id}
-                  style={[
-                    styles.modalItem,
-                    currentMarketId === m.id && styles.modalItemActive,
-                  ]}
-                  onPress={() => {
-                    setCurrentMarket(m.id);
-                    setShowMarketPicker(false);
-                  }}
+                  style={[styles.marketItem, currentMarketId === m.id && styles.marketItemActive]}
+                  onPress={() => { setCurrentMarket(m.id); setShowMarketPicker(false); }}
                 >
-                  <Text style={styles.modalItemText}>🏪 {m.name}</Text>
-                  <Text style={styles.modalItemSub}>{m.location}</Text>
+                  <Text style={styles.marketItemText}>🏪 {m.name}</Text>
                 </TouchableOpacity>
               ))}
-            </ScrollView>
-            <TouchableOpacity
-              style={styles.modalClose}
-              onPress={() => setShowMarketPicker(false)}
-            >
-              <Text style={styles.modalCloseText}>取消</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-    </>
-  );
-}
+            </View>
+          )}
 
-// ─────────────────────────────────────────────────────────────
-// 商品管理視圖
-// ─────────────────────────────────────────────────────────────
+          {/* 備註 */}
+          <Text style={styles.fieldLabel}>備註（選填）</Text>
+          <TextInput
+            style={styles.noteInput}
+            value={note}
+            onChangeText={setNote}
+            placeholder="例如：客人買兩份..."
+            placeholderTextColor={COLORS.textTertiary}
+            multiline
+            maxLength={100}
+          />
 
-function ProductsView() {
-  const products = useProductStore((s) => s.products);
-  const addProduct = useProductStore((s) => s.addProduct);
-  const deleteProduct = useProductStore((s) => s.deleteProduct);
-  const currency = useSettingsStore((s) => s.currency);
-
-  const [showForm, setShowForm] = React.useState(false);
-  const [name, setName] = React.useState('');
-  const [price, setPrice] = React.useState('');
-  const [unit, setUnit] = React.useState('個');
-  const [category, setCategory] = React.useState<CategoryId>('sales');
-
-  const handleAdd = () => {
-    const p = parseFloat(price);
-    if (!name.trim()) {
-      Alert.alert('請輸入商品名稱');
-      return;
-    }
-    if (!p || p <= 0) {
-      Alert.alert('請輸入有效單價');
-      return;
-    }
-    addProduct({
-      name: name.trim(),
-      price: p,
-      unit: unit.trim() || '個',
-      categoryId: category,
-    });
-    setName('');
-    setPrice('');
-    setUnit('個');
-    setCategory('sales');
-    setShowForm(false);
-    Alert.alert('✓ 已新增', `${name.trim()} 已加入商品目錄`);
-  };
-
-  const handleDelete = (product: Product) => {
-    Alert.alert('刪除商品', `確定要刪除「${product.name}」嗎？`, [
-      { text: '取消', style: 'cancel' },
-      {
-        text: '刪除',
-        style: 'destructive',
-        onPress: () => deleteProduct(product.id),
-      },
-    ]);
-  };
-
-  return (
-    <View style={{ gap: SPACING.lg }}>
-      <View style={styles.formCard}>
-        {!showForm ? (
-          <TouchableOpacity style={styles.addBtn} onPress={() => setShowForm(true)}>
-            <Text style={styles.addBtnText}>+ 新增商品</Text>
+          <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit}>
+            <Text style={styles.submitBtnText}>✓ 完成記帳</Text>
           </TouchableOpacity>
-        ) : (
-          <>
-            <Text style={styles.formTitle}>新增商品</Text>
-
-            {/* 名稱 */}
-            <View style={styles.formRow}>
-              <Text style={styles.formLabel}>名稱</Text>
-              <TextInput
-                style={styles.formInput}
-                value={name}
-                onChangeText={setName}
-                placeholder="例如：手作餅乾"
-                placeholderTextColor={COLORS.textTertiary}
-              />
-            </View>
-
-            {/* 單價 */}
-            <View style={styles.formRow}>
-              <Text style={styles.formLabel}>單價</Text>
-              <TextInput
-                style={styles.formInput}
-                value={price}
-                onChangeText={setPrice}
-                placeholder="0"
-                placeholderTextColor={COLORS.textTertiary}
-                keyboardType="decimal-pad"
-              />
-            </View>
-
-            {/* 單位 */}
-            <View style={styles.formRow}>
-              <Text style={styles.formLabel}>單位</Text>
-              <TextInput
-                style={styles.formInput}
-                value={unit}
-                onChangeText={setUnit}
-                placeholder="個 / 份 / 杯"
-                placeholderTextColor={COLORS.textTertiary}
-              />
-            </View>
-
-            {/* 分類 */}
-            <View style={styles.formRow}>
-              <Text style={styles.formLabel}>分類</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                <View style={styles.categoryRow}>
-                  {CATEGORIES.filter((c) => c.type === 'income').map((cat) => (
-                    <TouchableOpacity
-                      key={cat.id}
-                      style={[
-                        styles.categoryMini,
-                        category === cat.id && styles.categoryMiniActive,
-                      ]}
-                      onPress={() => setCategory(cat.id)}
-                    >
-                      <Text style={{ fontSize: 12 }}>
-                        {cat.icon} {cat.label}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </ScrollView>
-            </View>
-
-            <View style={styles.formActions}>
-              <TouchableOpacity
-                style={[styles.formActionBtn, styles.cancelBtn]}
-                onPress={() => setShowForm(false)}
-              >
-                <Text style={styles.cancelText}>取消</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.formActionBtn, styles.saveBtn]}
-                onPress={handleAdd}
-              >
-                <Text style={styles.saveText}>儲存</Text>
-              </TouchableOpacity>
-            </View>
-          </>
-        )}
-      </View>
-
-      {products.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyEmoji}>📦</Text>
-          <Text style={styles.emptyText}>尚無商品</Text>
-          <Text style={styles.emptySubtext}>點擊「新增商品」開始建立商品目錄{'\n'}建立後即可在記帳頁一鍵記錄銷售</Text>
-        </View>
-      ) : (
-        <View style={styles.productList}>
-          {products.map((p) => {
-            const cat = CATEGORIES.find((c) => c.id === p.categoryId);
-            return (
-              <TouchableOpacity
-                key={p.id}
-                style={styles.productItem}
-                onLongPress={() => handleDelete(p)}
-                activeOpacity={0.7}
-              >
-                <View style={styles.productInfo}>
-                  <Text style={styles.productEmoji}>{cat?.icon ?? '📦'}</Text>
-                  <View>
-                    <Text style={styles.productName}>{p.name}</Text>
-                    <Text style={styles.productDetail}>
-                      {formatMoney(p.price, currency)} / {p.unit}
-                    </Text>
-                  </View>
-                </View>
-                <Text style={styles.productHint}>長按刪除</Text>
-              </TouchableOpacity>
-            );
-          })}
         </View>
       )}
     </View>
   );
 }
 
-// ─────────────────────────────────────────────────────────────
-// 輔助函式
-// ─────────────────────────────────────────────────────────────
+function ProductsView() {
+  const { products, addProduct, deleteProduct } = useProductStore();
+  const currency = useSettingsStore((s) => s.currency);
+  const [showForm, setShowForm] = React.useState(false);
+  const [name, setName] = React.useState('');
+  const [price, setPrice] = React.useState('');
+  const [unit, setUnit] = React.useState('個');
 
-function formatMoney(amount: number, currency: CurrencyCode): string {
-  const { symbol } = CURRENCIES[currency];
-  return `${symbol}${amount.toLocaleString()}`;
+  const handleAdd = () => {
+    const p = parseFloat(price);
+    if (!name.trim()) { Alert.alert('請輸入商品名稱'); return; }
+    if (!p || p <= 0) { Alert.alert('請輸入有效單價'); return; }
+    addProduct({ name: name.trim(), price: p, unit: unit.trim() || '個', categoryId: 'sales' });
+    setName(''); setPrice(''); setUnit('個'); setShowForm(false);
+  };
+
+  return (
+    <View style={{ gap: SPACING.lg }}>
+      {!showForm ? (
+        <TouchableOpacity style={styles.addBtn} onPress={() => setShowForm(true)}>
+          <Text style={styles.addBtnText}>+ 新增商品</Text>
+        </TouchableOpacity>
+      ) : (
+        <View style={styles.formCard}>
+          <Text style={styles.formTitle}>新增商品</Text>
+          <TextInput
+            style={styles.formInput}
+            placeholder="商品名稱"
+            placeholderTextColor={COLORS.textTertiary}
+            value={name}
+            onChangeText={setName}
+          />
+          <View style={styles.formRow}>
+            <TextInput
+              style={[styles.formInput, { flex: 1 }]}
+              placeholder="單價"
+              placeholderTextColor={COLORS.textTertiary}
+              value={price}
+              onChangeText={setPrice}
+              keyboardType="decimal-pad"
+            />
+            <TextInput
+              style={[styles.formInput, { width: 80, marginLeft: SPACING.sm }]}
+              placeholder="單位"
+              placeholderTextColor={COLORS.textTertiary}
+              value={unit}
+              onChangeText={setUnit}
+            />
+          </View>
+          <View style={styles.formActions}>
+            <TouchableOpacity style={[styles.formActionBtn, styles.cancelBtn]} onPress={() => setShowForm(false)}>
+              <Text style={styles.cancelText}>取消</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.formActionBtn, styles.saveBtn]} onPress={handleAdd}>
+              <Text style={styles.saveText}>儲存</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {products.length === 0 ? (
+        <View style={styles.emptyProducts}>
+          <Text style={styles.emptyProductsEmoji}>📦</Text>
+          <Text style={styles.emptyProductsText}>尚無商品</Text>
+          <Text style={styles.emptyProductsHint}>建立商品後即可一鍵記錄銷售</Text>
+        </View>
+      ) : (
+        <View style={{ gap: SPACING.sm }}>
+          {products.map((p) => (
+            <TouchableOpacity
+              key={p.id}
+              style={styles.productItem}
+              onPress={() => {
+                Alert.alert('刪除商品', `確定要刪除「${p.name}」嗎？`, [
+                  { text: '取消', style: 'cancel' },
+                  { text: '刪除', style: 'destructive', onPress: () => deleteProduct(p.id) },
+                ]);
+              }}
+            >
+              <View>
+                <Text style={styles.productItemName}>{p.name}</Text>
+                <Text style={styles.productItemPrice}>{formatMoney(p.price, currency)} / {p.unit}</Text>
+              </View>
+              <Text style={styles.productItemHint}>點擊刪除</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+    </View>
+  );
 }
 
-// ─────────────────────────────────────────────────────────────
-// 樣式
-// ─────────────────────────────────────────────────────────────
+// ── Helpers ──
+
+function useStores() {
+  const currency = useSettingsStore((s) => s.currency);
+  const products = useProductStore((s) => s.products);
+  const currentMarketId = useMarketStore((s) => s.currentMarketId);
+  const markets = useMarketStore((s) => s.markets);
+  const addTransaction = useTransactionStore((s) => s.addTransaction);
+  const setCurrentMarket = useMarketStore((s) => s.setCurrentMarket);
+  return { currency, products, currentMarketId, markets, addTransaction, setCurrentMarket };
+}
+
+function formatMoney(amount: number, currency: string): string {
+  const symbols: Record<string, string> = { HKD: 'HK$', TWD: 'NT$', THB: '฿', MYR: 'RM', SGD: 'S$', USD: 'US$' };
+  return `${symbols[currency] || ''}${amount.toLocaleString()}`;
+}
+
+// ── Styles ──
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  content: {
-    padding: SPACING.lg,
-    gap: SPACING.lg,
-  },
+  safe: { flex: 1, backgroundColor: COLORS.background },
+  container: { flex: 1, backgroundColor: COLORS.background },
+  content: { padding: SPACING.lg, gap: SPACING.lg, paddingBottom: SPACING.xxl },
   modeToggle: {
     flexDirection: 'row',
-    backgroundColor: COLORS.card,
+    backgroundColor: COLORS.muted,
     borderRadius: BORDER_RADIUS.md,
     padding: 4,
-    borderWidth: 1,
-    borderColor: COLORS.border,
   },
-  modeBtn: {
-    flex: 1,
-    paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.md,
-    borderRadius: BORDER_RADIUS.sm,
-    alignItems: 'center',
-  },
-  modeBtnActive: {
-    backgroundColor: COLORS.primary,
-  },
-  modeBtnText: {
-    fontSize: FONT_SIZE.md,
-    color: COLORS.textSecondary,
-    fontWeight: FONT_WEIGHT.medium,
-  },
-  modeBtnTextActive: {
-    color: '#FFF',
-    fontWeight: FONT_WEIGHT.semibold,
-  },
-  // 商品快捷
-  section: {
-    gap: SPACING.sm,
-  },
-  sectionTitle: {
-    fontSize: FONT_SIZE.md,
-    fontWeight: FONT_WEIGHT.semibold,
-    color: COLORS.text,
-  },
-  productGrid: {
+  modeBtn: { flex: 1, paddingVertical: SPACING.sm, borderRadius: BORDER_RADIUS.sm, alignItems: 'center' },
+  modeBtnActive: { backgroundColor: COLORS.card, shadowColor: COLORS.shadow, shadowOpacity: 0.1, shadowRadius: 2, elevation: 1 },
+  modeBtnText: { fontSize: FONT_SIZE.md, color: COLORS.textSecondary, fontWeight: '500' },
+  modeBtnTextActive: { color: COLORS.text, fontWeight: '600' },
+  recordWrap: { gap: SPACING.lg },
+  // Toast
+  toast: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: SPACING.sm,
-  },
-  quickProductBtn: {
+    alignItems: 'center',
     backgroundColor: COLORS.card,
     borderWidth: 1.5,
-    borderColor: COLORS.primary,
-    borderRadius: BORDER_RADIUS.md,
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.lg,
-    minWidth: '47%',
-    flexGrow: 1,
-    alignItems: 'center',
-  },
-  quickProductName: {
-    fontSize: FONT_SIZE.md,
-    fontWeight: FONT_WEIGHT.semibold,
-    color: COLORS.text,
-  },
-  quickProductPrice: {
-    fontSize: FONT_SIZE.lg,
-    fontWeight: FONT_WEIGHT.bold,
-    color: COLORS.primary,
-    marginTop: 2,
-  },
-  // 收入/支出切換
-  typeToggle: {
-    flexDirection: 'row',
+    borderColor: COLORS.income + '60',
+    borderRadius: BORDER_RADIUS.lg,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm + 2,
     gap: SPACING.sm,
+    shadowColor: COLORS.shadow,
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
   },
-  typeBtn: {
+  toastIcon: {
+    width: 32, height: 32, borderRadius: 16,
+    backgroundColor: COLORS.incomeBg,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  toastCheck: { color: COLORS.income, fontSize: 16, fontWeight: 'bold' },
+  toastContent: { flex: 1 },
+  toastLabel: { fontSize: 10, color: COLORS.textSecondary },
+  toastText: { fontSize: FONT_SIZE.sm, fontWeight: '600', color: COLORS.text, marginTop: 1 },
+  toastUndo: { paddingHorizontal: SPACING.sm, paddingVertical: SPACING.xs, borderRadius: BORDER_RADIUS.sm },
+  toastUndoText: { fontSize: FONT_SIZE.xs, fontWeight: '600', color: COLORS.primary },
+  toastClose: { padding: SPACING.xs },
+  toastCloseText: { color: COLORS.textSecondary, fontSize: 14 },
+  // Section
+  section: { gap: SPACING.sm },
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  sectionTitle: { fontSize: FONT_SIZE.md, fontWeight: '600', color: COLORS.text },
+  sectionHint: { fontSize: 10, color: COLORS.textTertiary },
+  sectionHintRow: { flexDirection: 'row', gap: SPACING.sm, alignItems: 'center' },
+  undoLink: { fontSize: 10, fontWeight: '600', color: COLORS.primary },
+  // 支付方式
+  paymentGrid: { flexDirection: 'row', gap: SPACING.xs + 2 },
+  paymentBtn: {
     flex: 1,
-    paddingVertical: SPACING.md,
+    alignItems: 'center',
+    paddingVertical: SPACING.sm + 2,
     borderRadius: BORDER_RADIUS.md,
-    backgroundColor: COLORS.card,
     borderWidth: 2,
     borderColor: COLORS.border,
-    alignItems: 'center',
-  },
-  typeBtnExpense: {
-    backgroundColor: COLORS.expense,
-    borderColor: COLORS.expense,
-  },
-  typeBtnIncome: {
-    backgroundColor: COLORS.income,
-    borderColor: COLORS.income,
-  },
-  typeBtnText: {
-    fontSize: FONT_SIZE.lg,
-    fontWeight: FONT_WEIGHT.semibold,
-    color: COLORS.text,
-  },
-  // 分類/支付捲動
-  categoryScroll: {
-    flexDirection: 'row',
-  },
-  paymentChip: {
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    borderRadius: BORDER_RADIUS.full,
     backgroundColor: COLORS.card,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    marginRight: SPACING.sm,
+    gap: 2,
   },
-  paymentChipActive: {
-    backgroundColor: COLORS.primary,
+  paymentBtnActive: {
     borderColor: COLORS.primary,
-  },
-  paymentChipText: {
-    fontSize: FONT_SIZE.sm,
-    color: COLORS.text,
-    fontWeight: '500',
-  },
-  // 市集選擇
-  marketPicker: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: COLORS.card,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: BORDER_RADIUS.md,
-    padding: SPACING.md,
-  },
-  marketPickerText: {
-    fontSize: FONT_SIZE.md,
-    color: COLORS.text,
-  },
-  marketPickerArrow: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
-  },
-  // 備註
-  noteInput: {
-    backgroundColor: COLORS.card,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: BORDER_RADIUS.md,
-    minHeight: 60,
-    padding: SPACING.md,
-    fontSize: FONT_SIZE.md,
-    color: COLORS.text,
-    textAlignVertical: 'top',
-  },
-  // 確認按鈕
-  recordBtn: {
-    backgroundColor: COLORS.primary,
-    borderRadius: BORDER_RADIUS.md,
-    paddingVertical: SPACING.lg,
-    alignItems: 'center',
-  },
-  recordBtnText: {
-    fontSize: FONT_SIZE.lg,
-    fontWeight: FONT_WEIGHT.semibold,
-    color: '#FFF',
-  },
-  // Modal
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: COLORS.card,
-    borderTopLeftRadius: BORDER_RADIUS.xl,
-    borderTopRightRadius: BORDER_RADIUS.xl,
-    padding: SPACING.lg,
-    maxHeight: '70%',
-  },
-  modalTitle: {
-    fontSize: FONT_SIZE.lg,
-    fontWeight: FONT_WEIGHT.semibold,
-    color: COLORS.text,
-    marginBottom: SPACING.md,
-    textAlign: 'center',
-  },
-  modalList: {
-    maxHeight: 400,
-  },
-  modalItem: {
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.lg,
-    borderRadius: BORDER_RADIUS.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.divider,
-  },
-  modalItemActive: {
-    backgroundColor: COLORS.primary + '15',
-  },
-  modalItemText: {
-    fontSize: FONT_SIZE.md,
-    color: COLORS.text,
-    fontWeight: FONT_WEIGHT.medium,
-  },
-  modalItemSub: {
-    fontSize: FONT_SIZE.xs,
-    color: COLORS.textSecondary,
-    marginTop: 2,
-  },
-  modalClose: {
-    marginTop: SPACING.md,
-    padding: SPACING.md,
-    backgroundColor: COLORS.background,
-    borderRadius: BORDER_RADIUS.md,
-    alignItems: 'center',
-  },
-  modalCloseText: {
-    fontSize: FONT_SIZE.md,
-    color: COLORS.textSecondary,
-  },
-  // 商品管理表單
-  formCard: {
-    backgroundColor: COLORS.card,
-    borderRadius: BORDER_RADIUS.md,
-    padding: SPACING.lg,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  addBtn: {
-    padding: SPACING.md,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: COLORS.primary,
-    borderRadius: BORDER_RADIUS.sm,
-  },
-  addBtnText: {
-    color: COLORS.primary,
-    fontSize: FONT_SIZE.md,
-    fontWeight: FONT_WEIGHT.semibold,
-  },
-  formTitle: {
-    fontSize: FONT_SIZE.lg,
-    fontWeight: FONT_WEIGHT.semibold,
-    color: COLORS.text,
-    marginBottom: SPACING.md,
-  },
-  formRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: SPACING.sm,
-    gap: SPACING.md,
-  },
-  formLabel: {
-    fontSize: FONT_SIZE.sm,
-    color: COLORS.textSecondary,
-    width: 50,
-  },
-  formInput: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-    borderRadius: BORDER_RADIUS.sm,
-    padding: SPACING.sm,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    fontSize: FONT_SIZE.md,
-    color: COLORS.text,
-  },
-  categoryRow: {
-    flexDirection: 'row',
-    gap: SPACING.xs,
-  },
-  categoryMini: {
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: SPACING.xs,
-    borderRadius: BORDER_RADIUS.full,
-    backgroundColor: COLORS.background,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  categoryMiniActive: {
-    backgroundColor: COLORS.primary + '20',
-    borderColor: COLORS.primary,
-  },
-  formActions: {
-    flexDirection: 'row',
-    gap: SPACING.sm,
-    marginTop: SPACING.md,
-  },
-  formActionBtn: {
-    flex: 1,
-    paddingVertical: SPACING.sm,
-    borderRadius: BORDER_RADIUS.sm,
-    alignItems: 'center',
-  },
-  cancelBtn: {
-    backgroundColor: COLORS.background,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  saveBtn: {
     backgroundColor: COLORS.primary,
   },
-  cancelText: {
-    color: COLORS.textSecondary,
-    fontSize: FONT_SIZE.md,
-  },
-  saveText: {
-    color: '#FFF',
-    fontSize: FONT_SIZE.md,
-    fontWeight: FONT_WEIGHT.semibold,
-  },
-  emptyState: {
+  paymentIcon: { fontSize: 18 },
+  paymentLabel: { fontSize: 10, fontWeight: '500', color: COLORS.textSecondary },
+  paymentLabelActive: { color: COLORS.textInverse, fontWeight: '600' },
+  // 商品網格
+  productGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
+  emptyProducts: {
     alignItems: 'center',
     paddingVertical: SPACING.xxl,
-  },
-  emptyEmoji: {
-    fontSize: 48,
-    marginBottom: SPACING.md,
-  },
-  emptyText: {
-    fontSize: FONT_SIZE.lg,
-    color: COLORS.textSecondary,
-    fontWeight: FONT_WEIGHT.semibold,
-  },
-  emptySubtext: {
-    fontSize: FONT_SIZE.sm,
-    color: COLORS.textTertiary,
-    marginTop: SPACING.xs,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  productList: {
-    gap: SPACING.sm,
-  },
-  productItem: {
-    backgroundColor: COLORS.card,
-    borderRadius: BORDER_RADIUS.sm,
-    padding: SPACING.md,
+    backgroundColor: COLORS.muted,
+    borderRadius: BORDER_RADIUS.md,
     borderWidth: 1,
-    borderColor: COLORS.borderLight,
+    borderStyle: 'dashed',
+    borderColor: COLORS.border,
+  },
+  emptyProductsEmoji: { fontSize: 36, marginBottom: SPACING.sm },
+  emptyProductsText: { fontSize: FONT_SIZE.md, fontWeight: '600', color: COLORS.text },
+  emptyProductsHint: { fontSize: FONT_SIZE.xs, color: COLORS.textSecondary, marginTop: 4 },
+  // 手動記帳
+  advancedToggle: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    backgroundColor: COLORS.muted,
+    borderRadius: BORDER_RADIUS.md,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.md,
   },
-  productInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  advancedToggleText: { fontSize: FONT_SIZE.sm, fontWeight: '500', color: COLORS.text },
+  advancedToggleArrow: { fontSize: 12, color: COLORS.textSecondary },
+  advancedCard: {
+    backgroundColor: COLORS.card,
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.lg,
+    borderWidth: 1,
+    borderColor: COLORS.border,
     gap: SPACING.md,
-    flex: 1,
   },
-  productEmoji: {
-    fontSize: 24,
+  typeToggle: { flexDirection: 'row', gap: SPACING.sm },
+  typeBtn: {
+    flex: 1, paddingVertical: SPACING.sm + 2, borderRadius: BORDER_RADIUS.sm,
+    backgroundColor: COLORS.muted, alignItems: 'center',
   },
-  productName: {
-    fontSize: FONT_SIZE.md,
-    fontWeight: FONT_WEIGHT.semibold,
-    color: COLORS.text,
+  typeBtnExpense: { backgroundColor: COLORS.expense },
+  typeBtnIncome: { backgroundColor: COLORS.income },
+  typeBtnText: { fontSize: FONT_SIZE.sm, fontWeight: '600', color: COLORS.textSecondary },
+  typeBtnTextActive: { color: '#FFFFFF' },
+  fieldLabel: { fontSize: FONT_SIZE.xs, fontWeight: '500', color: COLORS.textSecondary },
+  chipRow: { flexDirection: 'row', gap: SPACING.xs },
+  marketPicker: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: COLORS.background, borderRadius: BORDER_RADIUS.sm,
+    paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm + 2,
+    borderWidth: 1, borderColor: COLORS.border,
   },
-  productDetail: {
-    fontSize: FONT_SIZE.sm,
-    color: COLORS.textSecondary,
-    marginTop: 2,
+  marketPickerText: { fontSize: FONT_SIZE.sm, color: COLORS.text },
+  marketPickerArrow: { fontSize: 10, color: COLORS.textSecondary },
+  marketList: {
+    backgroundColor: COLORS.card, borderRadius: BORDER_RADIUS.sm,
+    borderWidth: 1, borderColor: COLORS.border, maxHeight: 200,
   },
-  productHint: {
-    fontSize: FONT_SIZE.xs,
-    color: COLORS.textTertiary,
+  marketItem: { paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm + 2, borderBottomWidth: 1, borderBottomColor: COLORS.divider },
+  marketItemActive: { backgroundColor: COLORS.primary + '10' },
+  marketItemText: { fontSize: FONT_SIZE.sm, color: COLORS.text },
+  noteInput: {
+    backgroundColor: COLORS.background, borderRadius: BORDER_RADIUS.sm,
+    paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm,
+    borderWidth: 1, borderColor: COLORS.border, minHeight: 50,
+    fontSize: FONT_SIZE.sm, color: COLORS.text, textAlignVertical: 'top',
   },
+  submitBtn: {
+    backgroundColor: COLORS.primary, borderRadius: BORDER_RADIUS.md,
+    paddingVertical: SPACING.md, alignItems: 'center', marginTop: SPACING.xs,
+  },
+  submitBtnText: { color: '#FFFFFF', fontSize: FONT_SIZE.md, fontWeight: '600' },
+  // 商品管理表單
+  addBtn: {
+    paddingVertical: SPACING.md, alignItems: 'center',
+    borderWidth: 1.5, borderStyle: 'dashed', borderColor: COLORS.primary,
+    borderRadius: BORDER_RADIUS.md,
+  },
+  addBtnText: { color: COLORS.primary, fontSize: FONT_SIZE.md, fontWeight: '600' },
+  formCard: {
+    backgroundColor: COLORS.card, borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.lg, borderWidth: 1, borderColor: COLORS.border, gap: SPACING.sm,
+  },
+  formTitle: { fontSize: FONT_SIZE.lg, fontWeight: '600', color: COLORS.text, marginBottom: SPACING.xs },
+  formRow: { flexDirection: 'row' },
+  formInput: {
+    backgroundColor: COLORS.background, borderRadius: BORDER_RADIUS.sm,
+    paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm,
+    borderWidth: 1, borderColor: COLORS.border,
+    fontSize: FONT_SIZE.md, color: COLORS.text,
+  },
+  formActions: { flexDirection: 'row', gap: SPACING.sm, marginTop: SPACING.sm },
+  formActionBtn: { flex: 1, paddingVertical: SPACING.sm, borderRadius: BORDER_RADIUS.sm, alignItems: 'center' },
+  cancelBtn: { backgroundColor: COLORS.muted, borderWidth: 1, borderColor: COLORS.border },
+  saveBtn: { backgroundColor: COLORS.primary },
+  cancelText: { color: COLORS.textSecondary, fontSize: FONT_SIZE.md },
+  saveText: { color: '#FFFFFF', fontSize: FONT_SIZE.md, fontWeight: '600' },
+  productItem: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: COLORS.card, borderRadius: BORDER_RADIUS.sm,
+    paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md,
+    borderWidth: 1, borderColor: COLORS.borderLight,
+  },
+  productItemName: { fontSize: FONT_SIZE.md, fontWeight: '600', color: COLORS.text },
+  productItemPrice: { fontSize: FONT_SIZE.xs, color: COLORS.textSecondary, marginTop: 2 },
+  productItemHint: { fontSize: 10, color: COLORS.textTertiary },
 });
