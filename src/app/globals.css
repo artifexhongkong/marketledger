@@ -117,21 +117,20 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
   }
   body {
     @apply bg-background text-foreground;
   }
-  /* 觸控滾動：讓所有可滾動區域在手機上用手指滑動 */
+  /* 全域隱藏所有捲動條（手機 App 風格） */
+  ::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+  }
   * {
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior: contain;
-  }
-  /* 隱藏滾動條但保留滾動功能（手機 App 風格） */
-  .scrollbar-hide {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-  .scrollbar-hide::-webkit-scrollbar {
-    display: none;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
   }
 }
