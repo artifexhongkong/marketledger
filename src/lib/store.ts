@@ -7,8 +7,11 @@ import { persist, createJSONStorage } from "zustand/middleware";
 export type CurrencyCode = "HKD" | "TWD" | "THB" | "MYR" | "SGD" | "USD";
 export type TransactionType = "income" | "expense";
 export type PaymentMethod =
-  | "cash" | "payme" | "alipayhk" | "wechat_pay" | "fps"
-  | "line_pay" | "truemoney" | "tng" | "stripe" | "other"
+  | "cash" | "credit_card" | "apple_pay" | "google_pay" | "bank_transfer" | "paypal"
+  | "payme" | "alipayhk" | "wechat_pay" | "fps" | "octopus"
+  | "line_pay" | "jkopay"
+  | "truemoney" | "tng" | "grabpay" | "duitnow" | "promptpay"
+  | "other"
   | `custom_${string}`;
 
 // 自訂支付方式資料結構
@@ -80,17 +83,61 @@ export const CATEGORIES: { id: CategoryId; label: string; icon: string; type: Tr
 ];
 
 export const PAYMENT_METHODS: Record<PaymentMethod, { label: string; icon: string }> = {
+  // 通用
   cash: { label: "現金", icon: "💵" },
-  payme: { label: "PayMe", icon: "💳" },
+  credit_card: { label: "信用卡", icon: "💳" },
+  apple_pay: { label: "Apple Pay", icon: "" },
+  google_pay: { label: "Google Pay", icon: "🅖" },
+  bank_transfer: { label: "銀行轉帳", icon: "🏦" },
+  paypal: { label: "PayPal", icon: "🅿️" },
+  // 香港
+  payme: { label: "PayMe", icon: "🅿️" },
   alipayhk: { label: "AlipayHK", icon: "🅰️" },
   wechat_pay: { label: "WeChat Pay", icon: "💬" },
   fps: { label: "FPS", icon: "⚡" },
+  octopus: { label: "八達通", icon: "🐙" },
+  // 台灣
   line_pay: { label: "LINE Pay", icon: "🟢" },
+  jkopay: { label: "街口支付", icon: "🅹" },
+  // 東南亞
   truemoney: { label: "TrueMoney", icon: "🔵" },
   tng: { label: "Touch 'n Go", icon: "🟡" },
-  stripe: { label: "Stripe", icon: "💳" },
+  grabpay: { label: "GrabPay", icon: "🟢" },
+  duitnow: { label: "DuitNow", icon: "💠" },
+  promptpay: { label: "PromptPay", icon: "🅿️" },
+  // 其他
   other: { label: "其他", icon: "📋" },
 };
+
+// ── 支付方式分類（按地區）──
+export interface PaymentCategory {
+  id: string;
+  label: string;
+  payments: PaymentMethod[];
+}
+
+export const PAYMENT_CATEGORIES: PaymentCategory[] = [
+  {
+    id: "common",
+    label: "通用",
+    payments: ["cash", "credit_card", "apple_pay", "google_pay", "bank_transfer", "paypal"],
+  },
+  {
+    id: "hk",
+    label: "香港",
+    payments: ["payme", "fps", "alipayhk", "wechat_pay", "octopus"],
+  },
+  {
+    id: "tw",
+    label: "台灣",
+    payments: ["line_pay", "jkopay"],
+  },
+  {
+    id: "sea",
+    label: "東南亞",
+    payments: ["truemoney", "tng", "grabpay", "duitnow", "promptpay"],
+  },
+];
 
 /**
  * 取得支付方式的顯示資訊（支援自訂支付方式）

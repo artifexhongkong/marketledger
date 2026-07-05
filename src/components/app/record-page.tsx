@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { useAppStore, CATEGORIES, PAYMENT_METHODS, formatCurrency, getPaymentMethodInfo } from "@/lib/store";
+import { useAppStore, CATEGORIES, PAYMENT_METHODS, PAYMENT_CATEGORIES, formatCurrency, getPaymentMethodInfo } from "@/lib/store";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -421,25 +421,25 @@ function PaymentSelector({
   const { customPaymentMethods, addCustomPaymentMethod, deleteCustomPaymentMethod } = useAppStore();
   const [showAddModal, setShowAddModal] = useState(false);
   const [showManageMode, setShowManageMode] = useState(false);
-
-  // 內建支付方式（前 5 個常用）
-  const builtinPayments: PaymentMethod[] = ["cash", "payme", "fps", "alipayhk", "wechat_pay"];
-  // 其他內建支付方式
-  const otherBuiltinPayments: PaymentMethod[] = ["line_pay", "truemoney", "tng", "stripe", "other"];
+  const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
 
   // 取得支付方式資訊
-  const getPaymentInfo = (m: PaymentMethod): { label: string; icon: string; color: string } => {
+  const getPaymentInfo = (m: PaymentMethod): { label: string; icon: string } => {
     if (m.startsWith("custom_")) {
       const custom = customPaymentMethods.find((c) => `custom_${c.id}` === m);
-      if (custom) return { label: custom.label, icon: custom.icon, color: custom.color };
+      if (custom) return { label: custom.label, icon: custom.icon };
     }
     const info = PAYMENT_METHODS[m as keyof typeof PAYMENT_METHODS];
-    return { label: info?.label || m, icon: info?.icon || "💳", color: "#0F1F3D" };
+    return { label: info?.label || m, icon: info?.icon || "💳" };
   };
 
   // 縮短標籤顯示
   const shortLabel = (label: string) => {
-    return label.replace("Pay", "").replace("Touch 'n ", "TnG").replace("WeChat Pay", "WeChat");
+    return label
+      .replace("Touch 'n ", "TnG")
+      .replace("WeChat Pay", "WeChat")
+      .replace("Credit Card", "信用卡")
+      .replace("Bank Transfer", "轉帳");
   };
 
   return (
@@ -461,10 +461,10 @@ function PaymentSelector({
         </div>
       </div>
 
-      {/* 主要支付方式（內建 + 自訂）—— Grid 自適應 */}
+      {/* 通用支付方式 + 自訂（一屏可見） */}
       <div className="grid grid-cols-5 gap-1.5">
-        {/* 內建常用 */}
-        {builtinPayments.map((m) => {
+        {/* 通用支付方式 */}
+        {PAYMENT_CATEGORIES[0].payments.map((m) => {
           const info = getPaymentInfo(m);
           const active = payment === m;
           return (
@@ -502,23 +502,6 @@ function PaymentSelector({
           );
         })}
 
-        {/* 其他內建支付方式 */}
-        {otherBuiltinPayments.map((m) => {
-          const info = getPaymentInfo(m);
-          const active = payment === m;
-          return (
-            <PaymentButton2
-              key={m}
-              icon={info.icon}
-              label={shortLabel(info.label)}
-              active={active}
-              manageMode={showManageMode}
-              onClick={() => setPayment(m)}
-              onDelete={null}
-            />
-          );
-        })}
-
         {/* 新增按鈕 */}
         <button
           onClick={() => setShowAddModal(true)}
@@ -527,7 +510,51 @@ function PaymentSelector({
           <Plus className="w-4 h-4" />
           <span className="text-[10px] font-medium">新增</span>
         </button>
+
+        {/* 更多按鈕 */}
+        <button
+          onClick={() => setExpandedCategory(expandedCategory ? null : "all")}
+          className={`flex flex-col items-center justify-center gap-0.5 py-2.5 rounded-xl border-2 transition ${
+            expandedCategory
+              ? "border-primary bg-primary text-primary-foreground"
+              : "border-border bg-card text-foreground hover:border-primary/40"
+          }`}
+        >
+          <span className="text-base leading-none">🌐</span>
+          <span className="text-[10px] font-medium">更多</span>
+        </button>
       </div>
+
+      {/* 展開的地區分類 */}
+      {expandedCategory && (
+        <div className="mt-2 space-y-2 animate-[fadeIn_0.2s_ease-out]">
+          {PAYMENT_CATEGORIES.slice(1).map((cat) => (
+            <div key={cat.id}>
+              <p className="text-[10px] font-medium text-muted-foreground px-1 mb-1">{cat.label}</p>
+              <div className="grid grid-cols-5 gap-1.5">
+                {cat.payments.map((m) => {
+                  const info = getPaymentInfo(m);
+                  const active = payment === m;
+                  return (
+                    <PaymentButton2
+                      key={m}
+                      icon={info.icon}
+                      label={shortLabel(info.label)}
+                      active={active}
+                      manageMode={showManageMode}
+                      onClick={() => {
+                        setPayment(m);
+                        setExpandedCategory(null);
+                      }}
+                      onDelete={null}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* 新增支付方式 Modal */}
       {showAddModal && (
