@@ -198,6 +198,8 @@ interface AppStore {
   products: Product[];
   markets: MarketData[];
   customPaymentMethods: CustomPaymentMethod[];
+  // 用戶自訂的首頁支付方式（從內建中選擇要顯示的）
+  visiblePayments: string[];
   // Actions
   setCurrency: (c: CurrencyCode) => void;
   setCurrentMarket: (id: string | null) => void;
@@ -208,6 +210,8 @@ interface AppStore {
   deleteProduct: (id: string) => void;
   addCustomPaymentMethod: (m: Omit<CustomPaymentMethod, "id">) => void;
   deleteCustomPaymentMethod: (id: string) => void;
+  setVisiblePayments: (payments: string[]) => void;
+  togglePaymentVisibility: (payment: string) => void;
   seedDemo: () => void;
 }
 
@@ -221,6 +225,8 @@ export const useAppStore = create<AppStore>()(
       products: [],
       markets: DEFAULT_MARKETS,
       customPaymentMethods: [],
+      // 預設首頁顯示通用支付方式
+      visiblePayments: ["cash", "credit_card", "apple_pay", "google_pay", "bank_transfer", "paypal"],
 
       setCurrency: (c) => set({ currency: c }),
       setCurrentMarket: (id) => set({ currentMarketId: id }),
@@ -261,6 +267,20 @@ export const useAppStore = create<AppStore>()(
         set((s) => ({
           customPaymentMethods: s.customPaymentMethods.filter((m) => m.id !== id),
         })),
+
+      setVisiblePayments: (payments) => set({ visiblePayments: payments }),
+
+      togglePaymentVisibility: (payment) =>
+        set((s) => {
+          const isShown = s.visiblePayments.includes(payment);
+          if (isShown) {
+            // 移除（至少保留一個）
+            if (s.visiblePayments.length <= 1) return s;
+            return { visiblePayments: s.visiblePayments.filter((p) => p !== payment) };
+          } else {
+            return { visiblePayments: [...s.visiblePayments, payment] };
+          }
+        }),
 
       seedDemo: () => {
         const { demoSeeded, transactions, currency } = get();

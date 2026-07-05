@@ -418,9 +418,10 @@ function PaymentSelector({
   payment: PaymentMethod;
   setPayment: (p: PaymentMethod) => void;
 }) {
-  const { customPaymentMethods, addCustomPaymentMethod, deleteCustomPaymentMethod } = useAppStore();
+  const { customPaymentMethods, addCustomPaymentMethod, deleteCustomPaymentMethod, visiblePayments, togglePaymentVisibility } = useAppStore();
   const [showAddModal, setShowAddModal] = useState(false);
   const [showManageMode, setShowManageMode] = useState(false);
+  const [showCustomizeModal, setShowCustomizeModal] = useState(false);
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
 
   // 取得支付方式資訊
@@ -433,7 +434,6 @@ function PaymentSelector({
     return { label: info?.label || m, icon: info?.icon || "💳" };
   };
 
-  // 縮短標籤顯示
   const shortLabel = (label: string) => {
     return label
       .replace("Touch 'n ", "TnG")
@@ -442,11 +442,21 @@ function PaymentSelector({
       .replace("Bank Transfer", "轉帳");
   };
 
+  // 首頁顯示的支付方式 = 用戶選擇的內建 + 自訂
+  const allBuiltinPayments = PAYMENT_CATEGORIES.flatMap((c) => c.payments);
+  const visibleBuiltin = allBuiltinPayments.filter((m) => visiblePayments.includes(m));
+
   return (
     <div className="mt-3">
       <div className="flex items-center justify-between mb-2">
         <p className="text-xs text-muted-foreground font-medium">💳 支付方式</p>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowCustomizeModal(true)}
+            className="text-[10px] font-medium text-muted-foreground hover:text-primary transition"
+          >
+            自訂
+          </button>
           {customPaymentMethods.length > 0 && (
             <button
               onClick={() => setShowManageMode(!showManageMode)}
@@ -457,14 +467,13 @@ function PaymentSelector({
               {showManageMode ? "完成" : "管理"}
             </button>
           )}
-          <p className="text-[10px] text-muted-foreground/70">點選套用至記帳</p>
         </div>
       </div>
 
-      {/* 通用支付方式 + 自訂（一屏可見） */}
+      {/* 首頁支付方式（用戶選擇的 + 自訂） */}
       <div className="grid grid-cols-5 gap-1.5">
-        {/* 通用支付方式 */}
-        {PAYMENT_CATEGORIES[0].payments.map((m) => {
+        {/* 用戶選擇顯示的內建支付方式 */}
+        {visibleBuiltin.map((m) => {
           const info = getPaymentInfo(m);
           const active = payment === m;
           return (
@@ -473,7 +482,7 @@ function PaymentSelector({
               icon={info.icon}
               label={shortLabel(info.label)}
               active={active}
-              manageMode={showManageMode}
+              manageMode={false}
               onClick={() => setPayment(m)}
               onDelete={null}
             />
@@ -532,11 +541,8 @@ function PaymentSelector({
                       icon={info.icon}
                       label={shortLabel(info.label)}
                       active={active}
-                      manageMode={showManageMode}
-                      onClick={() => {
-                        setPayment(m);
-                        setExpandedCategory(null);
-                      }}
+                      manageMode={false}
+                      onClick={() => { setPayment(m); setExpandedCategory(null); }}
                       onDelete={null}
                     />
                   );
@@ -544,8 +550,7 @@ function PaymentSelector({
               </div>
             </div>
           ))}
-
-          {/* 新增自訂支付方式按鈕（放在更多展開區底部） */}
+          {/* 新增自訂 */}
           <div>
             <p className="text-[10px] font-medium text-muted-foreground px-1 mb-1">自訂</p>
             <div className="grid grid-cols-5 gap-1.5">
@@ -561,6 +566,15 @@ function PaymentSelector({
         </div>
       )}
 
+      {/* 自訂顯示 Modal */}
+      {showCustomizeModal && (
+        <CustomizePaymentsModal
+          onClose={() => setShowCustomizeModal(false)}
+          visiblePayments={visiblePayments}
+          togglePaymentVisibility={togglePaymentVisibility}
+        />
+      )}
+
       {/* 新增支付方式 Modal */}
       {showAddModal && (
         <AddPaymentModal
@@ -571,6 +585,62 @@ function PaymentSelector({
           }}
         />
       )}
+    </div>
+  );
+}
+
+// ── 自訂顯示支付方式 Modal ──
+function CustomizePaymentsModal({
+  onClose,
+  visiblePayments,
+  togglePaymentVisibility,
+}: {
+  onClose: () => void;
+  visiblePayments: string[];
+  togglePaymentVisibility: (p: string) => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
+      <Card className="w-full max-w-xs max-h-[80vh] overflow-y-auto scrollbar-hide p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between sticky top-0 bg-card pb-2">
+          <h3 className="text-base font-semibold text-foreground">自訂首頁支付方式</h3>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <p className="text-xs text-muted-foreground -mt-2">勾選要在首頁快速顯示的支付方式</p>
+
+        {PAYMENT_CATEGORIES.map((cat) => (
+          <div key={cat.id}>
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">{cat.label}</p>
+            <div className="space-y-1">
+              {cat.payments.map((m) => {
+                const info = PAYMENT_METHODS[m as keyof typeof PAYMENT_METHODS];
+                const isVisible = visiblePayments.includes(m);
+                return (
+                  <button
+                    key={m}
+                    onClick={() => togglePaymentVisibility(m)}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition ${
+                      isVisible ? "bg-primary/8" : "hover:bg-muted"
+                    }`}
+                  >
+                    <span className="text-lg">{info?.icon || "💳"}</span>
+                    <span className={`flex-1 text-left text-sm ${isVisible ? "text-foreground font-medium" : "text-muted-foreground"}`}>
+                      {info?.label || m}
+                    </span>
+                    <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition ${
+                      isVisible ? "bg-primary border-primary" : "border-border"
+                    }`}>
+                      {isVisible && <Check className="w-3 h-3 text-primary-foreground" strokeWidth={3} />}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </Card>
     </div>
   );
 }
@@ -754,6 +824,8 @@ function ProductButton({
   confirming, onConfirm, onRecord,
 }: ProductButtonProps) {
   const addTransaction = useAppStore((s) => s.addTransaction);
+  const btnRef = useRef<HTMLButtonElement | null>(null);
+  const pointerIdRef = useRef<number | null>(null);
 
   const [quantity, setQuantity] = useState(1);
   const [gestureMode, setGestureMode] = useState(false);
@@ -766,10 +838,13 @@ function ProductButton({
   const cancelRef = useRef(false);
   const qtyRef = useRef(1);
   const startPosRef = useRef<{ x: number; y: number } | null>(null);
+  const accumDyRef = useRef(0);  // 累積垂直位移（連續滑動用）
+  const accumDxRef = useRef(0);  // 累積水平位移（取消判定用）
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // 防止 pointerup 後 click 重複觸發
   const blockClickRef = useRef(false);
+  const lastMoveRef = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     return () => {
@@ -793,6 +868,8 @@ function ProductButton({
     gestureRef.current = true;
     cancelRef.current = false;
     qtyRef.current = 1;
+    accumDyRef.current = 0;
+    accumDxRef.current = 0;
     setGestureMode(true);
     setCancelled(false);
     setQuantity(1);
@@ -819,39 +896,51 @@ function ProductButton({
     gestureRef.current = false;
     cancelRef.current = false;
     qtyRef.current = 1;
+    accumDyRef.current = 0;
+    accumDxRef.current = 0;
+    startPosRef.current = null;
+    lastMoveRef.current = null;
     setGestureMode(false);
     setCancelled(false);
     setQuantity(1);
     setShowHint(false);
-    startPosRef.current = null;
   };
 
+  // 連續滑動：用累積位移，不需重置起點
   const handleSwipe = (clientX: number, clientY: number) => {
-    if (!gestureRef.current || !startPosRef.current || cancelRef.current) return;
-    const dx = clientX - startPosRef.current.x;
-    const dy = clientY - startPosRef.current.y;
+    if (!gestureRef.current || cancelRef.current) return;
+    if (!lastMoveRef.current) { lastMoveRef.current = { x: clientX, y: clientY }; return; }
+    const ddy = clientY - lastMoveRef.current.y;
+    const ddx = clientX - lastMoveRef.current.x;
+    lastMoveRef.current = { x: clientX, y: clientY };
+    accumDyRef.current += ddy;
+    accumDxRef.current += ddx;
     const TH = 25;
-    // 向右 = 取消
-    if (dx >= TH && Math.abs(dx) > Math.abs(dy)) { exitAndCancel(); return; }
-    // 垂直
-    if (Math.abs(dy) >= TH && Math.abs(dy) > Math.abs(dx)) {
-      if (dy < 0) { qtyRef.current += 1; setQuantity(qtyRef.current); setLastDir("up"); }
-      else { qtyRef.current = Math.max(1, qtyRef.current - 1); setQuantity(qtyRef.current); setLastDir("down"); }
-      startPosRef.current = { x: clientX, y: clientY };
+    // 向右取消
+    if (accumDxRef.current >= TH && Math.abs(accumDxRef.current) > Math.abs(accumDyRef.current)) { exitAndCancel(); return; }
+    // 向上 +1（連續觸發）
+    while (accumDyRef.current <= -TH) {
+      qtyRef.current += 1; setQuantity(qtyRef.current); setLastDir("up");
+      accumDyRef.current += TH;
       if (typeof navigator !== "undefined" && "vibrate" in navigator) (navigator as any).vibrate?.(15);
       setTimeout(() => setLastDir(null), 200);
     }
+    // 向下 −1（連續觸發，最低 1）
+    while (accumDyRef.current >= TH) {
+      if (qtyRef.current > 1) { qtyRef.current -= 1; setQuantity(qtyRef.current); setLastDir("down"); if (typeof navigator !== "undefined" && "vibrate" in navigator) (navigator as any).vibrate?.(15); setTimeout(() => setLastDir(null), 200); }
+      accumDyRef.current -= TH;
+    }
   };
 
-  // ── 用 pointerdown/pointermove/pointerup 統一處理 ──
+  // pointer events + setPointerCapture
   const onPointerDown = (e: React.PointerEvent) => {
-    if (e.button !== undefined && e.button !== 0) return;
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    if (btnRef.current) { try { btnRef.current.setPointerCapture(e.pointerId); } catch {} }
+    pointerIdRef.current = e.pointerId;
     startPosRef.current = { x: e.clientX, y: e.clientY };
+    lastMoveRef.current = { x: e.clientX, y: e.clientY };
     blockClickRef.current = false;
-    longPressTimerRef.current = setTimeout(() => {
-      enterGesture();
-      blockClickRef.current = true; // 進入手勢模式後，阻止隨後的 click
-    }, 400);
+    longPressTimerRef.current = setTimeout(() => { enterGesture(); blockClickRef.current = true; }, 400);
   };
 
   const onPointerMove = (e: React.PointerEvent) => {
@@ -860,23 +949,10 @@ function ProductButton({
 
   const onPointerUp = (e: React.PointerEvent) => {
     if (longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null; }
-    if (gestureRef.current && !cancelRef.current) {
-      exitAndRecord();
-    }
-    // 如果剛從手勢模式出來，阻止 click 事件
-    if (blockClickRef.current) {
-      blockClickRef.current = false;
-      // 延遲重置，確保 click 事件被擋掉
-      setTimeout(() => { blockClickRef.current = false; }, 500);
-      blockClickRef.current = true;
-    }
-  };
-
-  const onPointerLeave = () => {
-    if (!gestureRef.current && longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
+    if (btnRef.current && pointerIdRef.current !== null) { try { btnRef.current.releasePointerCapture(pointerIdRef.current); } catch {} }
+    pointerIdRef.current = null;
+    if (gestureRef.current && !cancelRef.current) { exitAndRecord(); }
+    if (blockClickRef.current) { setTimeout(() => { blockClickRef.current = false; }, 500); }
   };
 
   // click 只在「從未進入手勢模式」時記錄 1 筆
@@ -893,11 +969,11 @@ function ProductButton({
 
   return (
     <button
+      ref={btnRef}
       onClick={onClick}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
-      onPointerLeave={onPointerLeave}
       style={{ touchAction: "none" }}
       className={`relative bg-card border-2 rounded-xl p-2.5 text-center transition-all overflow-hidden min-h-[68px] flex flex-col justify-center select-none ${
         cancelled ? "border-rose-500 bg-rose-50"
