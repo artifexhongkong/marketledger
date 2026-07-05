@@ -765,6 +765,7 @@ function ProductButton({
   const gestureModeRef = useRef(false);
   const cancelledRef = useRef(false);
   const quantityRef = useRef(1);
+  const justExitedGestureRef = useRef(false); // 防止 touchend 後 click 重複觸發
 
   useEffect(() => { gestureModeRef.current = gestureMode; }, [gestureMode]);
   useEffect(() => { quantityRef.current = quantity; }, [quantity]);
@@ -800,6 +801,10 @@ function ProductButton({
   };
 
   const exitGestureMode = (wasCancelled: boolean) => {
+    // 標記剛退出手勢模式，防止隨後的 click 事件重複記錄
+    justExitedGestureRef.current = true;
+    setTimeout(() => { justExitedGestureRef.current = false; }, 300);
+
     if (wasCancelled) {
       cancelledRef.current = true;
       setCancelled(true);
@@ -841,7 +846,15 @@ function ProductButton({
   const handleTouchMove = (e: React.TouchEvent) => { handleSwipeMove(e.touches[0].clientX, e.touches[0].clientY); };
   const handleTouchEnd = () => {
     if (longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null; }
-    if (gestureModeRef.current && !cancelledRef.current) { recordTransaction(quantityRef.current); exitGestureMode(false); }
+    if (gestureModeRef.current && !cancelledRef.current) {
+      recordTransaction(quantityRef.current);
+      exitGestureMode(false);
+    }
+    // 防止隨後的 click 事件觸發（touch 裝置上 touchend 後會 fire click）
+    if (gestureModeRef.current || cancelledRef.current) {
+      justExitedGestureRef.current = true;
+      setTimeout(() => { justExitedGestureRef.current = false; }, 300);
+    }
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -855,6 +868,9 @@ function ProductButton({
         document.removeEventListener("mouseup", onGlobalUp);
         if (longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null; }
         if (gestureModeRef.current && !cancelledRef.current) { recordTransaction(quantityRef.current); exitGestureMode(false); }
+        // 防止 click 重複
+        justExitedGestureRef.current = true;
+        setTimeout(() => { justExitedGestureRef.current = false; }, 300);
       };
       document.addEventListener("mousemove", onGlobalMove);
       document.addEventListener("mouseup", onGlobalUp);
@@ -864,7 +880,11 @@ function ProductButton({
     if (!gestureModeRef.current && longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null; }
   };
   const handleClick = (e: React.MouseEvent) => {
-    if (gestureModeRef.current) { e.preventDefault(); return; }
+    // 手勢模式中或剛退出 → 不觸發 click（避免重複記錄）
+    if (gestureModeRef.current || justExitedGestureRef.current) {
+      e.preventDefault();
+      return;
+    }
     recordTransaction(1);
   };
 
