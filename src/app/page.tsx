@@ -19,6 +19,20 @@ const TABS: { id: TabId; label: string; icon: typeof Home }[] = [
   { id: "settings", label: "設定", icon: SettingsIcon },
 ];
 
+/** 狀態列時間 — 客戶端挂載後才渲染，避免 hydration mismatch */
+function StatusBarClock() {
+  const [time, setTime] = useState<string | null>(null);
+  useEffect(() => {
+    const update = () =>
+      setTime(new Date().toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit" }));
+    update();
+    const id = setInterval(update, 30_000);
+    return () => clearInterval(id);
+  }, []);
+  // 伺服器渲染與首次客戶端渲染都先留白，等挂載後再填入時間
+  return <span className="tabular-nums min-w-[44px]">{time ?? ""}</span>;
+}
+
 export default function Page() {
   const [tab, setTab] = useState<TabId>("home");
   const [hydrated, setHydrated] = useState(false);
@@ -58,7 +72,7 @@ export default function Page() {
           <div className="w-full h-full bg-background rounded-[2.5rem] overflow-hidden flex flex-col relative">
             {/* Status bar */}
             <div className="h-11 bg-background flex items-end justify-between px-6 pb-1 text-xs font-semibold text-foreground">
-              <span className="tabular-nums">{new Date().toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit" })}</span>
+              <StatusBarClock />
               <span className="flex items-center gap-1">
                 <span>5G</span>
                 <span className="inline-block w-5 h-2.5 border border-foreground rounded-sm relative">

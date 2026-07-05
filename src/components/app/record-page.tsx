@@ -153,16 +153,16 @@ function RecordView() {
 
   return (
     <div className="space-y-5">
-      {/* Toast 通知 — 從頂部滑入 */}
+      {/* Toast 通知 — sticky 在內容區頂部（捲動時仍可見，不會跑出手機框外） */}
       {toast && (
-        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 animate-[slideIn_0.3s_ease-out]">
-          <div className="bg-card border border-emerald-200 shadow-lg rounded-2xl px-4 py-3 flex items-center gap-3 min-w-[280px] max-w-[340px]">
-            <div className="w-9 h-9 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
-              <Check className="w-4 h-4 text-emerald-600" strokeWidth={3} />
+        <div className="sticky top-0 z-50 -mx-5 px-3 pt-2 pb-1 bg-background/95 backdrop-blur-sm animate-[slideIn_0.3s_ease-out]">
+          <div className="bg-card border border-emerald-200 shadow-lg rounded-2xl px-3 py-2.5 flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+              <Check className="w-3.5 h-3.5 text-emerald-600" strokeWidth={3} />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs text-muted-foreground">已記錄銷售</p>
-              <p className="text-sm font-semibold text-foreground truncate">
+              <p className="text-[10px] text-muted-foreground leading-tight">已記錄銷售</p>
+              <p className="text-xs font-semibold text-foreground truncate leading-tight mt-0.5">
                 {toast.productName} · {formatCurrency(toast.amount, currency)}
               </p>
             </div>
@@ -176,6 +176,7 @@ function RecordView() {
             <button
               onClick={handleDismissToast}
               className="text-muted-foreground hover:text-foreground p-1 flex-shrink-0"
+              aria-label="關閉通知"
             >
               <X className="w-3.5 h-3.5" />
             </button>
