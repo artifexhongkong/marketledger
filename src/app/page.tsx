@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Home, PencilLine, FileText, ClipboardList, MapPin, Settings as SettingsIcon, Cloud, CloudOff } from "lucide-react";
+import { Home, PencilLine, FileText, ClipboardList, MapPin, Settings as SettingsIcon, Cloud, CloudOff, History } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { useAuthStore } from "@/lib/auth-store";
 import { HomePage } from "@/components/app/home-page";
@@ -16,8 +16,8 @@ type TabId = "home" | "record" | "transactions" | "daily" | "markets" | "setting
 const TABS: { id: TabId; label: string; icon: typeof Home }[] = [
   { id: "home", label: "首頁", icon: Home },
   { id: "record", label: "記帳", icon: PencilLine },
+  { id: "daily", label: "歷史", icon: History },
   { id: "transactions", label: "記錄", icon: ClipboardList },
-  { id: "daily", label: "日報", icon: FileText },
   { id: "markets", label: "市集", icon: MapPin },
   { id: "settings", label: "設定", icon: SettingsIcon },
 ];
