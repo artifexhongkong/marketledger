@@ -736,6 +736,7 @@ const CURRENCIES_SYMBOL: Record<string, string> = {
 // ─────────────────────────────────────────────────────────────
 // ProductButton — 點擊記 1 筆 / 長按進入手勢模式
 // ↑+1  ↓−1  →取消（不記錄）
+// 用 pointer events 統一處理觸控和滑鼠，避免事件衝突
 // ─────────────────────────────────────────────────────────────
 interface ProductButtonProps {
   product: Product;
@@ -756,162 +757,151 @@ function ProductButton({
 
   const [quantity, setQuantity] = useState(1);
   const [gestureMode, setGestureMode] = useState(false);
-  const [showSwipeHint, setShowSwipeHint] = useState(false);
-  const [lastSwipeDir, setLastSwipeDir] = useState<"up" | "down" | "cancel" | null>(null);
+  const [showHint, setShowHint] = useState(false);
+  const [lastDir, setLastDir] = useState<"up" | "down" | null>(null);
   const [cancelled, setCancelled] = useState(false);
 
+  // 所有狀態用 ref 同步，避免閉包問題
+  const gestureRef = useRef(false);
+  const cancelRef = useRef(false);
+  const qtyRef = useRef(1);
+  const startPosRef = useRef<{ x: number; y: number } | null>(null);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
-  const gestureModeRef = useRef(false);
-  const cancelledRef = useRef(false);
-  const quantityRef = useRef(1);
-  const justExitedGestureRef = useRef(false); // 防止 touchend 後 click 重複觸發
+  const hintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // 防止 pointerup 後 click 重複觸發
+  const blockClickRef = useRef(false);
 
-  useEffect(() => { gestureModeRef.current = gestureMode; }, [gestureMode]);
-  useEffect(() => { quantityRef.current = quantity; }, [quantity]);
   useEffect(() => {
-    return () => { if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current); };
+    return () => {
+      if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+      if (hintTimerRef.current) clearTimeout(hintTimerRef.current);
+    };
   }, []);
 
-  const recordTransaction = (qty: number) => {
-    const txIds: string[] = [];
-    for (let i = 0; i < qty; i++) {
-      const txId = addTransaction({
-        type: "income", amount: product.price, currency: currency as any,
-        category: "sales", paymentMethod: payment, productId: product.id,
-        note: qty > 1 ? `${product.name} x${qty}` : product.name,
-        marketId: currentMarketId || undefined,
-      });
-      txIds.push(txId);
-    }
+  const doRecord = (qty: number) => {
+    const txId = addTransaction({
+      type: "income", amount: product.price, currency: currency as any,
+      category: "sales", paymentMethod: payment, productId: product.id,
+      note: qty > 1 ? `${product.name} x${qty}` : product.name,
+      marketId: currentMarketId || undefined,
+    });
     onConfirm(product.id);
-    onRecord(txIds[0], qty > 1 ? `${product.name} x${qty}` : product.name, product.price * qty);
+    onRecord(txId, qty > 1 ? `${product.name} x${qty}` : product.name, product.price * qty);
   };
 
-  const enterGestureMode = () => {
-    gestureModeRef.current = true;
-    cancelledRef.current = false;
+  const enterGesture = () => {
+    gestureRef.current = true;
+    cancelRef.current = false;
+    qtyRef.current = 1;
     setGestureMode(true);
-    setShowSwipeHint(true);
     setCancelled(false);
     setQuantity(1);
-    quantityRef.current = 1;
+    setShowHint(true);
+    if (hintTimerRef.current) clearTimeout(hintTimerRef.current);
+    hintTimerRef.current = setTimeout(() => setShowHint(false), 4000);
     if (typeof navigator !== "undefined" && "vibrate" in navigator) (navigator as any).vibrate?.(30);
-    setTimeout(() => setShowSwipeHint(false), 4000);
   };
 
-  const exitGestureMode = (wasCancelled: boolean) => {
-    if (wasCancelled) {
-      cancelledRef.current = true;
-      setCancelled(true);
-      if (typeof navigator !== "undefined" && "vibrate" in navigator) (navigator as any).vibrate?.([30, 30, 30]);
-      setTimeout(() => {
-        gestureModeRef.current = false; cancelledRef.current = false;
-        setGestureMode(false); setCancelled(false); setShowSwipeHint(false);
-        setQuantity(1); quantityRef.current = 1; swipeStartRef.current = null;
-      }, 600);
-    } else {
-      gestureModeRef.current = false;
-      setGestureMode(false); setShowSwipeHint(false);
-      setQuantity(1); quantityRef.current = 1; swipeStartRef.current = null;
-    }
+  const exitAndRecord = () => {
+    if (cancelRef.current) return; // 已取消就不記錄
+    doRecord(qtyRef.current);
+    resetGesture();
   };
 
-  const handleSwipeMove = (clientX: number, clientY: number) => {
-    if (!gestureModeRef.current || !swipeStartRef.current) return;
-    const deltaX = clientX - swipeStartRef.current.x;
-    const deltaY = clientY - swipeStartRef.current.y;
-    const THRESHOLD = 25;
-    // 向右滑 → 取消
-    if (deltaX >= THRESHOLD && Math.abs(deltaX) > Math.abs(deltaY)) { exitGestureMode(true); return; }
-    // 垂直滑動
-    if (Math.abs(deltaY) >= THRESHOLD && Math.abs(deltaY) > Math.abs(deltaX)) {
-      if (deltaY < 0) { quantityRef.current += 1; setQuantity(quantityRef.current); setLastSwipeDir("up"); }
-      else { quantityRef.current = Math.max(1, quantityRef.current - 1); setQuantity(quantityRef.current); setLastSwipeDir("down"); }
-      swipeStartRef.current = { x: clientX, y: clientY };
+  const exitAndCancel = () => {
+    cancelRef.current = true;
+    setCancelled(true);
+    if (typeof navigator !== "undefined" && "vibrate" in navigator) (navigator as any).vibrate?.([30, 30, 30]);
+    setTimeout(() => resetGesture(), 600);
+  };
+
+  const resetGesture = () => {
+    gestureRef.current = false;
+    cancelRef.current = false;
+    qtyRef.current = 1;
+    setGestureMode(false);
+    setCancelled(false);
+    setQuantity(1);
+    setShowHint(false);
+    startPosRef.current = null;
+  };
+
+  const handleSwipe = (clientX: number, clientY: number) => {
+    if (!gestureRef.current || !startPosRef.current || cancelRef.current) return;
+    const dx = clientX - startPosRef.current.x;
+    const dy = clientY - startPosRef.current.y;
+    const TH = 25;
+    // 向右 = 取消
+    if (dx >= TH && Math.abs(dx) > Math.abs(dy)) { exitAndCancel(); return; }
+    // 垂直
+    if (Math.abs(dy) >= TH && Math.abs(dy) > Math.abs(dx)) {
+      if (dy < 0) { qtyRef.current += 1; setQuantity(qtyRef.current); setLastDir("up"); }
+      else { qtyRef.current = Math.max(1, qtyRef.current - 1); setQuantity(qtyRef.current); setLastDir("down"); }
+      startPosRef.current = { x: clientX, y: clientY };
       if (typeof navigator !== "undefined" && "vibrate" in navigator) (navigator as any).vibrate?.(15);
-      setTimeout(() => setLastSwipeDir(null), 200);
+      setTimeout(() => setLastDir(null), 200);
     }
   };
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    const t = e.touches[0];
-    swipeStartRef.current = { x: t.clientX, y: t.clientY };
-    longPressTimerRef.current = setTimeout(() => enterGestureMode(), 400);
-  };
-  const handleTouchMove = (e: React.TouchEvent) => { handleSwipeMove(e.touches[0].clientX, e.touches[0].clientY); };
-  const handleTouchEnd = () => {
-    if (longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null; }
-
-    // 記住是否在手勢模式中（因為 exitGestureMode 會重置 ref）
-    const wasInGestureMode = gestureModeRef.current;
-    const wasCancelled = cancelledRef.current;
-
-    if (wasInGestureMode && !wasCancelled) {
-      recordTransaction(quantityRef.current);
-      exitGestureMode(false);
-    }
-
-    // 手機上 touchend 後瀏覽器會 fire click（約 300ms 後），設旗標防止重複記錄
-    if (wasInGestureMode || wasCancelled) {
-      justExitedGestureRef.current = true;
-      setTimeout(() => { justExitedGestureRef.current = false; }, 800);
-    }
-  };
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (e.button !== 0) return;
-    // 如果剛從手勢模式退出，不啟動新的長按計時器（手機上 touchend 後會 fire mousedown）
-    if (justExitedGestureRef.current) return;
-    swipeStartRef.current = { x: e.clientX, y: e.clientY };
+  // ── 用 pointerdown/pointermove/pointerup 統一處理 ──
+  const onPointerDown = (e: React.PointerEvent) => {
+    if (e.button !== undefined && e.button !== 0) return;
+    startPosRef.current = { x: e.clientX, y: e.clientY };
+    blockClickRef.current = false;
     longPressTimerRef.current = setTimeout(() => {
-      enterGestureMode();
-      const onGlobalMove = (ev: MouseEvent) => handleSwipeMove(ev.clientX, ev.clientY);
-      const onGlobalUp = () => {
-        document.removeEventListener("mousemove", onGlobalMove);
-        document.removeEventListener("mouseup", onGlobalUp);
-        if (longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null; }
-
-        const wasInGestureMode = gestureModeRef.current;
-        const wasCancelled = cancelledRef.current;
-
-        if (wasInGestureMode && !wasCancelled) {
-          recordTransaction(quantityRef.current);
-          exitGestureMode(false);
-        }
-
-        if (wasInGestureMode || wasCancelled) {
-          justExitedGestureRef.current = true;
-          setTimeout(() => { justExitedGestureRef.current = false; }, 800);
-        }
-      };
-      document.addEventListener("mousemove", onGlobalMove);
-      document.addEventListener("mouseup", onGlobalUp);
+      enterGesture();
+      blockClickRef.current = true; // 進入手勢模式後，阻止隨後的 click
     }, 400);
   };
-  const handleMouseLeave = () => {
-    if (!gestureModeRef.current && longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null; }
+
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (gestureRef.current) handleSwipe(e.clientX, e.clientY);
   };
-  const handleClick = (e: React.MouseEvent) => {
-    // 手勢模式中或剛退出 → 不觸發 click（避免重複記錄）
-    if (gestureModeRef.current || justExitedGestureRef.current) {
+
+  const onPointerUp = (e: React.PointerEvent) => {
+    if (longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null; }
+    if (gestureRef.current && !cancelRef.current) {
+      exitAndRecord();
+    }
+    // 如果剛從手勢模式出來，阻止 click 事件
+    if (blockClickRef.current) {
+      blockClickRef.current = false;
+      // 延遲重置，確保 click 事件被擋掉
+      setTimeout(() => { blockClickRef.current = false; }, 500);
+      blockClickRef.current = true;
+    }
+  };
+
+  const onPointerLeave = () => {
+    if (!gestureRef.current && longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
+  // click 只在「從未進入手勢模式」時記錄 1 筆
+  const onClick = (e: React.MouseEvent) => {
+    if (blockClickRef.current || gestureRef.current || cancelRef.current) {
       e.preventDefault();
+      e.stopPropagation();
       return;
     }
-    recordTransaction(1);
+    // 清除長按計時器（如果還在）
+    if (longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null; }
+    doRecord(1);
   };
 
   return (
     <button
-      onClick={handleClick}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-      onMouseDown={handleMouseDown}
-      onMouseLeave={handleMouseLeave}
+      onClick={onClick}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerLeave={onPointerLeave}
+      style={{ touchAction: "none" }}
       className={`relative bg-card border-2 rounded-xl p-2.5 text-center transition-all overflow-hidden min-h-[68px] flex flex-col justify-center select-none ${
         cancelled ? "border-rose-500 bg-rose-50"
-        : gestureMode ? "border-primary bg-primary/5 scale-[1.03] shadow-lg cursor-ns-resize"
+        : gestureMode ? "border-primary bg-primary/5 scale-[1.03] shadow-lg"
         : confirming ? "border-emerald-500 bg-emerald-50 scale-[0.97]"
         : "border-primary/20 hover:border-primary active:scale-[0.95] cursor-pointer"
       }`}
@@ -931,17 +921,17 @@ function ProductButton({
       )}
       {gestureMode && !cancelled && (
         <div className="absolute inset-0 bg-primary/5 flex flex-col items-center justify-center px-1">
-          <div className={`text-2xl font-bold tabular-nums transition-transform ${lastSwipeDir ? "scale-125" : "scale-100"} ${lastSwipeDir === "up" ? "text-emerald-600" : lastSwipeDir === "down" ? "text-rose-600" : "text-primary"}`}>
+          <div className={`text-2xl font-bold tabular-nums transition-transform ${lastDir ? "scale-125" : "scale-100"} ${lastDir === "up" ? "text-emerald-600" : lastDir === "down" ? "text-rose-600" : "text-primary"}`}>
             ×{quantity}
           </div>
           <div className="text-[10px] text-muted-foreground tabular-nums mt-0.5">
             {formatCurrency(product.price * quantity, currency as any)}
           </div>
-          {showSwipeHint && (
+          {showHint && (
             <div className="absolute inset-0 flex flex-col items-center justify-between py-1 pointer-events-none">
-              <div className={`text-[10px] font-medium transition ${lastSwipeDir === "up" ? "text-emerald-600 scale-110" : "text-muted-foreground/60"}`}>↑ +1</div>
-              <div className="text-[9px] text-muted-foreground/50 leading-tight text-center">↑+1 ↓−1<br/>→取消</div>
-              <div className={`text-[10px] font-medium transition ${lastSwipeDir === "down" ? "text-rose-600 scale-110" : "text-muted-foreground/60"}`}>↓ −1</div>
+              <div className={`text-[10px] font-medium ${lastDir === "up" ? "text-emerald-600 scale-110" : "text-muted-foreground/60"}`}>↑ +1</div>
+              <div className="text-[9px] text-muted-foreground/50 text-center leading-tight">↑+1 ↓−1<br/>→取消</div>
+              <div className={`text-[10px] font-medium ${lastDir === "down" ? "text-rose-600 scale-110" : "text-muted-foreground/60"}`}>↓ −1</div>
             </div>
           )}
         </div>
