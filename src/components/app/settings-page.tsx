@@ -191,7 +191,7 @@ export function SettingsPage() {
           <div className="pt-2 space-y-2 text-xs">
             <div className="flex justify-between py-1">
               <span className="text-muted-foreground">開發者</span>
-              <span className="text-foreground font-medium">市集記賬本團隊</span>
+              <span className="text-foreground font-medium">ArtifexStudio</span>
             </div>
             <div className="flex justify-between py-1">
               <span className="text-muted-foreground">技術棧</span>
