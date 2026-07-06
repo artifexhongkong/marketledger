@@ -149,10 +149,10 @@ function RecordView() {
 
   return (
     <div className="flex flex-col h-full relative">
-      {/* Toast 通知 — sticky 在頂部，從上方滑入（不偏左） */}
+      {/* Toast 通知 — fixed 定位，浮在頁面之上不影響排版 */}
       {toast && (
-        <div className="sticky top-0 z-50 -mx-5 px-3 pt-2 pb-1 bg-background/95 backdrop-blur-sm">
-          <div className="bg-card border border-emerald-200 shadow-lg rounded-2xl px-3 py-2.5 flex items-center gap-2.5 toast-slide-down">
+        <div className="fixed top-0 left-0 right-0 z-50 flex justify-center px-4 pt-14 toast-slide-down pointer-events-none">
+          <div className="bg-card border border-emerald-200 shadow-lg rounded-2xl px-3 py-2.5 flex items-center gap-2.5 max-w-sm pointer-events-auto">
             <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
               <Check className="w-3.5 h-3.5 text-emerald-600" strokeWidth={3} />
             </div>
@@ -955,7 +955,7 @@ function ProductButton({
       onPointerMove={onMove}
       onPointerUp={onUp}
       onPointerCancel={onUp}
-      style={{ touchAction: s.mode === "gesture" ? "none" : "auto" }}
+      style={{ touchAction: s.mode === "gesture" ? "none" : "pan-y" }}
       className={`relative bg-card border-2 rounded-xl p-2.5 text-center transition-all overflow-hidden min-h-[68px] flex flex-col justify-center select-none ${
         s.mode === "cancelled" ? "border-rose-500 bg-rose-50"
         : s.mode === "gesture" ? "border-primary bg-primary/5 scale-[1.03] shadow-lg"

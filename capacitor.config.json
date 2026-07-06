@@ -1,0 +1,11 @@
+{
+  "appId": "com.artifexstudio.marketledger",
+  "appName": "市集記賬本",
+  "webDir": "out",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "backgroundColor": "#FAFAF7"
+  }
+}
