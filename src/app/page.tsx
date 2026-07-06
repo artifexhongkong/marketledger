@@ -129,31 +129,25 @@ export default function Page() {
                   const active = tab === id;
                   return (
                     <button key={id} onClick={() => setTab(id)}
-                      className={`flex-1 flex flex-col items-center gap-1 py-1 transition min-w-0 ${
-                        featured ? "rounded-xl mx-0.5" : ""
-                      } ${
-                        featured && active
-                          ? "bg-accent/15 shadow-sm"
-                          : featured
-                          ? "bg-accent/8 hover:bg-accent/12"
-                          : ""
-                      }`}>
-                      <Icon
-                        className={`w-5 h-5 transition-all ${
-                          featured
-                            ? active
-                              ? "text-accent scale-110"
-                              : "text-accent"
-                            : active
-                            ? "text-accent scale-110"
-                            : "text-muted-foreground"
-                        }`}
-                        strokeWidth={active ? 2.5 : 2}
-                        fill={featured && active ? "currentColor" : "none"}
-                      />
+                      className="flex-1 flex flex-col items-center gap-1 py-1 transition min-w-0">
+                      {featured ? (
+                        // 市集：實心金色圓盤 + 深色圖示，視覺重量最強
+                        <div
+                          className={`relative w-9 h-9 rounded-full flex items-center justify-center bg-accent shadow-md shadow-accent/40 transition-all duration-200 ${
+                            active ? "scale-110 ring-2 ring-accent/30 ring-offset-1 ring-offset-card" : "hover:scale-105"
+                          }`}
+                        >
+                          <Icon className="w-5 h-5 text-background" strokeWidth={2.5} fill="currentColor" />
+                        </div>
+                      ) : (
+                        <Icon
+                          className={`w-5 h-5 transition-all ${active ? "text-accent scale-110" : "text-muted-foreground"}`}
+                          strokeWidth={active ? 2.5 : 2}
+                        />
+                      )}
                       <span className={`text-[10px] transition truncate ${
                         featured
-                          ? active ? "text-accent font-bold" : "text-accent font-semibold"
+                          ? "text-accent font-bold"
                           : active ? "text-accent font-semibold" : "text-muted-foreground"
                       }`}>
                         {label}
