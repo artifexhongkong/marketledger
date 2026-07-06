@@ -1,34 +1,74 @@
 "use client";
 
-import { useAppStore, CURRENCIES, type CurrencyCode, type LanguageCode } from "@/lib/store";
+import { useAppStore, CURRENCIES, type CurrencyCode } from "@/lib/store";
+import { useAuthStore } from "@/lib/auth-store";
+import { APP_VERSION, APP_VERSION_DISPLAY, GITHUB_RELEASES_API, GITHUB_RELEASES_PAGE, compareVersions } from "@/lib/version";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   Globe, Download, Trash2, Info, Coins,
   ChevronRight, FileSpreadsheet, FileJson,
+  RefreshCw, DownloadCloud, LogOut, CheckCircle2, AlertCircle, Loader2,
   type LucideIcon,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
+
+interface LatestReleaseInfo {
+  tag_name: string;
+  name: string;
+  html_url: string;
+  published_at: string;
+  assets: { name: string; browser_download_url: string; size: number }[];
+}
+
+type VersionStatus = "idle" | "checking" | "latest" | "outdated" | "error";
 
 export function SettingsPage() {
   const {
-    currency, language, setCurrency, setLanguage,
+    currency, setCurrency,
     transactions, clearAll,
   } = useAppStore();
+  const { testUsername, testLogout } = useAuthStore();
 
   const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
-  const [showLanguagePicker, setShowLanguagePicker] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
 
-  const languages: { key: LanguageCode; label: string; native: string }[] = [
-    { key: "zh_TW", label: "繁體中文", native: "繁體中文" },
-    { key: "zh_CN", label: "簡體中文", native: "简体中文" },
-    { key: "en", label: "English", native: "English" },
-    { key: "th", label: "泰文", native: "ไทย" },
-    { key: "ms", label: "馬來文", native: "Bahasa Melayu" },
-  ];
+  // 版本檢查狀態
+  const [versionStatus, setVersionStatus] = useState<VersionStatus>("idle");
+  const [latestRelease, setLatestRelease] = useState<LatestReleaseInfo | null>(null);
+  const [checkError, setCheckError] = useState("");
+
+  const checkUpdate = useCallback(async () => {
+    setVersionStatus("checking");
+    setCheckError("");
+    try {
+      const res = await fetch(GITHUB_RELEASES_API, { cache: "no-store" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data: LatestReleaseInfo = await res.json();
+      setLatestRelease(data);
+      const cmp = compareVersions(data.tag_name, APP_VERSION);
+      setVersionStatus(cmp > 0 ? "outdated" : "latest");
+    } catch (e: any) {
+      setCheckError(e?.message || "檢查失敗");
+      setVersionStatus("error");
+    }
+  }, []);
+
+  // 進入設定頁時自動檢查一次
+  useEffect(() => {
+    checkUpdate();
+  }, [checkUpdate]);
+
+  const handleUpdate = () => {
+    if (!latestRelease) return;
+    // 找出 APK 下載連結
+    const apkAsset = latestRelease.assets.find((a) => a.name.endsWith(".apk"));
+    const url = apkAsset?.browser_download_url || latestRelease.html_url;
+    // 在新視窗開啟下載頁
+    window.open(url, "_blank");
+  };
 
   const exportData = (format: "csv" | "json") => {
     if (transactions.length === 0) return alert("目前沒有交易記錄可以匯出");
@@ -61,11 +101,35 @@ export function SettingsPage() {
     alert("已清除所有交易記錄");
   };
 
-  const currentLang = languages.find((l) => l.key === language);
+  const handleLogout = () => {
+    if (confirm("確定要登出測試帳號嗎？")) {
+      testLogout();
+    }
+  };
 
   return (
     <div className="px-5 pb-4 space-y-4">
       <h1 className="text-xl font-bold pt-4 text-foreground">設定</h1>
+
+      {/* 測試帳號資訊 */}
+      <SettingsGroup title="測試帳號">
+        <div className="px-4 py-3 flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-accent/15 flex items-center justify-center flex-shrink-0">
+            <CheckCircle2 className="w-4 h-4 text-accent" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-foreground">{testUsername}</p>
+            <p className="text-[10px] text-muted-foreground">已登入測試帳號</p>
+          </div>
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-1 text-[11px] text-rose-600 hover:text-rose-700 px-2.5 py-1.5 rounded-md hover:bg-rose-50 transition"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            登出
+          </button>
+        </div>
+      </SettingsGroup>
 
       {/* 偏好設定群組 */}
       <SettingsGroup title="偏好設定">
@@ -75,7 +139,7 @@ export function SettingsPage() {
           iconColor="text-amber-600"
           label="幣別"
           value={`${CURRENCIES[currency].symbol} ${currency}`}
-          onClick={() => { setShowCurrencyPicker(!showCurrencyPicker); setShowLanguagePicker(false); }}
+          onClick={() => setShowCurrencyPicker(!showCurrencyPicker)}
           expanded={showCurrencyPicker}
         >
           <div className="grid grid-cols-3 gap-2 pt-2">
@@ -95,39 +159,6 @@ export function SettingsPage() {
             ))}
           </div>
         </SettingsRow>
-
-        <SettingsRow
-          icon={Globe}
-          iconBg="bg-blue-100"
-          iconColor="text-blue-600"
-          label="語言"
-          value={currentLang?.native}
-          onClick={() => { setShowLanguagePicker(!showLanguagePicker); setShowCurrencyPicker(false); }}
-          expanded={showLanguagePicker}
-          isLast
-        >
-          <div className="space-y-1 pt-2">
-            {languages.map((lang) => (
-              <button
-                key={lang.key}
-                onClick={() => { setLanguage(lang.key); setShowLanguagePicker(false); }}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm transition ${
-                  language === lang.key
-                    ? "bg-primary/8 text-primary font-medium"
-                    : "text-foreground hover:bg-muted"
-                }`}
-              >
-                <span>{lang.native}</span>
-                {language === lang.key && (
-                  <span className="text-primary">✓</span>
-                )}
-              </button>
-            ))}
-            <p className="text-[10px] text-muted-foreground/60 italic px-3 pt-1">
-              ※ 多語系介面將於 V2 版本提供
-            </p>
-          </div>
-        </SettingsRow>
       </SettingsGroup>
 
       {/* 資料管理群組 */}
@@ -138,7 +169,7 @@ export function SettingsPage() {
           iconColor="text-emerald-600"
           label="匯出資料"
           value={`${transactions.length} 筆交易`}
-          onClick={() => { setShowExportMenu(!showExportMenu); }}
+          onClick={() => setShowExportMenu(!showExportMenu)}
           expanded={showExportMenu}
         >
           <div className="grid grid-cols-2 gap-2 pt-2">
@@ -172,6 +203,83 @@ export function SettingsPage() {
         />
       </SettingsGroup>
 
+      {/* 應用更新群組 */}
+      <SettingsGroup title="應用更新">
+        <div className="px-4 py-3.5 space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
+              {versionStatus === "checking" ? (
+                <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
+              ) : versionStatus === "latest" ? (
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              ) : versionStatus === "outdated" ? (
+                <AlertCircle className="w-4 h-4 text-amber-600" />
+              ) : versionStatus === "error" ? (
+                <AlertCircle className="w-4 h-4 text-rose-600" />
+              ) : (
+                <Info className="w-4 h-4 text-blue-600" />
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-foreground">目前版本</p>
+              <p className="text-[11px] text-muted-foreground">{APP_VERSION_DISPLAY}</p>
+            </div>
+            <button
+              onClick={checkUpdate}
+              disabled={versionStatus === "checking"}
+              className="flex items-center gap-1 text-[11px] text-blue-600 hover:text-blue-700 px-2.5 py-1.5 rounded-md hover:bg-blue-50 transition disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${versionStatus === "checking" ? "animate-spin" : ""}`} />
+              重新檢查
+            </button>
+          </div>
+
+          {/* 狀態訊息 */}
+          {versionStatus === "latest" && (
+            <div className="text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+              ✓ 已是最新版本
+            </div>
+          )}
+          {versionStatus === "outdated" && latestRelease && (
+            <div className="space-y-2">
+              <div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                <p className="font-medium">發現新版本 {latestRelease.tag_name}</p>
+                <p className="text-[10px] text-amber-600/80 mt-0.5">
+                  發布於 {new Date(latestRelease.published_at).toLocaleDateString("zh-TW")}
+                </p>
+              </div>
+              <Button
+                onClick={handleUpdate}
+                className="w-full h-9 text-xs font-medium"
+              >
+                <DownloadCloud className="w-3.5 h-3.5 mr-1" />
+                下載更新
+              </Button>
+            </div>
+          )}
+          {versionStatus === "error" && (
+            <div className="space-y-2">
+              <div className="text-[11px] text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">
+                檢查失敗：{checkError}
+              </div>
+              <Button
+                onClick={checkUpdate}
+                variant="outline"
+                className="w-full h-9 text-xs font-medium"
+              >
+                <RefreshCw className="w-3.5 h-3.5 mr-1" />
+                重試
+              </Button>
+            </div>
+          )}
+          {versionStatus === "checking" && (
+            <div className="text-[11px] text-muted-foreground bg-muted/40 rounded-lg px-3 py-2">
+              正在檢查最新版本...
+            </div>
+          )}
+        </div>
+      </SettingsGroup>
+
       {/* 關於群組 */}
       <SettingsGroup title="關於">
         <SettingsRow
@@ -179,7 +287,7 @@ export function SettingsPage() {
           iconBg="bg-slate-100"
           iconColor="text-slate-600"
           label="版本資訊"
-          value="v1.0.1"
+          value={APP_VERSION_DISPLAY}
           onClick={() => setShowAbout(!showAbout)}
           expanded={showAbout}
           isLast
@@ -196,6 +304,10 @@ export function SettingsPage() {
             <div className="flex justify-between py-1">
               <span className="text-muted-foreground">更新日期</span>
               <span className="text-foreground font-medium">2026.07</span>
+            </div>
+            <div className="flex justify-between py-1">
+              <span className="text-muted-foreground">版本標籤</span>
+              <span className="text-foreground font-medium">{APP_VERSION}</span>
             </div>
           </div>
         </SettingsRow>

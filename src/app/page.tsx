@@ -10,6 +10,7 @@ import { TransactionsPage } from "@/components/app/transactions-page";
 import { MarketsPage } from "@/components/app/markets-page";
 import { SettingsPage } from "@/components/app/settings-page";
 import { AuthPage } from "@/components/app/auth-section";
+import { LoginScreen } from "@/components/app/login-screen";
 
 type TabId = "home" | "record" | "transactions" | "markets" | "settings" | "account";
 
@@ -27,7 +28,7 @@ export default function Page() {
   const seedDemo = useAppStore((s) => s.seedDemo);
   const cleanupOrphanedTxs = useAppStore((s) => s.cleanupOrphanedTxs);
   const migrateCategories = useAppStore((s) => s.migrateCategories);
-  const { user, storageMode } = useAuthStore();
+  const { user, storageMode, testAuthed } = useAuthStore();
 
   useEffect(() => {
     setHydrated(true);
@@ -47,6 +48,22 @@ export default function Page() {
 
   // 帳號頁面是獨立覆蓋層
   const showAccount = tab === "account";
+
+  // 未通過測試帳號登入 → 顯示登入畫面
+  if (hydrated && !testAuthed) {
+    return (
+      <main className="min-h-screen bg-slate-200 flex items-center justify-center overflow-hidden">
+        <div className="relative w-full h-screen md:w-[390px] md:h-[780px] md:max-h-[calc(100vh-4rem)] md:rounded-[2.5rem] md:bg-slate-900 md:p-3 md:shadow-2xl md:shadow-slate-900/30"
+          style={{ maxHeight: "100dvh" }}>
+          <div className="hidden md:block absolute top-3 left-1/2 -translate-x-1/2 w-32 h-7 bg-slate-900 rounded-b-2xl z-30" />
+          <div className="w-full h-full bg-background md:rounded-[2rem] overflow-hidden flex flex-col relative">
+            <LoginScreen />
+            <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-32 h-1 bg-foreground/80 rounded-full" />
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-slate-200 flex items-center justify-center overflow-hidden">
