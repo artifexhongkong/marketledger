@@ -321,31 +321,36 @@ export const useAppStore = create<AppStore>()(
         // 如果開啟自動記帳，為每個市集日加上攤位費支出
         if (e.autoAddFee && e.boothFee > 0) {
           const { currency } = get();
-          const dailyFee = e.boothFee;
           const start = new Date(e.startDate);
           const end = new Date(e.endDate);
-          const dayMs = 86400000;
-          for (let ts = start.getTime(); ts <= end.getTime() + dayMs - 1; ts += dayMs) {
-            const dayStart = new Date(ts);
-            const dayTs = new Date(dayStart.getFullYear(), dayStart.getMonth(), dayStart.getDate(), 9, 0).getTime();
-            const { transactions: txs, addTransaction } = get();
-            const exists = txs.some((t) => t.category === "rent" && t.note?.includes(e.name) && Math.abs(t.createdAt - dayTs) < dayMs);
+          const newTxs: Transaction[] = [];
+          // 遍歷每一天
+          for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+            const dayTs = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 9, 0).getTime();
+            const { transactions: txs } = get();
+            // 檢查是否已有該日的攤位費（同名）
+            const exists = txs.some((t) =>
+              t.category === "rent" &&
+              t.note?.includes(e.name) &&
+              Math.abs(t.createdAt - dayTs) < 86400000
+            );
             if (!exists) {
-              addTransaction({
-                type: "expense", amount: dailyFee, currency, category: "rent",
+              const txId = `tx_mkt_${dayTs}_${Math.random().toString(36).slice(2, 6)}`;
+              newTxs.push({
+                id: txId,
+                type: "expense",
+                amount: e.boothFee,
+                currency,
+                category: "rent",
                 paymentMethod: "cash",
                 note: `${e.name} 攤位費${e.feeType === "total" ? "（分攤）" : ""}`,
                 marketId: id,
+                createdAt: dayTs,  // 直接設定為正確日期，不事後修改
               });
-              // 修正 createdAt
-              set((s) => ({
-                transactions: s.transactions.map((t) =>
-                  t.note?.includes(e.name) && t.note?.includes("攤位費") && t.createdAt > Date.now() - 5000
-                    ? { ...t, createdAt: dayTs }
-                    : t
-                ),
-              }));
             }
+          }
+          if (newTxs.length > 0) {
+            set((s) => ({ transactions: [...s.transactions, ...newTxs] }));
           }
         }
         return id;
