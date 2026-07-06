@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useMemo, useRef } from "react";
-import { useAppStore, formatCurrency, CURRENCIES, type MarketEvent } from "@/lib/store";
+import { useState, useMemo } from "react";
+import { useAppStore, formatCurrency, CURRENCIES, type MarketEvent, getCategoryInfo, getPaymentMethodInfo } from "@/lib/store";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, X, MapPin, Calendar, Clock, Store, Trash2, ChevronLeft, ChevronRight, Eye, EyeOff, Pencil } from "lucide-react";
+import { Plus, X, MapPin, Calendar, Clock, Store, Trash2, ChevronLeft, ChevronRight, Eye, EyeOff, Pencil, Inbox, ArrowUpRight, ArrowDownRight } from "lucide-react";
 
 const EVENT_COLORS = ["#1A1D24", "#059669", "#E11D48", "#F59E0B", "#7C3AED", "#0891B2"];
 const WEEKDAYS = ["日", "一", "二", "三", "四", "五", "六"];
@@ -21,22 +21,46 @@ function parseDateKey(key: string) {
 }
 
 export function MarketsPage() {
-  const { marketEvents, addMarketEvent, deleteMarketEvent, updateMarketEvent, currency, transactions } = useAppStore();
+  const { marketEvents, addMarketEvent, deleteMarketEvent, updateMarketEvent, currency, transactions, customPaymentMethods } = useAppStore();
   const [showForm, setShowForm] = useState(false);
   const [editingEvent, setEditingEvent] = useState<MarketEvent | null>(null);
   const [viewYear, setViewYear] = useState(new Date().getFullYear());
   const [viewMonth, setViewMonth] = useState(new Date().getMonth());
   const [showProfit, setShowProfit] = useState(true);
+  // 選中的日期（點擊日曆某天 → 顯示該天交易列表）
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
-  const prevMonth = () => { if (viewMonth === 0) { setViewMonth(11); setViewYear(viewYear - 1); } else setViewMonth(viewMonth - 1); };
-  const nextMonth = () => { if (viewMonth === 11) { setViewMonth(0); setViewYear(viewYear + 1); } else setViewMonth(viewMonth + 1); };
+  const prevMonth = () => { if (viewMonth === 0) { setViewMonth(11); setViewYear(viewYear - 1); } else setViewMonth(viewMonth - 1); setSelectedDate(null); };
+  const nextMonth = () => { if (viewMonth === 11) { setViewMonth(0); setViewYear(viewYear + 1); } else setViewMonth(viewMonth + 1); setSelectedDate(null); };
 
-  const getDayProfit = (dateKey: string) => {
-    const dayTxs = transactions.filter((t) => toDateKey(new Date(t.createdAt)) === dateKey);
-    const income = dayTxs.filter((t) => t.type === "income").reduce((a, b) => a + b.amount, 0);
-    const expense = dayTxs.filter((t) => t.type === "expense").reduce((a, b) => a + b.amount, 0);
-    return income - expense;
+  // 按日期分組交易
+  const groupedByDate = useMemo(() => {
+    const groups: Record<string, typeof transactions> = {};
+    transactions.forEach((t) => {
+      const key = toDateKey(new Date(t.createdAt));
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(t);
+    });
+    return groups;
+  }, [transactions]);
+
+  const getDateSummary = (dateKey: string) => {
+    const txs = groupedByDate[dateKey] || [];
+    const income = txs.filter((t) => t.type === "income").reduce((a, b) => a + b.amount, 0);
+    const expense = txs.filter((t) => t.type === "expense").reduce((a, b) => a + b.amount, 0);
+    return { income, expense, profit: income - expense, count: txs.length };
   };
+
+  // 月份總計（給 Hero 卡用）
+  const monthSummary = useMemo(() => {
+    const monthTxs = transactions.filter((t) => {
+      const d = new Date(t.createdAt);
+      return d.getFullYear() === viewYear && d.getMonth() === viewMonth;
+    });
+    const income = monthTxs.filter((t) => t.type === "income").reduce((a, b) => a + b.amount, 0);
+    const expense = monthTxs.filter((t) => t.type === "expense").reduce((a, b) => a + b.amount, 0);
+    return { income, expense, profit: income - expense, count: monthTxs.length };
+  }, [transactions, viewYear, viewMonth]);
 
   const monthEvents = useMemo(() => marketEvents.filter((e) => {
     const start = parseDateKey(e.startDate); const end = parseDateKey(e.endDate);
@@ -59,24 +83,18 @@ export function MarketsPage() {
     for (let d = 1; d <= daysInMonth; d++) {
       const dateKey = toDateKey(new Date(viewYear, viewMonth, d));
       const dayEvents = marketEvents.filter((e) => dateKey >= e.startDate && dateKey <= e.endDate);
-      const profit = getDayProfit(dateKey);
-      const hasTx = transactions.some((t) => toDateKey(new Date(t.createdAt)) === dateKey);
-      days.push({ day: d, dateKey, isToday: dateKey === todayKey, events: dayEvents, profit, hasTx });
+      const summary = getDateSummary(dateKey);
+      days.push({ day: d, dateKey, isToday: dateKey === todayKey, events: dayEvents, profit: summary.profit, count: summary.count, hasTx: summary.count > 0 });
     }
     return days;
-  }, [viewYear, viewMonth, marketEvents, transactions]);
-
-  const monthProfit = useMemo(() => calendarDays.filter(Boolean).reduce((s, d) => s + (d.profit || 0), 0), [calendarDays]);
+  }, [viewYear, viewMonth, marketEvents, groupedByDate]);
 
   const handleSave = (data: Omit<MarketEvent, "id" | "createdAt">) => {
     if (editingEvent) {
-      // 編輯：先刪舊的自動記帳交易，再重新加
       updateMarketEvent(editingEvent.id, data);
-      // 清除舊的攤位費交易
       const { transactions: txs } = useAppStore.getState();
       const cleaned = txs.filter((t) => t.marketId !== editingEvent.id);
       useAppStore.setState({ transactions: cleaned });
-      // 如果開啟自動記帳，重新加
       if (data.autoAddFee && data.boothFee > 0) {
         reAddFees(editingEvent.id, data);
       }
@@ -87,7 +105,6 @@ export function MarketsPage() {
     setEditingEvent(null);
   };
 
-  // 重新加攤位費
   const reAddFees = (eventId: string, e: Omit<MarketEvent, "id" | "createdAt">) => {
     const { currency, transactions: txs } = useAppStore.getState();
     const start = parseDateKey(e.startDate); const end = parseDateKey(e.endDate);
@@ -110,10 +127,25 @@ export function MarketsPage() {
   const handleDelete = (id: string) => { deleteMarketEvent(id); };
   const handleAdd = () => { setEditingEvent(null); setShowForm(true); };
 
+  // 選中日期的交易列表
+  const selectedTxs = selectedDate ? (groupedByDate[selectedDate] || []).slice().sort((a, b) => b.createdAt - a.createdAt) : [];
+  const selectedSummary = selectedDate ? getDateSummary(selectedDate) : null;
+  const selectedDateLabel = selectedDate ? (() => {
+    const d = parseDateKey(selectedDate);
+    const today = new Date(); const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
+    if (d.toDateString() === today.toDateString()) return "今日";
+    if (d.toDateString() === yesterday.toDateString()) return "昨日";
+    return `${d.getMonth() + 1}/${d.getDate()}`;
+  })() : null;
+
   return (
     <div className="px-4 pb-6 space-y-3">
+      {/* Header */}
       <div className="pt-4 flex items-center justify-between">
-        <h1 className="text-xl font-bold text-foreground">市集日曆</h1>
+        <div>
+          <h1 className="text-xl font-bold text-foreground">市集日曆</h1>
+          <p className="text-[11px] text-muted-foreground mt-0.5">點日期看記錄 · 看市集活動</p>
+        </div>
         <div className="flex items-center gap-2">
           <button onClick={() => setShowProfit(!showProfit)}
             className={`w-7 h-7 rounded-md flex items-center justify-center transition ${showProfit ? "bg-accent/15 text-accent" : "bg-muted text-muted-foreground"}`}>
@@ -126,6 +158,123 @@ export function MarketsPage() {
         </div>
       </div>
 
+      {/* 月份總計 Hero（取代舊的簡陋「月盈虧」一行字）*/}
+      <div className="bg-gradient-to-br from-primary to-primary/85 rounded-2xl p-4 text-primary-foreground shadow-lg">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-[11px] text-primary-foreground/60 uppercase tracking-wider">{viewYear}年 {MONTHS[viewMonth]}</p>
+            <p className="text-2xl font-bold tabular-nums mt-0.5">
+              {monthSummary.profit >= 0 ? "+" : "−"}{formatCurrency(Math.abs(monthSummary.profit), currency)}
+            </p>
+          </div>
+          <div className="text-right space-y-1">
+            <div className="flex items-center gap-1 justify-end">
+              <ArrowUpRight className="w-3 h-3 text-emerald-300" />
+              <span className="text-[11px] text-primary-foreground/60">收入</span>
+              <span className="text-xs font-semibold tabular-nums">{formatCurrency(monthSummary.income, currency)}</span>
+            </div>
+            <div className="flex items-center gap-1 justify-end">
+              <ArrowDownRight className="w-3 h-3 text-rose-300" />
+              <span className="text-[11px] text-primary-foreground/60">支出</span>
+              <span className="text-xs font-semibold tabular-nums">{formatCurrency(monthSummary.expense, currency)}</span>
+            </div>
+            <p className="text-[11px] text-primary-foreground/60">{monthSummary.count} 筆交易</p>
+          </div>
+        </div>
+      </div>
+
+      {/* 日曆 — 同時顯示每日盈虧 + 市集活動彩色點 + 點擊選取日期 */}
+      <Card className="p-3">
+        <div className="flex items-center justify-between mb-2">
+          <button onClick={prevMonth} className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-muted"><ChevronLeft className="w-4 h-4 text-foreground" /></button>
+          <span className="text-sm font-bold text-foreground">{viewYear} {MONTHS[viewMonth]}</span>
+          <button onClick={nextMonth} className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-muted"><ChevronRight className="w-4 h-4 text-foreground" /></button>
+        </div>
+        <div className="grid grid-cols-7 gap-0.5 mb-1">{WEEKDAYS.map((w) => <div key={w} className="text-center text-[9px] font-medium text-muted-foreground py-0.5">{w}</div>)}</div>
+        <div className="grid grid-cols-7 gap-0.5">
+          {calendarDays.map((day, i) => {
+            if (!day) return <div key={`e-${i}`} />;
+            const isSelected = selectedDate === day.dateKey;
+            return (
+              <button key={day.dateKey} onClick={() => setSelectedDate(isSelected ? null : day.dateKey)}
+                className={`relative aspect-square rounded-lg flex flex-col items-center justify-center text-[11px] transition-all border
+                  ${isSelected ? "bg-accent text-accent-foreground border-accent shadow" : "border-transparent"}
+                  ${!isSelected && day.events.length > 0 ? "bg-muted/40" : ""}
+                  ${!isSelected && day.hasTx && day.events.length === 0 ? "bg-primary/5" : ""}
+                  ${!isSelected ? "hover:bg-muted" : ""}
+                  ${day.isToday && !isSelected ? "ring-1 ring-accent/40" : ""}`}>
+                <span className={`font-medium leading-none ${isSelected ? "text-accent-foreground" : day.isToday ? "text-accent" : "text-foreground"}`}>{day.day}</span>
+                {showProfit && day.hasTx && (
+                  <span className={`text-[8px] tabular-nums mt-0.5 leading-none ${isSelected ? "text-accent-foreground/80" : day.profit >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                    {day.profit >= 0 ? "+" : "−"}{Math.abs(day.profit) >= 1000 ? `${(Math.abs(day.profit) / 1000).toFixed(1)}k` : Math.abs(day.profit)}
+                  </span>
+                )}
+                {day.events.length > 0 && (
+                  <div className="absolute bottom-0.5 flex gap-0.5">
+                    {day.events.slice(0, 3).map((e: MarketEvent, ei: number) => (
+                      <div key={ei} className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: isSelected ? "rgba(255,255,255,0.85)" : e.color }} />
+                    ))}
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </Card>
+
+      {/* 選中日期的交易列表 */}
+      {selectedDate && selectedDateLabel && (
+        <div>
+          <div className="flex items-center justify-between px-1 mb-1.5">
+            <div className="flex items-center gap-1.5">
+              <Calendar className="w-3 h-3 text-muted-foreground" />
+              <span className="text-sm font-bold text-foreground">{selectedDateLabel}</span>
+              <span className="text-[10px] text-muted-foreground">{selectedSummary?.count || 0} 筆</span>
+            </div>
+            {selectedSummary && selectedSummary.count > 0 && (
+              <span className={`text-xs font-bold tabular-nums ${selectedSummary.profit >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                淨 {selectedSummary.profit >= 0 ? "+" : "−"}{formatCurrency(Math.abs(selectedSummary.profit), currency)}
+              </span>
+            )}
+          </div>
+          {selectedTxs.length === 0 ? (
+            <Card className="p-4 text-center border-dashed">
+              <Inbox className="w-6 h-6 text-muted-foreground/40 mx-auto mb-1" />
+              <p className="text-[11px] text-muted-foreground">這天沒有交易</p>
+            </Card>
+          ) : (
+            <Card className="divide-y divide-border overflow-hidden">
+              {selectedTxs.map((t) => {
+                const cat = getCategoryInfo(t.category);
+                const pay = t.paymentMethod ? getPaymentMethodInfo(t.paymentMethod, customPaymentMethods) : null;
+                return (
+                  <div key={t.id} className="flex items-center gap-2.5 px-3 py-2.5">
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm flex-shrink-0"
+                      style={{ backgroundColor: (cat?.color || "#6B7280") + "15" }}>
+                      {cat?.icon || "📝"}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-xs font-medium text-foreground truncate">{cat?.label || t.category}</p>
+                        {pay && <span className="text-[9px] text-muted-foreground bg-muted px-1 rounded">{pay.label}</span>}
+                      </div>
+                      <p className="text-[10px] text-muted-foreground">
+                        {new Date(t.createdAt).toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit" })}{t.note && ` · ${t.note}`}
+                      </p>
+                    </div>
+                    <span className="text-sm font-bold tabular-nums flex-shrink-0"
+                      style={{ color: t.type === "income" ? "#059669" : "#E11D48" }}>
+                      {t.type === "income" ? "+" : "−"}{t.amount.toLocaleString()}
+                    </span>
+                  </div>
+                );
+              })}
+            </Card>
+          )}
+        </div>
+      )}
+
+      {/* 即將到來市集 */}
       {upcomingEvents.length > 0 && (
         <div className="space-y-2">
           <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-1">即將到來</p>
@@ -135,30 +284,7 @@ export function MarketsPage() {
         </div>
       )}
 
-      <Card className="p-3">
-        <div className="flex items-center justify-between mb-2">
-          <button onClick={prevMonth} className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-muted"><ChevronLeft className="w-4 h-4 text-foreground" /></button>
-          <div className="text-center">
-            <span className="text-sm font-bold text-foreground">{viewYear} {MONTHS[viewMonth]}</span>
-            {showProfit && <span className={`block text-[10px] font-medium tabular-nums ${monthProfit >= 0 ? "text-emerald-600" : "text-rose-600"}`}>月盈虧 {monthProfit >= 0 ? "+" : "−"}{formatCurrency(Math.abs(monthProfit), currency)}</span>}
-          </div>
-          <button onClick={nextMonth} className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-muted"><ChevronRight className="w-4 h-4 text-foreground" /></button>
-        </div>
-        <div className="grid grid-cols-7 gap-0.5 mb-1">{WEEKDAYS.map((w) => <div key={w} className="text-center text-[9px] font-medium text-muted-foreground py-0.5">{w}</div>)}</div>
-        <div className="grid grid-cols-7 gap-0.5">
-          {calendarDays.map((day, i) => {
-            if (!day) return <div key={`e-${i}`} />;
-            return (
-              <div key={day.dateKey} className={`relative aspect-square rounded-lg flex flex-col items-center justify-center text-[11px] border ${day.isToday ? "border-accent/40" : "border-transparent"} ${day.events.length > 0 ? "bg-muted/40" : ""}`}>
-                <span className={`font-medium leading-none ${day.isToday ? "text-accent" : "text-foreground"}`}>{day.day}</span>
-                {showProfit && day.hasTx && <span className={`text-[8px] tabular-nums mt-0.5 leading-none ${day.profit >= 0 ? "text-emerald-600" : "text-rose-600"}`}>{day.profit >= 0 ? "+" : "−"}{Math.abs(day.profit) >= 1000 ? `${(Math.abs(day.profit) / 1000).toFixed(1)}k` : Math.abs(day.profit)}</span>}
-                {day.events.length > 0 && <div className="absolute bottom-0.5 flex gap-0.5">{day.events.slice(0, 3).map((e, ei) => <div key={ei} className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: e.color }} />)}</div>}
-              </div>
-            );
-          })}
-        </div>
-      </Card>
-
+      {/* 當月市集活動 */}
       {monthEvents.length > 0 && (
         <div className="space-y-2">
           <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-1">{MONTHS[viewMonth]}市集（{monthEvents.length}）</p>

@@ -1,23 +1,21 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Home, PencilLine, FileText, ClipboardList, MapPin, Settings as SettingsIcon, Cloud, CloudOff, History, User } from "lucide-react";
+import { Home, PencilLine, FileText, ClipboardList, MapPin, Settings as SettingsIcon, Cloud, CloudOff, User } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { useAuthStore } from "@/lib/auth-store";
 import { HomePage } from "@/components/app/home-page";
 import { RecordPage } from "@/components/app/record-page";
 import { TransactionsPage } from "@/components/app/transactions-page";
-import { DailyPage } from "@/components/app/daily-page";
 import { MarketsPage } from "@/components/app/markets-page";
 import { SettingsPage } from "@/components/app/settings-page";
 import { AuthPage } from "@/components/app/auth-section";
 
-type TabId = "home" | "record" | "transactions" | "daily" | "markets" | "settings" | "account";
+type TabId = "home" | "record" | "transactions" | "markets" | "settings" | "account";
 
 const TABS: { id: TabId; label: string; icon: typeof Home }[] = [
   { id: "home", label: "首頁", icon: Home },
   { id: "record", label: "記帳", icon: PencilLine },
-  { id: "daily", label: "歷史", icon: History },
   { id: "transactions", label: "記錄", icon: ClipboardList },
   { id: "markets", label: "市集", icon: MapPin },
   { id: "settings", label: "設定", icon: SettingsIcon },
@@ -119,7 +117,6 @@ export default function Page() {
                     {tab === "home" && <HomePage />}
                     {tab === "record" && <RecordPage />}
                     {tab === "transactions" && <TransactionsPage />}
-                    {tab === "daily" && <DailyPage />}
                     {tab === "markets" && <MarketsPage />}
                     {tab === "settings" && <SettingsPage />}
                   </>
