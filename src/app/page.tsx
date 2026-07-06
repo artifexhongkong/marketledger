@@ -13,10 +13,10 @@ import { AuthPage } from "@/components/app/auth-section";
 
 type TabId = "home" | "record" | "transactions" | "markets" | "settings" | "account";
 
-const TABS: { id: TabId; label: string; icon: typeof Home }[] = [
+const TABS: { id: TabId; label: string; icon: typeof Home; featured?: boolean }[] = [
   { id: "home", label: "概況", icon: Home },
   { id: "record", label: "記帳", icon: PencilLine },
-  { id: "markets", label: "市集", icon: Store },
+  { id: "markets", label: "市集", icon: Store, featured: true },
   { id: "transactions", label: "記錄", icon: ClipboardList },
   { id: "settings", label: "設定", icon: SettingsIcon },
 ];
@@ -125,14 +125,37 @@ export default function Page() {
 
               {/* Tab bar */}
               <div className="bg-card border-t border-border flex items-stretch justify-between px-1 pt-2 pb-5 flex-shrink-0">
-                {TABS.map(({ id, label, icon: Icon }) => {
+                {TABS.map(({ id, label, icon: Icon, featured }) => {
                   const active = tab === id;
                   return (
                     <button key={id} onClick={() => setTab(id)}
-                      className="flex-1 flex flex-col items-center gap-1 py-1 transition min-w-0">
-                      <Icon className={`w-5 h-5 transition-all ${active ? "text-accent scale-110" : "text-muted-foreground"}`}
-                        strokeWidth={active ? 2.5 : 2} />
-                      <span className={`text-[10px] transition truncate ${active ? "text-accent font-semibold" : "text-muted-foreground"}`}>
+                      className={`flex-1 flex flex-col items-center gap-1 py-1 transition min-w-0 ${
+                        featured ? "rounded-xl mx-0.5" : ""
+                      } ${
+                        featured && active
+                          ? "bg-accent/15 shadow-sm"
+                          : featured
+                          ? "bg-accent/8 hover:bg-accent/12"
+                          : ""
+                      }`}>
+                      <Icon
+                        className={`w-5 h-5 transition-all ${
+                          featured
+                            ? active
+                              ? "text-accent scale-110"
+                              : "text-accent"
+                            : active
+                            ? "text-accent scale-110"
+                            : "text-muted-foreground"
+                        }`}
+                        strokeWidth={active ? 2.5 : 2}
+                        fill={featured && active ? "currentColor" : "none"}
+                      />
+                      <span className={`text-[10px] transition truncate ${
+                        featured
+                          ? active ? "text-accent font-bold" : "text-accent font-semibold"
+                          : active ? "text-accent font-semibold" : "text-muted-foreground"
+                      }`}>
                         {label}
                       </span>
                     </button>
