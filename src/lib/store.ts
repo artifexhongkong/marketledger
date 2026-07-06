@@ -323,29 +323,34 @@ export const useAppStore = create<AppStore>()(
           const { currency } = get();
           const start = new Date(e.startDate);
           const end = new Date(e.endDate);
+          // 計算天數
+          const dayMs = 86400000;
+          const totalDays = Math.round((end.getTime() - start.getTime()) / dayMs) + 1;
+          // 總計模式：平均分攤到每天；每天模式：每天都是 boothFee
+          const dailyAmount = e.feeType === "total"
+            ? Math.round(e.boothFee / totalDays)
+            : e.boothFee;
+
           const newTxs: Transaction[] = [];
-          // 遍歷每一天
           for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
             const dayTs = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 9, 0).getTime();
             const { transactions: txs } = get();
-            // 檢查是否已有該日的攤位費（同名）
             const exists = txs.some((t) =>
               t.category === "rent" &&
               t.note?.includes(e.name) &&
-              Math.abs(t.createdAt - dayTs) < 86400000
+              Math.abs(t.createdAt - dayTs) < dayMs
             );
             if (!exists) {
-              const txId = `tx_mkt_${dayTs}_${Math.random().toString(36).slice(2, 6)}`;
               newTxs.push({
-                id: txId,
+                id: `tx_mkt_${dayTs}_${Math.random().toString(36).slice(2, 6)}`,
                 type: "expense",
-                amount: e.boothFee,
+                amount: dailyAmount,
                 currency,
                 category: "rent",
                 paymentMethod: "cash",
-                note: `${e.name} 攤位費${e.feeType === "total" ? "（分攤）" : ""}`,
+                note: `${e.name} 攤位費`,
                 marketId: id,
-                createdAt: dayTs,  // 直接設定為正確日期，不事後修改
+                createdAt: dayTs,
               });
             }
           }
@@ -359,6 +364,8 @@ export const useAppStore = create<AppStore>()(
       deleteMarketEvent: (id) =>
         set((s) => ({
           marketEvents: s.marketEvents.filter((e) => e.id !== id),
+          // 同時刪除該市集的自動記帳攤位費
+          transactions: s.transactions.filter((t) => t.marketId !== id),
         })),
 
       updateMarketEvent: (id, data) =>
