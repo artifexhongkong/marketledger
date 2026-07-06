@@ -10,10 +10,24 @@ export interface GoogleUser {
   sub: string; // Google user ID
 }
 
-// 測試帳號清單（之後可擴充多帳號）
+// 測試帳號清單 — 只存 SHA-256 hash，不存明文密碼
+// 這樣即使 source code 外洩也看不到原始密碼
 const TEST_ACCOUNTS: Record<string, string> = {
   chl2o2: "45f8cf2f521b260f6366ea42b6ca0df6af147f50416027ccf63ca2a6af53bb6a",
 };
+
+// SHA-256 hash helper（用 Web Crypto API）
+async function sha256(text: string): Promise<string> {
+  if (typeof crypto === "undefined" || !crypto.subtle) {
+    // fallback（不應該發生在現代瀏覽器/WebView）
+    return "";
+  }
+  const encoder = new TextEncoder();
+  const data = encoder.encode(text);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+}
 
 interface AuthState {
   user: GoogleUser | null;
@@ -31,8 +45,8 @@ interface AuthState {
   setStorageMode: (mode: "local" | "drive") => void;
   signOut: () => void;
 
-  // 測試帳號登入/登出
-  testLogin: (username: string, password: string) => boolean;
+  // 測試帳號登入/登出（hash 驗證，async）
+  testLogin: (username: string, password: string) => Promise<boolean>;
   testLogout: () => void;
 }
 
@@ -52,9 +66,14 @@ export const useAuthStore = create<AuthState>()(
 
       signOut: () => set({ user: null, accessToken: null, storageMode: "local" }),
 
-      testLogin: (username, password) => {
+      testLogin: async (username, password) => {
         const u = username.trim().toLowerCase();
-        if (TEST_ACCOUNTS[u] && TEST_ACCOUNTS[u] === password) {
+        const storedHash = TEST_ACCOUNTS[u];
+        if (!storedHash) return false;
+        // 計算輸入密碼的 hash 並比對
+        const inputHash = await sha256(password);
+        if (!inputHash) return false;
+        if (storedHash === inputHash) {
           set({ testAuthed: true, testUsername: u, testLoginAt: Date.now() });
           return true;
         }

@@ -18,7 +18,7 @@ export function LoginScreen() {
 
   useEffect(() => setMounted(true), []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
@@ -29,15 +29,19 @@ export function LoginScreen() {
 
     setLoading(true);
     // 模擬一點延遲，避免暴力破解太快
-    setTimeout(() => {
-      const ok = testLogin(username, password);
+    await new Promise((r) => setTimeout(r, 350));
+    try {
+      const ok = await testLogin(username, password);
       if (!ok) {
         setError("帳號或密碼錯誤");
         setPassword("");
         setLoading(false);
       }
       // 成功的話 testAuthed=true，page.tsx 會自動切換到主畫面
-    }, 350);
+    } catch {
+      setError("登入失敗，請重試");
+      setLoading(false);
+    }
   };
 
   if (!mounted) {
