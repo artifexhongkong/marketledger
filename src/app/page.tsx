@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Home, PencilLine, ClipboardList, Settings as SettingsIcon, Cloud, CloudOff, User, Tent } from "lucide-react";
+import { Home, PencilLine, ClipboardList, Settings as SettingsIcon, Cloud, CloudOff, User, Store } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { useAuthStore } from "@/lib/auth-store";
 import { HomePage } from "@/components/app/home-page";
@@ -16,7 +16,7 @@ type TabId = "home" | "record" | "transactions" | "markets" | "settings" | "acco
 const TABS: { id: TabId; label: string; icon: typeof Home; featured?: boolean }[] = [
   { id: "home", label: "首頁", icon: Home },
   { id: "record", label: "記帳", icon: PencilLine },
-  { id: "markets", label: "市集", icon: Tent, featured: true },
+  { id: "markets", label: "市集", icon: Store, featured: true },
   { id: "transactions", label: "記錄", icon: ClipboardList },
   { id: "settings", label: "設定", icon: SettingsIcon },
 ];
@@ -124,26 +124,25 @@ export default function Page() {
               </div>
 
               {/* Tab bar */}
-              <div className="bg-card border-t border-border flex items-stretch justify-between px-1 pt-2 pb-5 flex-shrink-0 relative">
+              <div className="bg-card border-t border-border flex items-stretch justify-between px-1 pt-2 pb-5 flex-shrink-0">
                 {TABS.map(({ id, label, icon: Icon, featured }) => {
                   const active = tab === id;
                   if (featured) {
-                    // 特色浮起按鈕：中間位置、香檳金圓盤、向上浮起
+                    // 特色膠囊按鈕：圖示+文字一體，accent 底色，垂直置中
                     return (
                       <button key={id} onClick={() => setTab(id)}
-                        className="flex-1 flex flex-col items-center gap-1 py-1 min-w-0 relative">
-                        {/* 占位：與其他 tab 的圖示區同高，維持按鈕高度一致 */}
-                        <div className="w-5 h-5" aria-hidden />
-                        <span className={`text-[10px] transition truncate ${active ? "text-accent font-bold" : "text-muted-foreground"}`}>
-                          {label}
-                        </span>
-                        {/* 浮起圓盤 */}
+                        className="flex-1 flex items-center justify-center min-w-0 py-1 transition">
                         <div
-                          className={`absolute left-1/2 -translate-x-1/2 -top-3 w-11 h-11 rounded-full flex items-center justify-center shadow-lg transition-all duration-200 bg-accent text-accent-foreground ${
-                            active ? "scale-110 ring-4 ring-accent/20 shadow-accent/40" : "hover:scale-105 shadow-accent/25"
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all duration-200 ${
+                            active
+                              ? "bg-accent text-accent-foreground shadow-md shadow-accent/30 scale-105"
+                              : "bg-accent/12 text-accent hover:bg-accent/20"
                           }`}
                         >
-                          <Icon className="w-5 h-5" strokeWidth={2.5} />
+                          <Icon className="w-4 h-4" strokeWidth={active ? 2.5 : 2} />
+                          <span className={`text-[11px] transition truncate ${active ? "font-bold" : "font-medium"}`}>
+                            {label}
+                          </span>
                         </div>
                       </button>
                     );
