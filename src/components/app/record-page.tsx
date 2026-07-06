@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { useAppStore, CATEGORIES, PAYMENT_METHODS, PAYMENT_CATEGORIES, formatCurrency, getPaymentMethodInfo } from "@/lib/store";
+import { useAppStore, CATEGORIES, PAYMENT_METHODS, PAYMENT_CATEGORIES, CURRENCIES, formatCurrency, getPaymentMethodInfo } from "@/lib/store";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -285,7 +285,7 @@ function RecordView() {
               <div>
                 <p className="text-xs text-muted-foreground mb-1.5 font-medium">金額</p>
                 <div className="bg-background border border-border rounded-lg flex items-center px-3 h-12">
-                  <span className="text-base text-muted-foreground mr-2">{CURRENCIES_SYMBOL[currency]}</span>
+                  <span className="text-base text-muted-foreground mr-2">{CURRENCIES[currency as keyof typeof CURRENCIES]?.symbol || "$"}</span>
                   <Input
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
