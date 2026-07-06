@@ -452,19 +452,38 @@ function PaymentSelector({
     if (sortTimerRef.current) { clearTimeout(sortTimerRef.current); sortTimerRef.current = null; }
   };
 
+  // 點擊空白處退出排序
+  const handleSortAreaClick = (e: React.MouseEvent) => {
+    if (sortMode) {
+      // 如果點到的不是支付方式按鈕本身，退出排序
+      const target = e.target as HTMLElement;
+      if (!target.closest('[data-pay-index]')) {
+        setSortMode(false);
+        setDragIndex(null);
+        setDragOverIndex(null);
+      }
+    }
+  };
+
+  // 拖拽中即時重排（接近其他圖標時讓位）
+  const handleDragOverLive = (e: React.DragEvent, index: number) => {
+    if (!sortMode || dragIndex === null || dragIndex === index) return;
+    e.preventDefault();
+    if (dragOverIndex !== index) {
+      setDragOverIndex(index);
+      // 即時重排：把拖拽中的項目移到當前位置
+      reorderVisiblePayments(dragIndex, index);
+      // 更新 dragIndex 為新位置
+      setDragIndex(index);
+    }
+  };
+
   return (
-    <div className="mt-3">
+    <div className="mt-3" onClick={handleSortAreaClick}>
       <div className="flex items-center justify-between mb-2">
         <p className="text-xs text-muted-foreground font-medium">支付方式</p>
-        {sortMode && (
-          <button onClick={() => setSortMode(false)}
-            className="text-[10px] font-medium text-accent hover:text-foreground transition">
-            完成排序
-          </button>
-        )}
-        {!sortMode && (
-          <p className="text-[10px] text-muted-foreground/50">長按排序</p>
-        )}
+        {!sortMode && <p className="text-[10px] text-muted-foreground/50">長按排序</p>}
+        {sortMode && <p className="text-[10px] text-accent/70">拖拽排序中</p>}
       </div>
 
       {/* 主頁支付方式 */}
@@ -477,11 +496,12 @@ function PaymentSelector({
           const active = payment === m;
           const vi = visiblePayments.indexOf(m);
           return (
-            <div key={m} draggable={sortMode}
-              onDragStart={() => handleDragStart(vi)}
-              onDragOver={(e) => handleDragOver(e, vi)}
-              onDrop={() => handleDrop(vi)}
-              className={`relative transition-all ${dragOverIndex === vi ? "scale-95 opacity-60" : ""} ${dragIndex === vi ? "opacity-40" : ""} ${sortMode ? "cursor-move" : ""}`}>
+            <div key={m} data-pay-index={vi}
+              draggable={sortMode}
+              onDragStart={() => { if (sortMode) setDragIndex(vi); }}
+              onDragOver={(e) => handleDragOverLive(e, vi)}
+              onDragEnd={() => { setDragIndex(null); setDragOverIndex(null); }}
+              className={`relative transition-all duration-200 ease-out ${dragIndex === vi ? "opacity-30 scale-90" : ""} ${sortMode ? "cursor-move" : ""}`}>
               <PaymentButton2 icon={info.icon} label={shortLabel(info.label)} active={active}
                 manageMode={false} onClick={() => !sortMode && !showMore && setPayment(m as PaymentMethod)} onDelete={null} />
               {showMore && !sortMode && (
@@ -498,11 +518,12 @@ function PaymentSelector({
           const active = payment === m;
           const vi = visiblePayments.indexOf(m);
           return (
-            <div key={c.id} draggable={sortMode}
-              onDragStart={() => handleDragStart(vi)}
-              onDragOver={(e) => handleDragOver(e, vi)}
-              onDrop={() => handleDrop(vi)}
-              className={`relative transition-all ${dragOverIndex === vi ? "scale-95 opacity-60" : ""} ${dragIndex === vi ? "opacity-40" : ""} ${sortMode ? "cursor-move" : ""}`}>
+            <div key={c.id} data-pay-index={vi}
+              draggable={sortMode}
+              onDragStart={() => { if (sortMode) setDragIndex(vi); }}
+              onDragOver={(e) => handleDragOverLive(e, vi)}
+              onDragEnd={() => { setDragIndex(null); setDragOverIndex(null); }}
+              className={`relative transition-all duration-200 ease-out ${dragIndex === vi ? "opacity-30 scale-90" : ""} ${sortMode ? "cursor-move" : ""}`}>
               <PaymentButton2 icon={c.icon} label={shortLabel(c.label)} active={active}
                 manageMode={sortMode} onClick={() => !sortMode && !showMore && setPayment(m)}
                 onDelete={() => { if (confirm(`刪除支付方式「${c.label}」？`)) { deleteCustomPaymentMethod(c.id); if (payment === m) setPayment("cash"); } }} />
