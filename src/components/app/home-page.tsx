@@ -1,6 +1,6 @@
 "use client";
 
-import { useAppStore, getDailySummary, formatCurrency, formatDateTime, CATEGORIES, getPaymentMethodInfo } from "@/lib/store";
+import { useAppStore, getDailySummary, formatCurrency, formatDateTime, getCategoryInfo, getPaymentMethodInfo } from "@/lib/store";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowUpRight, ArrowDownRight, MapPin, ChevronRight, Receipt, TrendingUp, Wallet } from "lucide-react";
@@ -89,7 +89,7 @@ export function HomePage() {
           <>
             <Card className="divide-y divide-border overflow-hidden">
               {previewToday.map((t) => {
-                const cat = CATEGORIES.find((c) => c.id === t.category);
+                const cat = getCategoryInfo(t.category);
                 const pay = t.paymentMethod ? getPaymentMethodInfo(t.paymentMethod, customPaymentMethods) : null;
                 return (
                   <div key={t.id} className="flex items-center gap-2.5 px-3 py-2.5">
@@ -128,7 +128,7 @@ export function HomePage() {
           <h2 className="text-sm font-bold text-foreground mb-2">分類</h2>
           <div className="flex flex-wrap gap-1.5">
             {Object.entries(summary.byCategory).map(([catId, amount]) => {
-              const cat = CATEGORIES.find((c) => c.id === catId);
+              const cat = getCategoryInfo(catId);
               if (!cat) return null;
               return (
                 <div key={catId} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-card border border-border">

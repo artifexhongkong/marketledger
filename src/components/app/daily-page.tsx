@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useAppStore, formatCurrency, CATEGORIES, getPaymentMethodInfo } from "@/lib/store";
+import { useAppStore, formatCurrency, getCategoryInfo, getPaymentMethodInfo } from "@/lib/store";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowUpRight, ArrowDownRight, Calendar, Inbox, ChevronLeft, ChevronRight } from "lucide-react";
@@ -165,7 +165,7 @@ export function DailyPage() {
           ) : (
             <Card className="divide-y divide-border overflow-hidden">
               {selectedTxs.map((t) => {
-                const cat = CATEGORIES.find((c) => c.id === t.category);
+                const cat = getCategoryInfo(t.category);
                 const pay = t.paymentMethod ? getPaymentMethodInfo(t.paymentMethod, customPaymentMethods) : null;
                 return (
                   <div key={t.id} className="flex items-center gap-2.5 px-3 py-2.5">

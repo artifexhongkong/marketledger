@@ -59,7 +59,7 @@ function RecordView() {
   // 手動記帳欄位
   const [txType, setTxType] = useState<TransactionType>("expense");
   const [amount, setAmount] = useState("");
-  const [category, setCategory] = useState<CategoryId | "">("");
+  const [category, setCategory] = useState<CategoryId>("misc");
   const [note, setNote] = useState("");
   const [showMarketPicker, setShowMarketPicker] = useState(false);
 
@@ -123,7 +123,6 @@ function RecordView() {
   const handleSubmit = () => {
     const amt = parseFloat(amount);
     if (!amt || amt <= 0) return alert("請輸入金額");
-    if (!category) return alert("請選擇分類");
     addTransaction({
       type: txType,
       amount: amt,
@@ -134,7 +133,6 @@ function RecordView() {
       marketId: currentMarketId || undefined,
     });
     setAmount("");
-    setCategory("");
     setNote("");
     setShowAdvanced(false);
   };
@@ -264,7 +262,7 @@ function RecordView() {
               {/* 收入/支出切換 */}
               <div className="grid grid-cols-2 gap-2">
                 <button
-                  onClick={() => { setTxType("expense"); setCategory(""); }}
+                  onClick={() => { setTxType("expense"); setCategory("misc"); }}
                   className={`py-2.5 rounded-lg text-sm font-semibold transition ${
                     txType === "expense" ? "bg-rose-600 text-white" : "bg-muted text-muted-foreground"
                   }`}
@@ -272,7 +270,7 @@ function RecordView() {
                   💸 支出
                 </button>
                 <button
-                  onClick={() => { setTxType("income"); setCategory(""); }}
+                  onClick={() => { setTxType("income"); setCategory("sales"); }}
                   className={`py-2.5 rounded-lg text-sm font-semibold transition ${
                     txType === "income" ? "bg-emerald-600 text-white" : "bg-muted text-muted-foreground"
                   }`}

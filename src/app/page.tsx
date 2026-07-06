@@ -28,13 +28,15 @@ export default function Page() {
   const [hydrated, setHydrated] = useState(false);
   const seedDemo = useAppStore((s) => s.seedDemo);
   const cleanupOrphanedTxs = useAppStore((s) => s.cleanupOrphanedTxs);
+  const migrateCategories = useAppStore((s) => s.migrateCategories);
   const { user, storageMode } = useAuthStore();
 
   useEffect(() => {
     setHydrated(true);
+    migrateCategories(); // 一次性遷移：舊分類 ID → 新版精簡分類
     cleanupOrphanedTxs(); // 清理孤兒交易（已刪除市集的攤位費）
     seedDemo();
-  }, [seedDemo, cleanupOrphanedTxs]);
+  }, [seedDemo, cleanupOrphanedTxs, migrateCategories]);
 
   useEffect(() => {
     const handler = (e: Event) => {

@@ -22,8 +22,10 @@ export interface CustomPaymentMethod {
   color: string;
 }
 export type CategoryId =
-  | "sales" | "ingredients" | "packaging" | "rent" | "utilities"
-  | "transport" | "marketing" | "equipment" | "other_income" | "other_expense";
+  | "sales" | "other_income"
+  | "rent" | "stock" | "misc" | "other_expense"
+  // 舊版分類 ID（保留相容性，會被 CATEGORY_MIGRATION 自動轉成新版）
+  | "ingredients" | "packaging" | "equipment" | "utilities" | "transport" | "marketing";
 
 export interface Transaction {
   id: string;
@@ -86,18 +88,36 @@ export const CURRENCIES: Record<CurrencyCode, { symbol: string; locale: string }
   USD: { symbol: "US$", locale: "en-US" },
 };
 
+// ── 精簡分類（市集攤商語境）──
+// 收入：銷售 / 其他收入
+// 支出：攤位費 / 進貨 / 雜費 / 其他
 export const CATEGORIES: { id: CategoryId; label: string; icon: string; type: TransactionType; color: string }[] = [
   { id: "sales", label: "銷售", icon: "💰", type: "income", color: "#059669" },
-  { id: "other_income", label: "其他收入", icon: "📦", type: "income", color: "#10B981" },
-  { id: "ingredients", label: "食材", icon: "🥬", type: "expense", color: "#E11D48" },
-  { id: "packaging", label: "包裝", icon: "📦", type: "expense", color: "#F59E0B" },
+  { id: "other_income", label: "其他收入", icon: "➕", type: "income", color: "#10B981" },
   { id: "rent", label: "攤位費", icon: "🏪", type: "expense", color: "#DC2626" },
-  { id: "utilities", label: "水電雜費", icon: "💡", type: "expense", color: "#0891B2" },
-  { id: "transport", label: "交通", icon: "🚌", type: "expense", color: "#7C3AED" },
-  { id: "marketing", label: "行銷", icon: "📢", type: "expense", color: "#DB2777" },
-  { id: "equipment", label: "設備", icon: "🔧", type: "expense", color: "#65A30D" },
-  { id: "other_expense", label: "其他支出", icon: "📝", type: "expense", color: "#6B7280" },
+  { id: "stock", label: "進貨", icon: "📦", type: "expense", color: "#F59E0B" },
+  { id: "misc", label: "雜費", icon: "💡", type: "expense", color: "#0891B2" },
+  { id: "other_expense", label: "其他", icon: "📝", type: "expense", color: "#6B7280" },
 ];
+
+// 舊分類 ID → 新分類 ID 映射（用於資料遷移與顯示相容）
+export const CATEGORY_MIGRATION: Record<string, string> = {
+  ingredients: "stock",  // 食材 → 進貨
+  packaging: "stock",    // 包裝 → 進貨
+  equipment: "stock",    // 設備 → 進貨
+  utilities: "misc",     // 水電雜費 → 雜費
+  transport: "misc",     // 交通 → 雜費
+  marketing: "misc",     // 行銷 → 雜費
+};
+
+/**
+ * 取得分類資訊（自動處理舊 ID → 新 ID 的對應）
+ */
+export function getCategoryInfo(id: string | undefined) {
+  if (!id) return CATEGORIES.find((c) => c.id === "other_expense");
+  const mapped = CATEGORY_MIGRATION[id] || id;
+  return CATEGORIES.find((c) => c.id === mapped) || CATEGORIES.find((c) => c.id === "other_expense");
+}
 
 export const PAYMENT_METHODS: Record<PaymentMethod, { label: string; icon: string }> = {
   // 通用
@@ -235,6 +255,7 @@ interface AppStore {
   deleteMarketEvent: (id: string) => void;
   updateMarketEvent: (id: string, data: Partial<MarketEvent>) => void;
   cleanupOrphanedTxs: () => void;
+  migrateCategories: () => void;
   seedDemo: () => void;
 }
 
@@ -414,6 +435,18 @@ export const useAppStore = create<AppStore>()(
         if (cleaned.length !== transactions.length) {
           set({ transactions: cleaned });
         }
+      },
+
+      // 一次性遷移：把舊分類 ID 轉成新版（ingredients/packaging/equipment → stock，utilities/transport/marketing → misc）
+      migrateCategories: () => {
+        const { transactions } = get();
+        let changed = false;
+        const txs = transactions.map((t) => {
+          const mapped = CATEGORY_MIGRATION[t.category];
+          if (mapped) { changed = true; return { ...t, category: mapped as CategoryId }; }
+          return t;
+        });
+        if (changed) set({ transactions: txs });
       },
     }),
     {
