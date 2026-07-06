@@ -8,7 +8,6 @@ import {
   ChevronRight, FileSpreadsheet, FileJson,
   type LucideIcon,
 } from "lucide-react";
-import { AuthSection } from "./auth-section";
 import { useState } from "react";
 
 export function SettingsPage() {
@@ -66,10 +65,7 @@ export function SettingsPage() {
 
   return (
     <div className="px-5 pb-4 space-y-4">
-      <h1 className="text-2xl font-semibold tracking-tight pt-2 text-foreground">設定</h1>
-
-      {/* 賬號登入 */}
-      <AuthSection />
+      <h1 className="text-xl font-bold pt-4 text-foreground">設定</h1>
 
       {/* 偏好設定群組 */}
       <SettingsGroup title="偏好設定">

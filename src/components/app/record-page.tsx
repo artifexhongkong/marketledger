@@ -413,6 +413,8 @@ function PaymentSelector({
   const [showManageMode, setShowManageMode] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [sortMode, setSortMode] = useState(false);
+  const sortTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const getPaymentInfo = (m: PaymentMethod): { label: string; icon: string } => {
     if (m.startsWith("custom_")) {
@@ -432,44 +434,59 @@ function PaymentSelector({
   const visibleCustom = customPaymentMethods.filter((c) => visiblePayments.includes(`custom_${c.id}`));
 
   // 拖拽排序
-  const handleDragStart = (index: number) => { setDragIndex(index); };
-  const handleDragOver = (e: React.DragEvent, index: number) => { e.preventDefault(); setDragOverIndex(index); };
+  const handleDragStart = (index: number) => { if (sortMode) setDragIndex(index); };
+  const handleDragOver = (e: React.DragEvent, index: number) => { if (sortMode) { e.preventDefault(); setDragOverIndex(index); } };
   const handleDrop = (index: number) => {
-    if (dragIndex !== null && dragIndex !== index) reorderVisiblePayments(dragIndex, index);
+    if (sortMode && dragIndex !== null && dragIndex !== index) reorderVisiblePayments(dragIndex, index);
     setDragIndex(null); setDragOverIndex(null);
+  };
+
+  // 長按進入排序模式
+  const handleSortLongPress = () => {
+    sortTimerRef.current = setTimeout(() => {
+      setSortMode(true);
+      if (typeof navigator !== "undefined" && "vibrate" in navigator) (navigator as any).vibrate?.(30);
+    }, 500);
+  };
+  const handleSortPressEnd = () => {
+    if (sortTimerRef.current) { clearTimeout(sortTimerRef.current); sortTimerRef.current = null; }
   };
 
   return (
     <div className="mt-3">
       <div className="flex items-center justify-between mb-2">
         <p className="text-xs text-muted-foreground font-medium">支付方式</p>
-        <div className="flex items-center gap-2">
-          {visibleBuiltin.length + visibleCustom.length > 0 && (
-            <button onClick={() => setShowManageMode(!showManageMode)}
-              className={`text-[10px] font-medium transition ${showManageMode ? "text-accent" : "text-muted-foreground hover:text-foreground"}`}>
-              {showManageMode ? "完成" : "排序"}
-            </button>
-          )}
-        </div>
+        {sortMode && (
+          <button onClick={() => setSortMode(false)}
+            className="text-[10px] font-medium text-accent hover:text-foreground transition">
+            完成排序
+          </button>
+        )}
+        {!sortMode && (
+          <p className="text-[10px] text-muted-foreground/50">長按排序</p>
+        )}
       </div>
 
-      {/* 主頁支付方式 — 點「更多」時已顯示的加 − 按鈕 */}
-      <div className="grid grid-cols-5 gap-1.5">
+      {/* 主頁支付方式 */}
+      <div className="grid grid-cols-5 gap-1.5"
+        onPointerDown={handleSortLongPress}
+        onPointerUp={handleSortPressEnd}
+        onPointerLeave={handleSortPressEnd}>
         {visibleBuiltin.map((m) => {
           const info = getPaymentInfo(m as PaymentMethod);
           const active = payment === m;
           const vi = visiblePayments.indexOf(m);
           return (
-            <div key={m} draggable={showManageMode}
+            <div key={m} draggable={sortMode}
               onDragStart={() => handleDragStart(vi)}
               onDragOver={(e) => handleDragOver(e, vi)}
               onDrop={() => handleDrop(vi)}
-              className={`relative transition-all ${dragOverIndex === vi ? "scale-95 opacity-60" : ""} ${dragIndex === vi ? "opacity-40" : ""}`}>
+              className={`relative transition-all ${dragOverIndex === vi ? "scale-95 opacity-60" : ""} ${dragIndex === vi ? "opacity-40" : ""} ${sortMode ? "cursor-move" : ""}`}>
               <PaymentButton2 icon={info.icon} label={shortLabel(info.label)} active={active}
-                manageMode={false} onClick={() => !showManageMode && !showMore && setPayment(m as PaymentMethod)} onDelete={null} />
-              {showMore && !showManageMode && (
+                manageMode={false} onClick={() => !sortMode && !showMore && setPayment(m as PaymentMethod)} onDelete={null} />
+              {showMore && !sortMode && (
                 <button onClick={(e) => { e.stopPropagation(); togglePaymentVisibility(m); }}
-                  className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-rose-500 text-white flex items-center justify-center shadow-sm z-10 animate-[fadeIn_0.15s_ease-out]">
+                  className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-rose-500 text-white flex items-center justify-center shadow-sm z-10 animate-[fadeIn_0.15s_ease-out] text-[13px] leading-none font-bold pb-0.5">
                   −
                 </button>
               )}
@@ -481,17 +498,17 @@ function PaymentSelector({
           const active = payment === m;
           const vi = visiblePayments.indexOf(m);
           return (
-            <div key={c.id} draggable={showManageMode}
+            <div key={c.id} draggable={sortMode}
               onDragStart={() => handleDragStart(vi)}
               onDragOver={(e) => handleDragOver(e, vi)}
               onDrop={() => handleDrop(vi)}
-              className={`relative transition-all ${dragOverIndex === vi ? "scale-95 opacity-60" : ""} ${dragIndex === vi ? "opacity-40" : ""}`}>
+              className={`relative transition-all ${dragOverIndex === vi ? "scale-95 opacity-60" : ""} ${dragIndex === vi ? "opacity-40" : ""} ${sortMode ? "cursor-move" : ""}`}>
               <PaymentButton2 icon={c.icon} label={shortLabel(c.label)} active={active}
-                manageMode={showManageMode} onClick={() => !showManageMode && !showMore && setPayment(m)}
+                manageMode={sortMode} onClick={() => !sortMode && !showMore && setPayment(m)}
                 onDelete={() => { if (confirm(`刪除支付方式「${c.label}」？`)) { deleteCustomPaymentMethod(c.id); if (payment === m) setPayment("cash"); } }} />
-              {showMore && !showManageMode && (
+              {showMore && !sortMode && (
                 <button onClick={(e) => { e.stopPropagation(); togglePaymentVisibility(`custom_${c.id}`); }}
-                  className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-rose-500 text-white flex items-center justify-center shadow-sm z-10 animate-[fadeIn_0.15s_ease-out]">
+                  className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-rose-500 text-white flex items-center justify-center shadow-sm z-10 animate-[fadeIn_0.15s_ease-out] text-[13px] leading-none font-bold pb-0.5">
                   −
                 </button>
               )}
@@ -544,7 +561,7 @@ function PaymentSelector({
                       <PaymentButton2 icon={info.icon} label={shortLabel(info.label)} active={active}
                         manageMode={false} onClick={() => { setPayment(m as PaymentMethod); setShowMore(false); }} onDelete={null} />
                       <button onClick={(e) => { e.stopPropagation(); togglePaymentVisibility(m); }}
-                        className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-sm z-10 animate-[fadeIn_0.15s_ease-out]">
+                        className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-sm z-10 animate-[fadeIn_0.15s_ease-out] text-[13px] leading-none font-bold pb-0.5">
                         +
                       </button>
                     </div>

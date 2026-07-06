@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Home, PencilLine, FileText, ClipboardList, MapPin, Settings as SettingsIcon, Cloud, CloudOff, History } from "lucide-react";
+import { Home, PencilLine, FileText, ClipboardList, MapPin, Settings as SettingsIcon, Cloud, CloudOff, History, User } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { useAuthStore } from "@/lib/auth-store";
 import { HomePage } from "@/components/app/home-page";
@@ -10,8 +10,9 @@ import { TransactionsPage } from "@/components/app/transactions-page";
 import { DailyPage } from "@/components/app/daily-page";
 import { MarketsPage } from "@/components/app/markets-page";
 import { SettingsPage } from "@/components/app/settings-page";
+import { AuthPage } from "@/components/app/auth-section";
 
-type TabId = "home" | "record" | "transactions" | "daily" | "markets" | "settings";
+type TabId = "home" | "record" | "transactions" | "daily" | "markets" | "settings" | "account";
 
 const TABS: { id: TabId; label: string; icon: typeof Home }[] = [
   { id: "home", label: "首頁", icon: Home },
@@ -22,114 +23,128 @@ const TABS: { id: TabId; label: string; icon: typeof Home }[] = [
   { id: "settings", label: "設定", icon: SettingsIcon },
 ];
 
-/** 頂部儲存模式指示器（雲端/本機） */
-function StorageIndicator() {
-  const { user, storageMode } = useAuthStore();
-  if (!user) return null;
-  return storageMode === "drive" ? (
-    <Cloud className="w-4 h-4 text-primary-foreground" fill="currentColor" />
-  ) : (
-    <CloudOff className="w-4 h-4 text-primary-foreground/70" />
-  );
-}
-
 export default function Page() {
   const [tab, setTab] = useState<TabId>("home");
   const [hydrated, setHydrated] = useState(false);
   const seedDemo = useAppStore((s) => s.seedDemo);
+  const { user, storageMode } = useAuthStore();
 
   useEffect(() => {
     setHydrated(true);
     seedDemo();
   }, [seedDemo]);
 
-  // 監聽從其他頁面發出的導航事件（例如首頁「查看全部」按鈕）
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent).detail as TabId;
-      if (detail && TABS.some((t) => t.id === detail)) {
-        setTab(detail);
-      }
+      if (detail) setTab(detail);
     };
     window.addEventListener("navigate-tab", handler as EventListener);
     return () => window.removeEventListener("navigate-tab", handler as EventListener);
   }, []);
 
+  // 帳號頁面是獨立覆蓋層
+  const showAccount = tab === "account";
+
   return (
     <main className="min-h-screen bg-slate-200 flex items-center justify-center overflow-hidden">
-      {/* 手機框架 — 在手機上填滿整個螢幕，在電腦上顯示固定大小 */}
       <div className="relative w-full h-screen md:w-[390px] md:h-[780px] md:max-h-[calc(100vh-4rem)] md:rounded-[2.5rem] md:bg-slate-900 md:p-3 md:shadow-2xl md:shadow-slate-900/30"
-        style={{ maxHeight: "100dvh" }}
-      >
-        {/* Notch — 只在 md 以上顯示 */}
+        style={{ maxHeight: "100dvh" }}>
         <div className="hidden md:block absolute top-3 left-1/2 -translate-x-1/2 w-32 h-7 bg-slate-900 rounded-b-2xl z-30" />
 
-        {/* Screen */}
         <div className="w-full h-full bg-background md:rounded-[2rem] overflow-hidden flex flex-col relative">
-            {/* Top app bar */}
-            <div className="h-12 bg-primary text-primary-foreground flex items-center justify-between px-4 flex-shrink-0">
-              <div className="w-6" />
-              <h2 className="text-base font-semibold">
-                {TABS.find((t) => t.id === tab)?.label}
-              </h2>
-              <div className="w-6 flex justify-end">
-                <StorageIndicator />
+          {/* Top app bar — 漸層 + 動態內容 */}
+          {!showAccount && (
+            <div className="flex-shrink-0 bg-gradient-to-r from-primary via-primary to-primary/90 text-primary-foreground relative overflow-hidden">
+              {/* 裝飾光暈 */}
+              <div className="absolute top-0 right-0 w-32 h-32 bg-accent/8 rounded-full blur-2xl" />
+              <div className="absolute bottom-0 left-0 w-24 h-24 bg-accent/5 rounded-full blur-xl" />
+
+              <div className="relative flex items-center justify-between px-4 h-14">
+                {/* 左側：頁面標題 */}
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg font-bold tracking-tight">
+                    {TABS.find((t) => t.id === tab)?.label || "市集記賬本"}
+                  </h2>
+                </div>
+
+                {/* 右側：帳號 + 儲存指示 */}
+                <div className="flex items-center gap-2">
+                  {user && (
+                    <div className="flex items-center gap-1">
+                      {storageMode === "drive" ? (
+                        <Cloud className="w-4 h-4 text-accent" fill="currentColor" />
+                      ) : (
+                        <CloudOff className="w-4 h-4 text-primary-foreground/50" />
+                      )}
+                    </div>
+                  )}
+                  {/* 帳號頭像/登入按鈕 */}
+                  <button onClick={() => setTab("account")} className="relative">
+                    {user?.picture ? (
+                      <img src={user.picture} alt="" className="w-7 h-7 rounded-full border border-accent/30" />
+                    ) : user ? (
+                      <div className="w-7 h-7 rounded-full bg-accent/20 flex items-center justify-center">
+                        <User className="w-4 h-4 text-accent" />
+                      </div>
+                    ) : (
+                      <div className="w-7 h-7 rounded-full bg-accent/15 flex items-center justify-center border border-accent/20">
+                        <User className="w-4 h-4 text-accent/70" />
+                      </div>
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
+          )}
 
-            {/* Content area */}
-            <div
-              className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide"
-              style={{
-                WebkitOverflowScrolling: "touch",
-                overscrollBehavior: "contain",
-                touchAction: "pan-y",
-              }}
-            >
-              {!hydrated ? (
-                <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
-                  載入中...
-                </div>
-              ) : (
-                <>
-                  {tab === "home" && <HomePage />}
-                  {tab === "record" && <RecordPage />}
-                  {tab === "transactions" && <TransactionsPage />}
-                  {tab === "daily" && <DailyPage />}
-                  {tab === "markets" && <MarketsPage />}
-                  {tab === "settings" && <SettingsPage />}
-                </>
-              )}
-            </div>
+          {/* 帳號頁面 — 獨立全螢幕 */}
+          {showAccount ? (
+            <AuthPage onBack={() => setTab("home")} />
+          ) : (
+            <>
+              {/* Content area */}
+              <div
+                className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide"
+                style={{ WebkitOverflowScrolling: "touch", overscrollBehavior: "contain", touchAction: "pan-y" }}
+              >
+                {!hydrated ? (
+                  <div className="flex items-center justify-center h-full text-sm text-muted-foreground">載入中...</div>
+                ) : (
+                  <>
+                    {tab === "home" && <HomePage />}
+                    {tab === "record" && <RecordPage />}
+                    {tab === "transactions" && <TransactionsPage />}
+                    {tab === "daily" && <DailyPage />}
+                    {tab === "markets" && <MarketsPage />}
+                    {tab === "settings" && <SettingsPage />}
+                  </>
+                )}
+              </div>
 
-            {/* Tab bar — 6 個 tab，緊湊排列 */}
-            <div className="bg-card border-t border-border flex items-stretch justify-between px-1 pt-2 pb-5 flex-shrink-0">
-              {TABS.map(({ id, label, icon: Icon }) => {
-                const active = tab === id;
-                return (
-                  <button
-                    key={id}
-                    onClick={() => setTab(id)}
-                    className="flex-1 flex flex-col items-center gap-1 py-1 transition min-w-0"
-                  >
-                    <Icon
-                      className={`w-5 h-5 transition ${active ? "text-primary" : "text-muted-foreground"}`}
-                      strokeWidth={active ? 2.5 : 2}
-                    />
-                    <span
-                      className={`text-[10px] transition truncate ${active ? "text-primary font-semibold" : "text-muted-foreground"}`}
-                    >
-                      {label}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
+              {/* Tab bar */}
+              <div className="bg-card border-t border-border flex items-stretch justify-between px-1 pt-2 pb-5 flex-shrink-0">
+                {TABS.map(({ id, label, icon: Icon }) => {
+                  const active = tab === id;
+                  return (
+                    <button key={id} onClick={() => setTab(id)}
+                      className="flex-1 flex flex-col items-center gap-1 py-1 transition min-w-0">
+                      <Icon className={`w-5 h-5 transition-all ${active ? "text-accent scale-110" : "text-muted-foreground"}`}
+                        strokeWidth={active ? 2.5 : 2} />
+                      <span className={`text-[10px] transition truncate ${active ? "text-accent font-semibold" : "text-muted-foreground"}`}>
+                        {label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
 
-            {/* Home indicator */}
-            <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-32 h-1 bg-foreground/80 rounded-full" />
-          </div>
+          {/* Home indicator */}
+          <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-32 h-1 bg-foreground/80 rounded-full" />
         </div>
+      </div>
     </main>
   );
 }
