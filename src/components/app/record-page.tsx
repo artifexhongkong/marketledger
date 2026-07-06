@@ -870,6 +870,10 @@ function ProductButton({
     qtyRef.current = 1;
     accumDyRef.current = 0;
     accumDxRef.current = 0;
+    // 進入手勢模式後才捕獲指標（之前不捕獲，讓頁面可以正常捲動）
+    if (btnRef.current && pointerIdRef.current !== null) {
+      try { btnRef.current.setPointerCapture(pointerIdRef.current); } catch {}
+    }
     setGestureMode(true);
     setCancelled(false);
     setQuantity(1);
@@ -933,10 +937,9 @@ function ProductButton({
     }
   };
 
-  // pointer events + setPointerCapture
+  // pointer events — 不在 down 時捕獲指標，讓頁面可正常捲動
   const onPointerDown = (e: React.PointerEvent) => {
     if (e.pointerType === "mouse" && e.button !== 0) return;
-    if (btnRef.current) { try { btnRef.current.setPointerCapture(e.pointerId); } catch {} }
     pointerIdRef.current = e.pointerId;
     startPosRef.current = { x: e.clientX, y: e.clientY };
     lastMoveRef.current = { x: e.clientX, y: e.clientY };
@@ -944,8 +947,19 @@ function ProductButton({
     longPressTimerRef.current = setTimeout(() => { enterGesture(); blockClickRef.current = true; }, 400);
   };
 
+  // 非手勢模式中，如果手指移動超過 10px，取消長按（讓瀏覽器接管捲動）
   const onPointerMove = (e: React.PointerEvent) => {
-    if (gestureRef.current) handleSwipe(e.clientX, e.clientY);
+    if (gestureRef.current) {
+      handleSwipe(e.clientX, e.clientY);
+    } else if (longPressTimerRef.current && startPosRef.current) {
+      // 還在等待長按，手指移動了 → 取消長按（使用者在捲動頁面）
+      const dy = Math.abs(e.clientY - startPosRef.current.y);
+      const dx = Math.abs(e.clientX - startPosRef.current.x);
+      if (dy > 10 || dx > 10) {
+        clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = null;
+      }
+    }
   };
 
   const onPointerUp = (e: React.PointerEvent) => {
