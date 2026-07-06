@@ -270,14 +270,14 @@ function AgodaDatePicker({ startDate, endDate, onSelect }: { startDate: string; 
                 ${d.isPast ? "text-muted-foreground/30 cursor-not-allowed" : ""}
                 ${d.isToday && !d.isStart && !d.isEnd ? "ring-1 ring-accent/40" : ""}`}>
               {d.day}
-              {d.isStart && <span className="absolute -bottom-3 text-[7px] text-accent">入住</span>}
-              {d.isEnd && d.isEnd !== d.isStart && <span className="absolute -bottom-3 text-[7px] text-accent">退房</span>}
+              {d.isStart && <span className="absolute -bottom-3 text-[7px] text-accent">開始</span>}
+              {d.isEnd && d.isEnd !== d.isStart && <span className="absolute -bottom-3 text-[7px] text-accent">結束</span>}
             </button>
           );
         })}
       </div>
       <div className="flex items-center justify-between mt-3 px-1">
-        <span className="text-[10px] text-muted-foreground">{tempStart === tempEnd ? "選擇結束日期" : `${tempStart} ~ ${tempEnd}`}</span>
+        <span className="text-[10px] text-muted-foreground">{tempStart === tempEnd ? "點選市集結束日（單日市集只需點一次）" : `${tempStart} ~ ${tempEnd}`}</span>
         <button type="button" onClick={() => { setTempStart(toDateKey(new Date())); setTempEnd(toDateKey(new Date())); setSelecting("start"); }} className="text-[10px] text-accent">重設</button>
       </div>
     </div>
