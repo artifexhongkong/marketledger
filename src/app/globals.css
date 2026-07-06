@@ -117,11 +117,15 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior: contain;
+    /* touch-action: pan-y 確保垂直拖動被識別為捲動，
+       讓用戶按住內容（Card/Button/div）也能上下滑動捲頁，
+       不會被個別元素攔截手勢 */
+    touch-action: pan-y;
   }
   body {
     @apply bg-background text-foreground;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
   }
   ::-webkit-scrollbar { display: none !important; width: 0 !important; height: 0 !important; }
   * { scrollbar-width: none !important; -ms-overflow-style: none !important; }
