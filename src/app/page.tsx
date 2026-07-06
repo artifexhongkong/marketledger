@@ -13,10 +13,10 @@ import { AuthPage } from "@/components/app/auth-section";
 
 type TabId = "home" | "record" | "transactions" | "markets" | "settings" | "account";
 
-const TABS: { id: TabId; label: string; icon: typeof Home; featured?: boolean }[] = [
-  { id: "home", label: "首頁", icon: Home },
+const TABS: { id: TabId; label: string; icon: typeof Home }[] = [
+  { id: "home", label: "概況", icon: Home },
   { id: "record", label: "記帳", icon: PencilLine },
-  { id: "markets", label: "市集", icon: Store, featured: true },
+  { id: "markets", label: "市集", icon: Store },
   { id: "transactions", label: "記錄", icon: ClipboardList },
   { id: "settings", label: "設定", icon: SettingsIcon },
 ];
@@ -125,28 +125,8 @@ export default function Page() {
 
               {/* Tab bar */}
               <div className="bg-card border-t border-border flex items-stretch justify-between px-1 pt-2 pb-5 flex-shrink-0">
-                {TABS.map(({ id, label, icon: Icon, featured }) => {
+                {TABS.map(({ id, label, icon: Icon }) => {
                   const active = tab === id;
-                  if (featured) {
-                    // 特色膠囊按鈕：圖示+文字一體，比其他 tab 大一號
-                    return (
-                      <button key={id} onClick={() => setTab(id)}
-                        className="flex-1 flex items-center justify-center min-w-0 py-1 transition">
-                        <div
-                          className={`flex items-center gap-2 px-5 py-2.5 rounded-full transition-all duration-200 ${
-                            active
-                              ? "bg-accent text-accent-foreground shadow-lg shadow-accent/40 scale-105"
-                              : "bg-accent/12 text-accent hover:bg-accent/20"
-                          }`}
-                        >
-                          <Icon className="w-5 h-5" strokeWidth={active ? 2.5 : 2} />
-                          <span className={`text-sm transition truncate ${active ? "font-bold" : "font-semibold"}`}>
-                            {label}
-                          </span>
-                        </div>
-                      </button>
-                    );
-                  }
                   return (
                     <button key={id} onClick={() => setTab(id)}
                       className="flex-1 flex flex-col items-center gap-1 py-1 transition min-w-0">
