@@ -453,7 +453,7 @@ function PaymentSelector({
         </div>
       </div>
 
-      {/* 主頁支付方式 */}
+      {/* 主頁支付方式 — 點「更多」時已顯示的加 − 按鈕 */}
       <div className="grid grid-cols-5 gap-1.5">
         {visibleBuiltin.map((m) => {
           const info = getPaymentInfo(m as PaymentMethod);
@@ -464,9 +464,15 @@ function PaymentSelector({
               onDragStart={() => handleDragStart(vi)}
               onDragOver={(e) => handleDragOver(e, vi)}
               onDrop={() => handleDrop(vi)}
-              className={`transition-all ${dragOverIndex === vi ? "scale-95 opacity-60" : ""} ${dragIndex === vi ? "opacity-40" : ""}`}>
+              className={`relative transition-all ${dragOverIndex === vi ? "scale-95 opacity-60" : ""} ${dragIndex === vi ? "opacity-40" : ""}`}>
               <PaymentButton2 icon={info.icon} label={shortLabel(info.label)} active={active}
-                manageMode={false} onClick={() => !showManageMode && setPayment(m as PaymentMethod)} onDelete={null} />
+                manageMode={false} onClick={() => !showManageMode && !showMore && setPayment(m as PaymentMethod)} onDelete={null} />
+              {showMore && !showManageMode && (
+                <button onClick={(e) => { e.stopPropagation(); togglePaymentVisibility(m); }}
+                  className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-rose-500 text-white flex items-center justify-center shadow-sm z-10 animate-[fadeIn_0.15s_ease-out]">
+                  −
+                </button>
+              )}
             </div>
           );
         })}
@@ -479,10 +485,16 @@ function PaymentSelector({
               onDragStart={() => handleDragStart(vi)}
               onDragOver={(e) => handleDragOver(e, vi)}
               onDrop={() => handleDrop(vi)}
-              className={`transition-all ${dragOverIndex === vi ? "scale-95 opacity-60" : ""} ${dragIndex === vi ? "opacity-40" : ""}`}>
+              className={`relative transition-all ${dragOverIndex === vi ? "scale-95 opacity-60" : ""} ${dragIndex === vi ? "opacity-40" : ""}`}>
               <PaymentButton2 icon={c.icon} label={shortLabel(c.label)} active={active}
-                manageMode={showManageMode} onClick={() => !showManageMode && setPayment(m)}
+                manageMode={showManageMode} onClick={() => !showManageMode && !showMore && setPayment(m)}
                 onDelete={() => { if (confirm(`刪除支付方式「${c.label}」？`)) { deleteCustomPaymentMethod(c.id); if (payment === m) setPayment("cash"); } }} />
+              {showMore && !showManageMode && (
+                <button onClick={(e) => { e.stopPropagation(); togglePaymentVisibility(`custom_${c.id}`); }}
+                  className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-rose-500 text-white flex items-center justify-center shadow-sm z-10 animate-[fadeIn_0.15s_ease-out]">
+                  −
+                </button>
+              )}
             </div>
           );
         })}
@@ -494,58 +506,61 @@ function PaymentSelector({
         </button>
       </div>
 
-      {/* 更多展開 — 所有支付方式 with +/- */}
+      {/* 更多展開 — 只顯示還沒在主頁的支付方式，帶 + 按鈕 */}
       {showMore && (
-        <div className="mt-2 space-y-2 animate-[fadeIn_0.2s_ease-out]">
-          {PAYMENT_CATEGORIES.map((cat) => (
-            <div key={cat.id}>
-              <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider px-1 mb-1">{cat.label}</p>
-              <div className="grid grid-cols-5 gap-1.5">
-                {cat.payments.map((m) => {
+        <div className="mt-2 animate-[fadeIn_0.2s_ease-out]">
+          {(() => {
+            // 收集所有未顯示的支付方式
+            const hidden: { m: string; info: { label: string; icon: string } }[] = [];
+            PAYMENT_CATEGORIES.forEach((cat) => {
+              cat.payments.forEach((m) => {
+                if (!visiblePayments.includes(m)) {
                   const info = PAYMENT_METHODS[m as keyof typeof PAYMENT_METHODS];
-                  const isShown = visiblePayments.includes(m);
-                  const active = payment === m;
+                  hidden.push({ m, info: { label: info?.label || m, icon: info?.icon || "💳" } });
+                }
+              });
+            });
+            customPaymentMethods.forEach((c) => {
+              const m = `custom_${c.id}`;
+              if (!visiblePayments.includes(m)) {
+                hidden.push({ m, info: { label: c.label, icon: c.icon } });
+              }
+            });
+
+            if (hidden.length === 0) {
+              return (
+                <div className="text-center py-3 text-[11px] text-muted-foreground">
+                  所有支付方式已顯示
+                </div>
+              );
+            }
+
+            return (
+              <div className="grid grid-cols-5 gap-1.5">
+                {hidden.map(({ m, info }) => {
+                  const active = payment === (m as PaymentMethod);
                   return (
                     <div key={m} className="relative">
-                      <PaymentButton2 icon={info?.icon || "💳"} label={shortLabel(info?.label || m)}
-                        active={active} manageMode={false}
-                        onClick={() => { setPayment(m as PaymentMethod); setShowMore(false); }} onDelete={null} />
+                      <PaymentButton2 icon={info.icon} label={shortLabel(info.label)} active={active}
+                        manageMode={false} onClick={() => { setPayment(m as PaymentMethod); setShowMore(false); }} onDelete={null} />
                       <button onClick={(e) => { e.stopPropagation(); togglePaymentVisibility(m); }}
-                        className={`absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full flex items-center justify-center shadow-sm transition z-10 ${isShown ? "bg-rose-500 text-white" : "bg-emerald-500 text-white"}`}>
-                        {isShown ? "−" : "+"}
+                        className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-sm z-10 animate-[fadeIn_0.15s_ease-out]">
+                        +
                       </button>
                     </div>
                   );
                 })}
+                {/* 新增自訂支付 */}
+                <div className="relative">
+                  <button onClick={() => setShowAddModal(true)}
+                    className="w-full flex flex-col items-center justify-center gap-0.5 py-2.5 rounded-xl border-2 border-dashed border-accent/40 bg-accent/5 text-accent hover:bg-accent/10 transition">
+                    <Plus className="w-4 h-4" />
+                    <span className="text-[10px] font-medium">新增</span>
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
-          {/* 自訂支付 */}
-          <div>
-            <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider px-1 mb-1">自訂</p>
-            <div className="grid grid-cols-5 gap-1.5">
-              {customPaymentMethods.map((c) => {
-                const m = `custom_${c.id}`;
-                const isShown = visiblePayments.includes(m);
-                const active = payment === (m as PaymentMethod);
-                return (
-                  <div key={c.id} className="relative">
-                    <PaymentButton2 icon={c.icon} label={shortLabel(c.label)} active={active}
-                      manageMode={false} onClick={() => { setPayment(m as PaymentMethod); setShowMore(false); }} onDelete={null} />
-                    <button onClick={(e) => { e.stopPropagation(); togglePaymentVisibility(m); }}
-                      className={`absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full flex items-center justify-center shadow-sm z-10 ${isShown ? "bg-rose-500 text-white" : "bg-emerald-500 text-white"}`}>
-                      {isShown ? "−" : "+"}
-                    </button>
-                  </div>
-                );
-              })}
-              <button onClick={() => setShowAddModal(true)}
-                className="flex flex-col items-center justify-center gap-0.5 py-2.5 rounded-xl border-2 border-dashed border-accent/40 bg-accent/5 text-accent hover:bg-accent/10 transition">
-                <Plus className="w-4 h-4" />
-                <span className="text-[10px] font-medium">新增</span>
-              </button>
-            </div>
-          </div>
+            );
+          })()}
         </div>
       )}
 
