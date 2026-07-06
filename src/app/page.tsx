@@ -128,19 +128,19 @@ export default function Page() {
                 {TABS.map(({ id, label, icon: Icon, featured }) => {
                   const active = tab === id;
                   if (featured) {
-                    // 特色膠囊按鈕：圖示+文字一體，accent 底色，垂直置中
+                    // 特色膠囊按鈕：圖示+文字一體，比其他 tab 大一號
                     return (
                       <button key={id} onClick={() => setTab(id)}
                         className="flex-1 flex items-center justify-center min-w-0 py-1 transition">
                         <div
-                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all duration-200 ${
+                          className={`flex items-center gap-2 px-5 py-2.5 rounded-full transition-all duration-200 ${
                             active
-                              ? "bg-accent text-accent-foreground shadow-md shadow-accent/30 scale-105"
+                              ? "bg-accent text-accent-foreground shadow-lg shadow-accent/40 scale-105"
                               : "bg-accent/12 text-accent hover:bg-accent/20"
                           }`}
                         >
-                          <Icon className="w-4 h-4" strokeWidth={active ? 2.5 : 2} />
-                          <span className={`text-[11px] transition truncate ${active ? "font-bold" : "font-medium"}`}>
+                          <Icon className="w-5 h-5" strokeWidth={active ? 2.5 : 2} />
+                          <span className={`text-sm transition truncate ${active ? "font-bold" : "font-semibold"}`}>
                             {label}
                           </span>
                         </div>
