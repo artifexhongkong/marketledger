@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Home, PencilLine, ClipboardList, Settings as SettingsIcon, Cloud, CloudOff, User, Store } from "lucide-react";
+import { Home, PencilLine, ClipboardList, Settings as SettingsIcon, Cloud, CloudOff, User, MapPin } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { useAuthStore } from "@/lib/auth-store";
 import { HomePage } from "@/components/app/home-page";
@@ -16,7 +16,7 @@ type TabId = "home" | "record" | "transactions" | "markets" | "settings" | "acco
 const TABS: { id: TabId; label: string; icon: typeof Home; featured?: boolean }[] = [
   { id: "home", label: "概況", icon: Home },
   { id: "record", label: "記帳", icon: PencilLine },
-  { id: "markets", label: "市集", icon: Store, featured: true },
+  { id: "markets", label: "市集", icon: MapPin, featured: true },
   { id: "transactions", label: "記錄", icon: ClipboardList },
   { id: "settings", label: "設定", icon: SettingsIcon },
 ];
@@ -137,7 +137,7 @@ export default function Page() {
                             active ? "scale-105 ring-2 ring-accent/30 ring-offset-1 ring-offset-card" : "hover:scale-105"
                           }`}
                         >
-                          <Icon className="w-5 h-5 text-white" strokeWidth={2.5} fill="currentColor" />
+                          <Icon className="w-6 h-6 text-white" strokeWidth={2.5} />
                           <span className="text-[10px] font-bold text-white leading-none whitespace-nowrap">{label}</span>
                         </div>
                       ) : (
