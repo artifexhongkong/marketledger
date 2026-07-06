@@ -131,25 +131,25 @@ export default function Page() {
                     <button key={id} onClick={() => setTab(id)}
                       className="flex-1 flex flex-col items-center justify-center gap-1 py-1 transition min-w-0">
                       {featured ? (
-                        // 市集：放大版金色膠囊容器，圖示+文字一體，白色
+                        // 市集：放大版金色圓形容器，圖示上文字下，白色
                         <div
-                          className={`flex items-center gap-1.5 px-4 py-2 rounded-full bg-accent shadow-lg shadow-accent/40 transition-all duration-200 ${
+                          className={`flex flex-col items-center justify-center gap-0.5 w-12 h-12 rounded-full bg-accent shadow-lg shadow-accent/40 transition-all duration-200 ${
                             active ? "scale-105 ring-2 ring-accent/30 ring-offset-1 ring-offset-card" : "hover:scale-105"
                           }`}
                         >
-                          <Icon className="w-5 h-5 text-white" strokeWidth={2.5} fill="currentColor" />
-                          <span className="text-xs font-bold text-white whitespace-nowrap">{label}</span>
+                          <Icon className="w-4 h-4 text-white" strokeWidth={2.5} fill="currentColor" />
+                          <span className="text-[9px] font-bold text-white leading-none whitespace-nowrap">{label}</span>
                         </div>
                       ) : (
-                        <Icon
-                          className={`w-5 h-5 transition-all ${active ? "text-accent scale-110" : "text-muted-foreground"}`}
-                          strokeWidth={active ? 2.5 : 2}
-                        />
-                      )}
-                      {!featured && (
-                        <span className={`text-[10px] transition truncate ${active ? "text-accent font-semibold" : "text-muted-foreground"}`}>
-                          {label}
-                        </span>
+                        <>
+                          <Icon
+                            className={`w-5 h-5 transition-all ${active ? "text-accent scale-110" : "text-muted-foreground"}`}
+                            strokeWidth={active ? 2.5 : 2}
+                          />
+                          <span className={`text-[10px] transition truncate ${active ? "text-accent font-semibold" : "text-muted-foreground"}`}>
+                            {label}
+                          </span>
+                        </>
                       )}
                     </button>
                   );
