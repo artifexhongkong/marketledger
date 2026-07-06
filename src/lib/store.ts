@@ -234,6 +234,7 @@ interface AppStore {
   addMarketEvent: (e: Omit<MarketEvent, "id" | "createdAt">) => string;
   deleteMarketEvent: (id: string) => void;
   updateMarketEvent: (id: string, data: Partial<MarketEvent>) => void;
+  cleanupOrphanedTxs: () => void;
   seedDemo: () => void;
 }
 
@@ -397,6 +398,22 @@ export const useAppStore = create<AppStore>()(
           { id: "prod_demo_4", name: "咖啡", price: 35, unit: "杯", categoryId: "sales" },
         ];
         set({ transactions: txs, products: demoProducts, demoSeeded: true });
+      },
+
+      // 啟動時清理孤兒交易（marketId 指向已刪除的市集）
+      cleanupOrphanedTxs: () => {
+        const { transactions, marketEvents } = get();
+        const eventIds = new Set(marketEvents.map((e) => e.id));
+        // 內建市集 id（pmq 等）不算孤兒
+        const builtinIds = new Set(["pmq", "jfflux", "d2place", "chatuchak", "cicada", "pasar_malam"]);
+        const cleaned = transactions.filter((t) => {
+          if (!t.marketId) return true; // 沒有 marketId 的保留
+          if (builtinIds.has(t.marketId)) return true; // 內建市集保留
+          return eventIds.has(t.marketId); // 用戶市集只保留存在的
+        });
+        if (cleaned.length !== transactions.length) {
+          set({ transactions: cleaned });
+        }
       },
     }),
     {

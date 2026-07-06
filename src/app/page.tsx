@@ -27,12 +27,14 @@ export default function Page() {
   const [tab, setTab] = useState<TabId>("home");
   const [hydrated, setHydrated] = useState(false);
   const seedDemo = useAppStore((s) => s.seedDemo);
+  const cleanupOrphanedTxs = useAppStore((s) => s.cleanupOrphanedTxs);
   const { user, storageMode } = useAuthStore();
 
   useEffect(() => {
     setHydrated(true);
+    cleanupOrphanedTxs(); // 清理孤兒交易（已刪除市集的攤位費）
     seedDemo();
-  }, [seedDemo]);
+  }, [seedDemo, cleanupOrphanedTxs]);
 
   useEffect(() => {
     const handler = (e: Event) => {
