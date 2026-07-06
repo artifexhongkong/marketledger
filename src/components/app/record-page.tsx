@@ -395,10 +395,10 @@ function RecordView() {
   );
 }
 
-// ── 支付方式選擇器（含自訂支付方式 + 新增按鈕）──
+// ── 支付方式選擇器 ──
 
 const PAYMENT_ICONS = ["💵", "💳", "⚡", "💬", "🅰️", "🟢", "🔵", "🟡", "📱", "🏦", "💸", "💰", "🎁", "✅", "📌", "🎯"];
-const PAYMENT_COLORS = ["#0F1F3D", "#059669", "#E11D48", "#F59E0B", "#7C3AED", "#0891B2", "#DB2777", "#65A30D", "#6B7280"];
+const PAYMENT_COLORS = ["#1A1D24", "#059669", "#E11D48", "#F59E0B", "#7C3AED", "#0891B2", "#DB2777", "#65A30D", "#6B7280"];
 
 function PaymentSelector({
   payment,
@@ -407,13 +407,13 @@ function PaymentSelector({
   payment: PaymentMethod;
   setPayment: (p: PaymentMethod) => void;
 }) {
-  const { customPaymentMethods, addCustomPaymentMethod, deleteCustomPaymentMethod, visiblePayments, togglePaymentVisibility } = useAppStore();
+  const { customPaymentMethods, addCustomPaymentMethod, deleteCustomPaymentMethod, visiblePayments, togglePaymentVisibility, reorderVisiblePayments } = useAppStore();
+  const [showMore, setShowMore] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showManageMode, setShowManageMode] = useState(false);
-  const [showCustomizeModal, setShowCustomizeModal] = useState(false);
-  const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
-  // 取得支付方式資訊
   const getPaymentInfo = (m: PaymentMethod): { label: string; icon: string } => {
     if (m.startsWith("custom_")) {
       const custom = customPaymentMethods.find((c) => `custom_${c.id}` === m);
@@ -424,129 +424,123 @@ function PaymentSelector({
   };
 
   const shortLabel = (label: string) => {
-    return label
-      .replace("Touch 'n ", "TnG")
-      .replace("WeChat Pay", "WeChat")
-      .replace("Credit Card", "信用卡")
-      .replace("Bank Transfer", "轉帳");
+    return label.replace("Touch 'n ", "TnG").replace("WeChat Pay", "WeChat").replace("Credit Card", "信用卡").replace("Bank Transfer", "轉帳");
   };
 
-  // 首頁顯示的支付方式 = 用戶選擇的內建 + 自訂
   const allBuiltinPayments = PAYMENT_CATEGORIES.flatMap((c) => c.payments);
-  const visibleBuiltin = allBuiltinPayments.filter((m) => visiblePayments.includes(m));
+  const visibleBuiltin = visiblePayments.filter((p) => !p.startsWith("custom_"));
+  const visibleCustom = customPaymentMethods.filter((c) => visiblePayments.includes(`custom_${c.id}`));
+
+  // 拖拽排序
+  const handleDragStart = (index: number) => { setDragIndex(index); };
+  const handleDragOver = (e: React.DragEvent, index: number) => { e.preventDefault(); setDragOverIndex(index); };
+  const handleDrop = (index: number) => {
+    if (dragIndex !== null && dragIndex !== index) reorderVisiblePayments(dragIndex, index);
+    setDragIndex(null); setDragOverIndex(null);
+  };
 
   return (
     <div className="mt-3">
       <div className="flex items-center justify-between mb-2">
-        <p className="text-xs text-muted-foreground font-medium">💳 支付方式</p>
+        <p className="text-xs text-muted-foreground font-medium">支付方式</p>
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowCustomizeModal(true)}
-            className="text-[10px] font-medium text-muted-foreground hover:text-primary transition"
-          >
-            自訂
-          </button>
-          {customPaymentMethods.length > 0 && (
-            <button
-              onClick={() => setShowManageMode(!showManageMode)}
-              className={`text-[10px] font-medium transition ${
-                showManageMode ? "text-rose-600" : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {showManageMode ? "完成" : "管理"}
+          {visibleBuiltin.length + visibleCustom.length > 0 && (
+            <button onClick={() => setShowManageMode(!showManageMode)}
+              className={`text-[10px] font-medium transition ${showManageMode ? "text-accent" : "text-muted-foreground hover:text-foreground"}`}>
+              {showManageMode ? "完成" : "排序"}
             </button>
           )}
         </div>
       </div>
 
-      {/* 首頁支付方式（用戶選擇的 + 自訂） */}
+      {/* 主頁支付方式 */}
       <div className="grid grid-cols-5 gap-1.5">
-        {/* 用戶選擇顯示的內建支付方式 */}
         {visibleBuiltin.map((m) => {
-          const info = getPaymentInfo(m);
+          const info = getPaymentInfo(m as PaymentMethod);
           const active = payment === m;
+          const vi = visiblePayments.indexOf(m);
           return (
-            <PaymentButton2
-              key={m}
-              icon={info.icon}
-              label={shortLabel(info.label)}
-              active={active}
-              manageMode={false}
-              onClick={() => setPayment(m)}
-              onDelete={null}
-            />
+            <div key={m} draggable={showManageMode}
+              onDragStart={() => handleDragStart(vi)}
+              onDragOver={(e) => handleDragOver(e, vi)}
+              onDrop={() => handleDrop(vi)}
+              className={`transition-all ${dragOverIndex === vi ? "scale-95 opacity-60" : ""} ${dragIndex === vi ? "opacity-40" : ""}`}>
+              <PaymentButton2 icon={info.icon} label={shortLabel(info.label)} active={active}
+                manageMode={false} onClick={() => !showManageMode && setPayment(m as PaymentMethod)} onDelete={null} />
+            </div>
           );
         })}
-
-        {/* 自訂支付方式 */}
-        {customPaymentMethods.map((c) => {
+        {visibleCustom.map((c) => {
           const m = `custom_${c.id}` as PaymentMethod;
           const active = payment === m;
+          const vi = visiblePayments.indexOf(m);
           return (
-            <PaymentButton2
-              key={c.id}
-              icon={c.icon}
-              label={shortLabel(c.label)}
-              active={active}
-              manageMode={showManageMode}
-              onClick={() => setPayment(m)}
-              onDelete={() => {
-                if (confirm(`刪除支付方式「${c.label}」？`)) {
-                  deleteCustomPaymentMethod(c.id);
-                  if (payment === m) setPayment("cash");
-                }
-              }}
-            />
+            <div key={c.id} draggable={showManageMode}
+              onDragStart={() => handleDragStart(vi)}
+              onDragOver={(e) => handleDragOver(e, vi)}
+              onDrop={() => handleDrop(vi)}
+              className={`transition-all ${dragOverIndex === vi ? "scale-95 opacity-60" : ""} ${dragIndex === vi ? "opacity-40" : ""}`}>
+              <PaymentButton2 icon={c.icon} label={shortLabel(c.label)} active={active}
+                manageMode={showManageMode} onClick={() => !showManageMode && setPayment(m)}
+                onDelete={() => { if (confirm(`刪除支付方式「${c.label}」？`)) { deleteCustomPaymentMethod(c.id); if (payment === m) setPayment("cash"); } }} />
+            </div>
           );
         })}
-
         {/* 更多按鈕 */}
-        <button
-          onClick={() => setExpandedCategory(expandedCategory ? null : "all")}
-          className={`flex flex-col items-center justify-center gap-0.5 py-2.5 rounded-xl border-2 transition ${
-            expandedCategory
-              ? "border-primary bg-primary text-primary-foreground"
-              : "border-border bg-card text-foreground hover:border-primary/40"
-          }`}
-        >
+        <button onClick={() => setShowMore(!showMore)}
+          className={`flex flex-col items-center justify-center gap-0.5 py-2.5 rounded-xl border-2 transition ${showMore ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card text-foreground hover:border-primary/40"}`}>
           <span className="text-base leading-none">🌐</span>
           <span className="text-[10px] font-medium">更多</span>
         </button>
       </div>
 
-      {/* 展開的地區分類 + 新增按鈕 */}
-      {expandedCategory && (
+      {/* 更多展開 — 所有支付方式 with +/- */}
+      {showMore && (
         <div className="mt-2 space-y-2 animate-[fadeIn_0.2s_ease-out]">
-          {PAYMENT_CATEGORIES.slice(1).map((cat) => (
+          {PAYMENT_CATEGORIES.map((cat) => (
             <div key={cat.id}>
-              <p className="text-[10px] font-medium text-muted-foreground px-1 mb-1">{cat.label}</p>
+              <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider px-1 mb-1">{cat.label}</p>
               <div className="grid grid-cols-5 gap-1.5">
                 {cat.payments.map((m) => {
-                  const info = getPaymentInfo(m);
+                  const info = PAYMENT_METHODS[m as keyof typeof PAYMENT_METHODS];
+                  const isShown = visiblePayments.includes(m);
                   const active = payment === m;
                   return (
-                    <PaymentButton2
-                      key={m}
-                      icon={info.icon}
-                      label={shortLabel(info.label)}
-                      active={active}
-                      manageMode={false}
-                      onClick={() => { setPayment(m); setExpandedCategory(null); }}
-                      onDelete={null}
-                    />
+                    <div key={m} className="relative">
+                      <PaymentButton2 icon={info?.icon || "💳"} label={shortLabel(info?.label || m)}
+                        active={active} manageMode={false}
+                        onClick={() => { setPayment(m as PaymentMethod); setShowMore(false); }} onDelete={null} />
+                      <button onClick={(e) => { e.stopPropagation(); togglePaymentVisibility(m); }}
+                        className={`absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full flex items-center justify-center shadow-sm transition z-10 ${isShown ? "bg-rose-500 text-white" : "bg-emerald-500 text-white"}`}>
+                        {isShown ? "−" : "+"}
+                      </button>
+                    </div>
                   );
                 })}
               </div>
             </div>
           ))}
-          {/* 新增自訂 */}
+          {/* 自訂支付 */}
           <div>
-            <p className="text-[10px] font-medium text-muted-foreground px-1 mb-1">自訂</p>
+            <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider px-1 mb-1">自訂</p>
             <div className="grid grid-cols-5 gap-1.5">
-              <button
-                onClick={() => setShowAddModal(true)}
-                className="flex flex-col items-center justify-center gap-0.5 py-2.5 rounded-xl border-2 border-dashed border-primary/40 bg-primary/5 text-primary hover:bg-primary/10 transition"
-              >
+              {customPaymentMethods.map((c) => {
+                const m = `custom_${c.id}`;
+                const isShown = visiblePayments.includes(m);
+                const active = payment === (m as PaymentMethod);
+                return (
+                  <div key={c.id} className="relative">
+                    <PaymentButton2 icon={c.icon} label={shortLabel(c.label)} active={active}
+                      manageMode={false} onClick={() => { setPayment(m as PaymentMethod); setShowMore(false); }} onDelete={null} />
+                    <button onClick={(e) => { e.stopPropagation(); togglePaymentVisibility(m); }}
+                      className={`absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full flex items-center justify-center shadow-sm z-10 ${isShown ? "bg-rose-500 text-white" : "bg-emerald-500 text-white"}`}>
+                      {isShown ? "−" : "+"}
+                    </button>
+                  </div>
+                );
+              })}
+              <button onClick={() => setShowAddModal(true)}
+                className="flex flex-col items-center justify-center gap-0.5 py-2.5 rounded-xl border-2 border-dashed border-accent/40 bg-accent/5 text-accent hover:bg-accent/10 transition">
                 <Plus className="w-4 h-4" />
                 <span className="text-[10px] font-medium">新增</span>
               </button>
@@ -555,124 +549,32 @@ function PaymentSelector({
         </div>
       )}
 
-      {/* 自訂顯示 Modal */}
-      {showCustomizeModal && (
-        <CustomizePaymentsModal
-          onClose={() => setShowCustomizeModal(false)}
-          visiblePayments={visiblePayments}
-          togglePaymentVisibility={togglePaymentVisibility}
-        />
-      )}
-
       {/* 新增支付方式 Modal */}
       {showAddModal && (
-        <AddPaymentModal
-          onClose={() => setShowAddModal(false)}
-          onAdd={(label, icon, color) => {
-            addCustomPaymentMethod({ label, icon, color });
-            setShowAddModal(false);
-          }}
-        />
+        <AddPaymentModal onClose={() => setShowAddModal(false)}
+          onAdd={(label, icon, color) => { addCustomPaymentMethod({ label, icon, color }); setShowAddModal(false); }} />
       )}
-    </div>
-  );
-}
-
-// ── 自訂顯示支付方式 Modal ──
-function CustomizePaymentsModal({
-  onClose,
-  visiblePayments,
-  togglePaymentVisibility,
-}: {
-  onClose: () => void;
-  visiblePayments: string[];
-  togglePaymentVisibility: (p: string) => void;
-}) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
-      <Card className="w-full max-w-xs max-h-[80vh] overflow-y-auto scrollbar-hide p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between sticky top-0 bg-card pb-2">
-          <h3 className="text-base font-semibold text-foreground">自訂首頁支付方式</h3>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-        <p className="text-xs text-muted-foreground -mt-2">勾選要在首頁快速顯示的支付方式</p>
-
-        {PAYMENT_CATEGORIES.map((cat) => (
-          <div key={cat.id}>
-            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">{cat.label}</p>
-            <div className="space-y-1">
-              {cat.payments.map((m) => {
-                const info = PAYMENT_METHODS[m as keyof typeof PAYMENT_METHODS];
-                const isVisible = visiblePayments.includes(m);
-                return (
-                  <button
-                    key={m}
-                    onClick={() => togglePaymentVisibility(m)}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition ${
-                      isVisible ? "bg-primary/8" : "hover:bg-muted"
-                    }`}
-                  >
-                    <span className="text-lg">{info?.icon || "💳"}</span>
-                    <span className={`flex-1 text-left text-sm ${isVisible ? "text-foreground font-medium" : "text-muted-foreground"}`}>
-                      {info?.label || m}
-                    </span>
-                    <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition ${
-                      isVisible ? "bg-primary border-primary" : "border-border"
-                    }`}>
-                      {isVisible && <Check className="w-3 h-3 text-primary-foreground" strokeWidth={3} />}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        ))}
-      </Card>
     </div>
   );
 }
 
 // ── 單個支付方式按鈕 ──
 function PaymentButton2({
-  icon,
-  label,
-  active,
-  manageMode,
-  onClick,
-  onDelete,
+  icon, label, active, manageMode, onClick, onDelete,
 }: {
-  icon: string;
-  label: string;
-  active: boolean;
-  manageMode: boolean;
-  onClick: () => void;
-  onDelete: (() => void) | null;
+  icon: string; label: string; active: boolean; manageMode: boolean;
+  onClick: () => void; onDelete: (() => void) | null;
 }) {
   return (
     <div className="relative">
-      <button
-        onClick={onClick}
-        disabled={manageMode && !onDelete}
-        className={`w-full flex flex-col items-center justify-center gap-0.5 py-2.5 rounded-xl border-2 transition-all ${
-          active
-            ? "border-primary bg-primary text-primary-foreground shadow-sm scale-[1.02]"
-            : "border-border bg-card text-foreground hover:border-primary/40"
-        } ${manageMode && onDelete ? "opacity-70" : ""}`}
-      >
+      <button onClick={onClick} disabled={manageMode && !onDelete}
+        className={`w-full flex flex-col items-center justify-center gap-0.5 py-2.5 rounded-xl border-2 transition-all ${active ? "border-primary bg-primary text-primary-foreground shadow-sm scale-[1.02]" : "border-border bg-card text-foreground hover:border-primary/40"} ${manageMode && onDelete ? "opacity-70" : ""}`}>
         <span className="text-base leading-none">{icon}</span>
-        <span className={`text-[10px] font-medium leading-none ${active ? "" : "text-muted-foreground"}`}>
-          {label}
-        </span>
+        <span className={`text-[10px] font-medium leading-none ${active ? "" : "text-muted-foreground"}`}>{label}</span>
       </button>
-      {/* 管理模式下的刪除按鈕 */}
       {manageMode && onDelete && (
-        <button
-          onClick={onDelete}
-          className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-rose-500 text-white flex items-center justify-center shadow-sm hover:bg-rose-600 transition z-10"
-          aria-label="刪除"
-        >
+        <button onClick={onDelete}
+          className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-rose-500 text-white flex items-center justify-center shadow-sm hover:bg-rose-600 transition z-10">
           <Trash2 className="w-3 h-3" />
         </button>
       )}
@@ -681,116 +583,51 @@ function PaymentButton2({
 }
 
 // ── 新增支付方式 Modal ──
-function AddPaymentModal({
-  onClose,
-  onAdd,
-}: {
-  onClose: () => void;
-  onAdd: (label: string, icon: string, color: string) => void;
-}) {
+function AddPaymentModal({ onClose, onAdd }: { onClose: () => void; onAdd: (label: string, icon: string, color: string) => void; }) {
   const [label, setLabel] = useState("");
   const [icon, setIcon] = useState(PAYMENT_ICONS[0]);
   const [color, setColor] = useState(PAYMENT_COLORS[0]);
-
-  const handleAdd = () => {
-    if (!label.trim()) {
-      alert("請輸入支付方式名稱");
-      return;
-    }
-    onAdd(label.trim(), icon, color);
-  };
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-      onClick={onClose}
-    >
-      <Card
-        className="w-full max-w-xs p-5 space-y-4"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-[fadeIn_0.15s_ease-out]" onClick={onClose}>
+      <Card className="w-full max-w-xs p-5 space-y-4 animate-[scaleIn_0.2s_ease-out]" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
           <h3 className="text-base font-semibold text-foreground">新增支付方式</h3>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
-            <X className="w-4 h-4" />
-          </button>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
         </div>
-
-        {/* 預覽 */}
         <div className="flex justify-center">
-          <div
-            className="flex flex-col items-center justify-center gap-0.5 py-2.5 px-4 rounded-xl border-2"
-            style={{ borderColor: color, backgroundColor: color + "15" }}
-          >
-            <span className="text-base leading-none">{icon}</span>
-            <span className="text-[10px] font-medium" style={{ color }}>
-              {label || "名稱"}
-            </span>
+          <div className="flex flex-col items-center justify-center gap-0.5 py-2.5 px-4 rounded-xl border-2" style={{ borderColor: color, backgroundColor: color + "15" }}>
+            <span className="text-base">{icon}</span>
+            <span className="text-[10px] font-medium" style={{ color }}>{label || "名稱"}</span>
           </div>
         </div>
-
-        {/* 名稱輸入 */}
         <div>
           <p className="text-xs font-medium text-muted-foreground mb-1.5">名稱</p>
-          <Input
-            value={label}
-            onChange={(e) => setLabel(e.target.value)}
-            placeholder="例如：八達通、PayPal"
-            maxLength={12}
-            className="bg-background"
-          />
+          <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="例如：八達通、PayPal" maxLength={12} className="bg-background" />
         </div>
-
-        {/* 圖示選擇 */}
         <div>
           <p className="text-xs font-medium text-muted-foreground mb-1.5">圖示</p>
           <div className="grid grid-cols-8 gap-1">
             {PAYMENT_ICONS.map((ic) => (
-              <button
-                key={ic}
-                onClick={() => setIcon(ic)}
-                className={`aspect-square rounded-lg flex items-center justify-center text-lg transition ${
-                  icon === ic
-                    ? "bg-primary/15 ring-2 ring-primary"
-                    : "bg-muted hover:bg-muted/70"
-                }`}
-              >
-                {ic}
-              </button>
+              <button key={ic} onClick={() => setIcon(ic)}
+                className={`aspect-square rounded-lg flex items-center justify-center text-lg transition ${icon === ic ? "bg-primary/15 ring-2 ring-primary" : "bg-muted hover:bg-muted/70"}`}>{ic}</button>
             ))}
           </div>
         </div>
-
-        {/* 顏色選擇 */}
         <div>
           <p className="text-xs font-medium text-muted-foreground mb-1.5">顏色</p>
           <div className="flex gap-2">
             {PAYMENT_COLORS.map((c) => (
-              <button
-                key={c}
-                onClick={() => setColor(c)}
-                className={`w-7 h-7 rounded-full transition ${
-                  color === c ? "ring-2 ring-offset-2 ring-foreground" : ""
-                }`}
-                style={{ backgroundColor: c }}
-                aria-label={`顏色 ${c}`}
-              />
+              <button key={c} onClick={() => setColor(c)}
+                className={`w-7 h-7 rounded-full transition ${color === c ? "ring-2 ring-offset-2 ring-foreground" : ""}`}
+                style={{ backgroundColor: c }} />
             ))}
           </div>
         </div>
-
-        {/* 確認按鈕 */}
-        <Button onClick={handleAdd} className="w-full h-10">
-          新增支付方式
-        </Button>
+        <Button onClick={() => { if (!label.trim()) { alert("請輸入名稱"); return; } onAdd(label.trim(), icon, color); }} className="w-full h-10">新增</Button>
       </Card>
     </div>
   );
 }
-
-const CURRENCIES_SYMBOL: Record<string, string> = {
-  HKD: "HK$", TWD: "NT$", THB: "฿", MYR: "RM", SGD: "$", USD: "US$",
-};
 
 // ─────────────────────────────────────────────────────────────
 // ProductButton — 簡潔版
@@ -1315,6 +1152,14 @@ function ProductsView() {
         @keyframes fadeIn {
           from { opacity: 0; }
           to { opacity: 1; }
+        }
+        @keyframes scaleIn {
+          from { opacity: 0; transform: scale(0.92); }
+          to { opacity: 1; transform: scale(1); }
+        }
+        @keyframes slideUp {
+          from { opacity: 0; transform: translateY(8px); }
+          to { opacity: 1; transform: translateY(0); }
         }
         :global(.shake-once) {
           animation: shake 0.5s ease-in-out;

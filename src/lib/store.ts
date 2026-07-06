@@ -212,6 +212,7 @@ interface AppStore {
   deleteCustomPaymentMethod: (id: string) => void;
   setVisiblePayments: (payments: string[]) => void;
   togglePaymentVisibility: (payment: string) => void;
+  reorderVisiblePayments: (fromIndex: number, toIndex: number) => void;
   seedDemo: () => void;
 }
 
@@ -274,12 +275,19 @@ export const useAppStore = create<AppStore>()(
         set((s) => {
           const isShown = s.visiblePayments.includes(payment);
           if (isShown) {
-            // 移除（至少保留一個）
             if (s.visiblePayments.length <= 1) return s;
             return { visiblePayments: s.visiblePayments.filter((p) => p !== payment) };
           } else {
             return { visiblePayments: [...s.visiblePayments, payment] };
           }
+        }),
+
+      reorderVisiblePayments: (fromIndex: number, toIndex: number) =>
+        set((s) => {
+          const arr = [...s.visiblePayments];
+          const [item] = arr.splice(fromIndex, 1);
+          arr.splice(toIndex, 0, item);
+          return { visiblePayments: arr };
         }),
 
       seedDemo: () => {
