@@ -1,207 +1,336 @@
 "use client";
 
-import { useState } from "react";
-import { useAppStore, formatCurrency, type MarketData } from "@/lib/store";
+import { useState, useMemo } from "react";
+import { useAppStore, formatCurrency, CURRENCIES, type MarketEvent } from "@/lib/store";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MapPin, Clock, LayoutGrid, Tag, CheckCircle2, Sparkles, Handshake, Lock } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Plus, X, MapPin, Calendar, Clock, Users, Store, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+
+const EVENT_COLORS = ["#1A1D24", "#059669", "#E11D48", "#F59E0B", "#7C3AED", "#0891B2"];
+const WEEKDAYS = ["日", "一", "二", "三", "四", "五", "六"];
+const MONTHS = ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"];
+const CROWD_LABELS = { low: "少", medium: "中", high: "多" };
 
 export function MarketsPage() {
-  // 預覽模式：可切換查看未來設計草圖
-  const [previewMode, setPreviewMode] = useState(false);
+  const { marketEvents, addMarketEvent, deleteMarketEvent, currency } = useAppStore();
+  const [showForm, setShowForm] = useState(false);
+  const [viewYear, setViewYear] = useState(new Date().getFullYear());
+  const [viewMonth, setViewMonth] = useState(new Date().getMonth());
+
+  const prevMonth = () => { if (viewMonth === 0) { setViewMonth(11); setViewYear(viewYear - 1); } else setViewMonth(viewMonth - 1); };
+  const nextMonth = () => { if (viewMonth === 11) { setViewMonth(0); setViewYear(viewYear + 1); } else setViewMonth(viewMonth + 1); };
+
+  // 找出這個月的市集活動
+  const monthEvents = useMemo(() => {
+    return marketEvents.filter((e) => {
+      const start = new Date(e.startDate);
+      const end = new Date(e.endDate);
+      const monthStart = new Date(viewYear, viewMonth, 1);
+      const monthEnd = new Date(viewYear, viewMonth + 1, 0);
+      return start <= monthEnd && end >= monthStart;
+    });
+  }, [marketEvents, viewYear, viewMonth]);
+
+  // 即將到來的市集
+  const upcomingEvents = useMemo(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    return marketEvents.filter((e) => e.endDate >= today).sort((a, b) => a.startDate.localeCompare(b.startDate));
+  }, [marketEvents]);
+
+  // 日曆天數
+  const calendarDays = useMemo(() => {
+    const firstDay = new Date(viewYear, viewMonth, 1);
+    const lastDay = new Date(viewYear, viewMonth + 1, 0);
+    const startWeekday = firstDay.getDay();
+    const daysInMonth = lastDay.getDate();
+    const todayKey = new Date().toISOString().slice(0, 10);
+    const days: any[] = [];
+    for (let i = 0; i < startWeekday; i++) days.push(null);
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateKey = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+      const dayEvents = marketEvents.filter((e) => {
+        return dateKey >= e.startDate && dateKey <= e.endDate;
+      });
+      days.push({ day: d, dateKey, isToday: dateKey === todayKey, events: dayEvents });
+    }
+    return days;
+  }, [viewYear, viewMonth, marketEvents]);
 
   return (
-    <div className="px-5 pb-4 space-y-4">
-      <div className="pt-2">
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">🌏 全球市集</h1>
-        <p className="text-xs text-muted-foreground mt-1">探索世界各地的市集機會</p>
+    <div className="px-4 pb-6 space-y-3">
+      {/* Header */}
+      <div className="pt-4 flex items-center justify-between">
+        <h1 className="text-xl font-bold text-foreground">市集日曆</h1>
+        <button onClick={() => setShowForm(true)}
+          className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-accent/15 text-accent text-xs font-medium hover:bg-accent/20 transition">
+          <Plus className="w-3.5 h-3.5" />新增
+        </button>
       </div>
 
-      {/* Coming soon card — 主視覺 */}
-      <Card className="relative overflow-hidden border-primary/30 bg-gradient-to-br from-primary/5 via-primary/8 to-accent/10 p-6">
-        {/* 裝飾光點 */}
-        <div className="absolute top-0 right-0 w-32 h-32 bg-accent/20 rounded-full blur-3xl -translate-y-8 translate-x-8" />
-        <div className="absolute bottom-0 left-0 w-24 h-24 bg-primary/15 rounded-full blur-2xl translate-y-4 -translate-x-4" />
-
-        <div className="relative">
-          {/* Icon + 標籤 */}
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
-              <Handshake className="w-4.5 h-4.5 text-primary" />
-            </div>
-            <Badge className="bg-accent/20 text-accent-foreground border-0 hover:bg-accent/20">
-              <Sparkles className="w-3 h-3 mr-1" />
-              功能開發中
-            </Badge>
-          </div>
-
-          {/* 標題 */}
-          <h2 className="text-lg font-semibold text-foreground leading-snug">
-            全球市集功能
-            <br />
-            正在與各國市集主辦方洽談
-          </h2>
-
-          {/* 說明 */}
-          <p className="text-xs text-muted-foreground leading-relaxed mt-3">
-            我們正積極與香港 PMQ、JFFLUX、台灣簡單生活節、泰國 Chatuchak、馬來西亞 Pasar Malam 等市集主辦方接洽合作。完成後將提供：
-          </p>
-
-          {/* 未來功能清單 */}
-          <ul className="mt-3 space-y-2">
-            {[
-              { icon: "🗺️", text: "全球市集行事曆與報名" },
-              { icon: "📊", text: "各市集營業額情報" },
-              { icon: "🤝", text: "線上攤位申請" },
-              { icon: "💡", text: "市集比較與建議" },
-            ].map((item, i) => (
-              <li key={i} className="flex items-center gap-2.5 text-xs text-foreground/80">
-                <span className="w-6 h-6 rounded-md bg-card/80 flex items-center justify-center text-sm flex-shrink-0">
-                  {item.icon}
-                </span>
-                <span>{item.text}</span>
-                <Lock className="w-3 h-3 text-muted-foreground/60 ml-auto" />
-              </li>
-            ))}
-          </ul>
-
-          {/* 預估時間 */}
-          <div className="mt-5 pt-4 border-t border-border/60 flex items-center justify-between">
-            <div>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">預計上線</p>
-              <p className="text-sm font-semibold text-foreground mt-0.5">V3 版本 · 2026 Q4</p>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setPreviewMode(!previewMode)}
-              className="text-xs text-primary hover:text-primary hover:bg-primary/10"
-            >
-              {previewMode ? "收起預覽" : "查看設計草圖 →"}
-            </Button>
-          </div>
-        </div>
-      </Card>
-
-      {/* 預覽模式：顯示未來設計草圖（半透明鎖定狀態） */}
-      {previewMode && (
-        <div>
-          <p className="text-xs text-muted-foreground mb-3 italic flex items-center gap-1.5">
-            <Sparkles className="w-3 h-3" />
-            未來上線後的設計草圖預覽
-          </p>
-          <div className="relative opacity-50 pointer-events-none select-none">
-            <PreviewMarketsList />
-            <div className="absolute inset-0 bg-background/30 backdrop-blur-[1px] rounded-xl flex items-center justify-center">
-              <div className="bg-card/95 px-4 py-2 rounded-full border border-border shadow-lg flex items-center gap-1.5">
-                <Lock className="w-3 h-3 text-muted-foreground" />
-                <span className="text-xs font-medium text-foreground">功能開發中</span>
-              </div>
-            </div>
-          </div>
+      {/* 即將到來 */}
+      {upcomingEvents.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-1">即將到來</p>
+          {upcomingEvents.slice(0, 3).map((e) => (
+            <EventCard key={e.id} event={e} currency={currency} onDelete={() => deleteMarketEvent(e.id)} />
+          ))}
         </div>
       )}
 
-      {/* 預先收集意見區 */}
-      <Card className="p-4 border-dashed border-2">
-        <div className="flex items-start gap-3">
-          <div className="w-8 h-8 rounded-full bg-accent/15 flex items-center justify-center flex-shrink-0">
-            <span className="text-sm">💡</span>
+      {/* 日曆 */}
+      <Card className="p-3">
+        <div className="flex items-center justify-between mb-2">
+          <button onClick={prevMonth} className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-muted">
+            <ChevronLeft className="w-4 h-4 text-foreground" />
+          </button>
+          <span className="text-sm font-bold text-foreground">{viewYear} {MONTHS[viewMonth]}</span>
+          <button onClick={nextMonth} className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-muted">
+            <ChevronRight className="w-4 h-4 text-foreground" />
+          </button>
+        </div>
+        <div className="grid grid-cols-7 gap-0.5 mb-1">
+          {WEEKDAYS.map((w) => <div key={w} className="text-center text-[9px] font-medium text-muted-foreground py-0.5">{w}</div>)}
+        </div>
+        <div className="grid grid-cols-7 gap-0.5">
+          {calendarDays.map((day, i) => {
+            if (!day) return <div key={`e-${i}`} />;
+            return (
+              <div key={day.dateKey}
+                className={`relative aspect-square rounded-lg flex flex-col items-center justify-center text-[11px] border ${day.isToday ? "border-accent/40" : "border-transparent"} ${day.events.length > 0 ? "bg-muted/50" : ""}`}>
+                <span className={`font-medium ${day.isToday ? "text-accent" : "text-foreground"}`}>{day.day}</span>
+                {day.events.length > 0 && (
+                  <div className="absolute bottom-1 flex gap-0.5">
+                    {day.events.slice(0, 3).map((e, ei) => (
+                      <div key={ei} className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: e.color }} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </Card>
+
+      {/* 這個月的市集 */}
+      {monthEvents.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-1">
+            {MONTHS[viewMonth]}市集（{monthEvents.length}）
+          </p>
+          {monthEvents.map((e) => (
+            <EventCard key={e.id} event={e} currency={currency} onDelete={() => deleteMarketEvent(e.id)} />
+          ))}
+        </div>
+      )}
+
+      {marketEvents.length === 0 && (
+        <Card className="p-6 text-center border-dashed">
+          <Calendar className="w-8 h-8 text-muted-foreground/40 mx-auto mb-1" />
+          <p className="text-xs text-muted-foreground">點「新增」添加市集活動</p>
+          <p className="text-[11px] text-muted-foreground/60 mt-0.5">選擇日期範圍，自動記帳攤位費</p>
+        </Card>
+      )}
+
+      {/* 新增表單 Modal */}
+      {showForm && (
+        <EventFormModal
+          onClose={() => setShowForm(false)}
+          onSave={(data) => { addMarketEvent(data); setShowForm(false); }}
+          currency={currency}
+        />
+      )}
+    </div>
+  );
+}
+
+function EventCard({ event, currency, onDelete }: { event: MarketEvent; currency: string; onDelete: () => void }) {
+  const [expanded, setExpanded] = useState(false);
+  const days = Math.ceil((new Date(event.endDate).getTime() - new Date(event.startDate).getTime()) / 86400000) + 1;
+  const dailyFee = event.feeType === "daily" ? event.boothFee : event.boothFee;
+  const totalFee = event.feeType === "daily" ? event.boothFee * days : event.boothFee;
+
+  return (
+    <Card className="overflow-hidden animate-[fadeIn_0.2s_ease-out]">
+      <div className="p-3 cursor-pointer" onClick={() => setExpanded(!expanded)}>
+        <div className="flex items-start gap-2">
+          <div className="w-1 self-stretch rounded-full" style={{ backgroundColor: event.color }} />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-foreground">{event.name}</p>
+            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+              <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
+                <Calendar className="w-2.5 h-2.5" />
+                {event.startDate === event.endDate ? event.startDate : `${event.startDate.slice(5)} ~ ${event.endDate.slice(5)}`}
+              </span>
+              {event.location && (
+                <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
+                  <MapPin className="w-2.5 h-2.5" />{event.location}
+                </span>
+              )}
+            </div>
+            {event.boothFee > 0 && (
+              <p className="text-[10px] text-muted-foreground mt-0.5">
+                攤位費 {formatCurrency(dailyFee, currency as any)}{event.feeType === "daily" ? "/天" : ""}
+                <span className="text-muted-foreground/60"> · 共 {formatCurrency(totalFee, currency as any)}</span>
+              </p>
+            )}
           </div>
-          <div className="flex-1">
-            <p className="text-sm font-medium text-foreground">想搶先體驗？</p>
-            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-              我們正在徵求 50 位種子用戶參與 Beta 測試，並優先獲得市集情報。如果你是市集主辦方或常態攤商，也歡迎與我們接洽合作。
-            </p>
-            <div className="flex gap-2 mt-3">
-              <Button variant="outline" size="sm" className="text-xs h-8">
-                加入 Beta 等候名單
-              </Button>
-              <Button variant="ghost" size="sm" className="text-xs h-8 text-primary">
-                了解合作方案
-              </Button>
+          <ChevronRight className={`w-4 h-4 text-muted-foreground transition-transform ${expanded ? "rotate-90" : ""}`} />
+        </div>
+      </div>
+      {expanded && (
+        <div className="px-3 pb-3 pt-1 border-t border-border space-y-1.5 animate-[fadeIn_0.15s_ease-out]">
+          {event.boothNumber && <InfoRow icon={<Store className="w-3 h-3" />} label="攤位編號" value={event.boothNumber} />}
+          {event.businessHours && <InfoRow icon={<Clock className="w-3 h-3" />} label="營業時段" value={event.businessHours} />}
+          {event.expectedCrowd && <InfoRow icon={<Users className="w-3 h-3" />} label="預期客流" value={CROWD_LABELS[event.expectedCrowd]} />}
+          {event.notes && <InfoRow icon={<Calendar className="w-3 h-3" />} label="備註" value={event.notes} />}
+          {event.autoAddFee && <p className="text-[10px] text-emerald-600">✓ 已自動記帳攤位費</p>}
+          <button onClick={onDelete} className="flex items-center gap-1 text-[11px] text-rose-500 hover:text-rose-600 mt-1">
+            <Trash2 className="w-3 h-3" />刪除
+          </button>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function InfoRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  return (
+    <div className="flex items-center gap-1.5 text-[11px]">
+      <span className="text-muted-foreground">{icon}</span>
+      <span className="text-muted-foreground">{label}：</span>
+      <span className="text-foreground">{value}</span>
+    </div>
+  );
+}
+
+function EventFormModal({ onClose, onSave, currency }: { onClose: () => void; onSave: (e: Omit<MarketEvent, "id" | "createdAt">) => void; currency: string }) {
+  const [name, setName] = useState("");
+  const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10));
+  const [endDate, setEndDate] = useState(new Date().toISOString().slice(0, 10));
+  const [location, setLocation] = useState("");
+  const [boothFee, setBoothFee] = useState("");
+  const [feeType, setFeeType] = useState<"total" | "daily">("daily");
+  const [autoAddFee, setAutoAddFee] = useState(true);
+  const [boothNumber, setBoothNumber] = useState("");
+  const [businessHours, setBusinessHours] = useState("");
+  const [expectedCrowd, setExpectedCrowd] = useState<"low" | "medium" | "high">("medium");
+  const [notes, setNotes] = useState("");
+  const [color, setColor] = useState(EVENT_COLORS[0]);
+
+  const handleSave = () => {
+    if (!name.trim()) { alert("請輸入市集名稱"); return; }
+    if (endDate < startDate) { alert("結束日期不能早於開始日期"); return; }
+    onSave({
+      name: name.trim(), startDate, endDate, location: location.trim(),
+      boothFee: parseFloat(boothFee) || 0, feeType, autoAddFee,
+      boothNumber: boothNumber.trim(), businessHours: businessHours.trim(),
+      expectedCrowd, notes: notes.trim(), color,
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-[fadeIn_0.15s_ease-out]" onClick={onClose}>
+      <Card className="w-full max-w-xs max-h-[85vh] overflow-y-auto scrollbar-hide p-5 space-y-3 animate-[scaleIn_0.2s_ease-out]" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between sticky top-0 bg-card pb-2">
+          <h3 className="text-base font-semibold text-foreground">新增市集</h3>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
+        </div>
+
+        {/* 名稱 */}
+        <div>
+          <p className="text-xs font-medium text-muted-foreground mb-1">市集名稱 *</p>
+          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="例如：PMQ 週末市集" className="bg-background h-9 text-sm" />
+        </div>
+
+        {/* 日期範圍 */}
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <p className="text-xs font-medium text-muted-foreground mb-1">開始日期</p>
+            <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="bg-background h-9 text-sm" />
+          </div>
+          <div>
+            <p className="text-xs font-medium text-muted-foreground mb-1">結束日期</p>
+            <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="bg-background h-9 text-sm" />
+          </div>
+        </div>
+
+        {/* 地點 */}
+        <div>
+          <p className="text-xs font-medium text-muted-foreground mb-1">地點</p>
+          <Input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="例如：中環 PMQ" className="bg-background h-9 text-sm" />
+        </div>
+
+        {/* 攤位費 */}
+        <div>
+          <p className="text-xs font-medium text-muted-foreground mb-1">攤位費用（{CURRENCIES[currency as keyof typeof CURRENCIES]?.symbol}）</p>
+          <div className="flex gap-2">
+            <Input type="number" value={boothFee} onChange={(e) => setBoothFee(e.target.value)} placeholder="0" className="bg-background h-9 text-sm flex-1" />
+            <div className="flex bg-muted rounded-lg p-0.5">
+              <button onClick={() => setFeeType("daily")} className={`px-2.5 py-1 text-[11px] rounded-md transition ${feeType === "daily" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>每天</button>
+              <button onClick={() => setFeeType("total")} className={`px-2.5 py-1 text-[11px] rounded-md transition ${feeType === "total" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>總計</button>
             </div>
           </div>
         </div>
+
+        {/* 自動記帳 */}
+        <button onClick={() => setAutoAddFee(!autoAddFee)}
+          className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg border transition ${autoAddFee ? "border-emerald-400 bg-emerald-50" : "border-border bg-background"}`}>
+          <div>
+            <p className="text-xs font-medium text-foreground">自動記帳攤位費</p>
+            <p className="text-[10px] text-muted-foreground">每天自動加上攤位費支出</p>
+          </div>
+          <div className={`w-9 h-5 rounded-full transition flex items-center ${autoAddFee ? "bg-emerald-500 justify-end" : "bg-muted-foreground/30 justify-start"}`}>
+            <div className="w-4 h-4 rounded-full bg-white shadow-sm mx-0.5" />
+          </div>
+        </button>
+
+        {/* 攤位編號 */}
+        <div>
+          <p className="text-xs font-medium text-muted-foreground mb-1">攤位編號</p>
+          <Input value={boothNumber} onChange={(e) => setBoothNumber(e.target.value)} placeholder="例如：A12" className="bg-background h-9 text-sm" />
+        </div>
+
+        {/* 營業時段 */}
+        <div>
+          <p className="text-xs font-medium text-muted-foreground mb-1">營業時段</p>
+          <Input value={businessHours} onChange={(e) => setBusinessHours(e.target.value)} placeholder="例如：10:00-18:00" className="bg-background h-9 text-sm" />
+        </div>
+
+        {/* 預期客流 */}
+        <div>
+          <p className="text-xs font-medium text-muted-foreground mb-1">預期客流</p>
+          <div className="flex gap-1.5">
+            {(["low", "medium", "high"] as const).map((c) => (
+              <button key={c} onClick={() => setExpectedCrowd(c)}
+                className={`flex-1 py-1.5 text-xs rounded-lg border transition ${expectedCrowd === c ? "border-accent bg-accent/10 text-accent" : "border-border bg-card text-muted-foreground"}`}>
+                {CROWD_LABELS[c]}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 顏色 */}
+        <div>
+          <p className="text-xs font-medium text-muted-foreground mb-1">標記顏色</p>
+          <div className="flex gap-2">
+            {EVENT_COLORS.map((c) => (
+              <button key={c} onClick={() => setColor(c)}
+                className={`w-6 h-6 rounded-full transition ${color === c ? "ring-2 ring-offset-1 ring-foreground" : ""}`}
+                style={{ backgroundColor: c }} />
+            ))}
+          </div>
+        </div>
+
+        {/* 備註 */}
+        <div>
+          <p className="text-xs font-medium text-muted-foreground mb-1">備註</p>
+          <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="其他資訊..." className="bg-background text-sm min-h-[50px]" maxLength={200} />
+        </div>
+
+        <Button onClick={handleSave} className="w-full h-10">新增市集</Button>
       </Card>
     </div>
   );
 }
-
-// ── 預覽用的市集列表元件（從原本的 markets page 抽出，作為草圖展示）──
-function PreviewMarketsList() {
-  const { markets, currentMarketId, transactions, currency } = useAppStore();
-
-  const getMarketStats = (id: string) => {
-    const txs = transactions.filter((t) => t.marketId === id);
-    const income = txs.filter((t) => t.type === "income").reduce((a, b) => a + b.amount, 0);
-    const expense = txs.filter((t) => t.type === "expense").reduce((a, b) => a + b.amount, 0);
-    return { count: txs.length, profit: income - expense };
-  };
-
-  return (
-    <div className="space-y-3">
-      {markets.slice(0, 3).map((m) => {
-        const stats = getMarketStats(m.id);
-        const isCurrent = currentMarketId === m.id;
-        return (
-          <Card
-            key={m.id}
-            className={`p-4 ${isCurrent ? "border-primary border-2 bg-primary/5" : "border-border"}`}
-          >
-            <div className="flex items-start gap-2 mb-2">
-              <Badge variant="secondary" className="text-[10px] py-0 px-1.5 font-medium bg-primary/10 text-primary border-0">
-                {CITY_LABELS[m.city]}
-              </Badge>
-              <Badge variant="outline" className="text-[10px] py-0 px-1.5 font-medium">
-                {TYPE_LABELS[m.type]}
-              </Badge>
-              {isCurrent && (
-                <div className="ml-auto bg-primary text-primary-foreground text-[10px] px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
-                  <CheckCircle2 className="w-2.5 h-2.5" />
-                  已選中
-                </div>
-              )}
-            </div>
-            <h3 className="text-base font-semibold text-foreground">{m.name}</h3>
-            <p className="text-xs text-muted-foreground mb-3">{m.nameEn}</p>
-            <div className="space-y-1.5 text-xs text-muted-foreground">
-              <div className="flex items-center gap-1.5">
-                <MapPin className="w-3 h-3 flex-shrink-0" />
-                <span className="truncate">{m.location}</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <Clock className="w-3 h-3 flex-shrink-0" />
-                <span>{m.schedule}</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <LayoutGrid className="w-3 h-3 flex-shrink-0" />
-                <span>{m.boothCount.toLocaleString()} 個攤位</span>
-                <span className="text-muted-foreground/60">·</span>
-                <Tag className="w-3 h-3 flex-shrink-0" />
-                <span>{m.feeRange}</span>
-              </div>
-            </div>
-            {stats.count > 0 && (
-              <div className="mt-3 pt-3 border-t border-border flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">已記錄 {stats.count} 筆</span>
-                <span className={`font-semibold tabular-nums ${stats.profit >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
-                  {formatCurrency(stats.profit, currency)}
-                </span>
-              </div>
-            )}
-          </Card>
-        );
-      })}
-    </div>
-  );
-}
-
-const CITY_LABELS: Record<string, string> = {
-  HK: "香港", TW: "台灣", TH: "泰國", MY: "馬來西亞", SG: "新加坡",
-};
-
-const TYPE_LABELS: Record<string, string> = {
-  night: "夜市", weekend: "週末", "pop-up": "快閃", festival: "節慶",
-};

@@ -59,6 +59,24 @@ export interface MarketData {
   description: string;
 }
 
+// ── 市集活動（用戶自建）──
+export interface MarketEvent {
+  id: string;
+  name: string;
+  startDate: string;  // YYYY-MM-DD
+  endDate: string;    // YYYY-MM-DD
+  location: string;
+  boothFee: number;
+  feeType: "total" | "daily";  // 總金額 or 每天
+  autoAddFee: boolean;          // 自動每天記帳攤位費
+  boothNumber: string;
+  businessHours: string;
+  expectedCrowd: "low" | "medium" | "high";
+  notes: string;
+  color: string;
+  createdAt: number;
+}
+
 // ── Static data ──
 export const CURRENCIES: Record<CurrencyCode, { symbol: string; locale: string }> = {
   HKD: { symbol: "HK$", locale: "zh-HK" },
@@ -197,6 +215,7 @@ interface AppStore {
   transactions: Transaction[];
   products: Product[];
   markets: MarketData[];
+  marketEvents: MarketEvent[];
   customPaymentMethods: CustomPaymentMethod[];
   // 用戶自訂的首頁支付方式（從內建中選擇要顯示的）
   visiblePayments: string[];
@@ -213,6 +232,9 @@ interface AppStore {
   setVisiblePayments: (payments: string[]) => void;
   togglePaymentVisibility: (payment: string) => void;
   reorderVisiblePayments: (fromIndex: number, toIndex: number) => void;
+  addMarketEvent: (e: Omit<MarketEvent, "id" | "createdAt">) => string;
+  deleteMarketEvent: (id: string) => void;
+  updateMarketEvent: (id: string, data: Partial<MarketEvent>) => void;
   seedDemo: () => void;
 }
 
@@ -225,6 +247,7 @@ export const useAppStore = create<AppStore>()(
       transactions: [],
       products: [],
       markets: DEFAULT_MARKETS,
+      marketEvents: [],
       customPaymentMethods: [],
       // 預設首頁顯示通用支付方式
       visiblePayments: ["cash", "credit_card", "apple_pay", "google_pay", "bank_transfer", "paypal"],
@@ -289,6 +312,55 @@ export const useAppStore = create<AppStore>()(
           arr.splice(toIndex, 0, item);
           return { visiblePayments: arr };
         }),
+
+      addMarketEvent: (e) => {
+        const id = `mkt_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        set((s) => ({
+          marketEvents: [...s.marketEvents, { ...e, id, createdAt: Date.now() }],
+        }));
+
+        // 如果開啟自動記帳，為每個市集日加上攤位費支出
+        if (e.autoAddFee && e.boothFee > 0) {
+          const { currency } = get();
+          const dailyFee = e.boothFee;
+          const start = new Date(e.startDate);
+          const end = new Date(e.endDate);
+          const dayMs = 86400000;
+          for (let ts = start.getTime(); ts <= end.getTime() + dayMs - 1; ts += dayMs) {
+            const dayStart = new Date(ts);
+            const dayTs = new Date(dayStart.getFullYear(), dayStart.getMonth(), dayStart.getDate(), 9, 0).getTime();
+            const { transactions: txs, addTransaction } = get();
+            const exists = txs.some((t) => t.category === "rent" && t.note?.includes(e.name) && Math.abs(t.createdAt - dayTs) < dayMs);
+            if (!exists) {
+              addTransaction({
+                type: "expense", amount: dailyFee, currency, category: "rent",
+                paymentMethod: "cash",
+                note: `${e.name} 攤位費${e.feeType === "total" ? "（分攤）" : ""}`,
+                marketId: id,
+              });
+              // 修正 createdAt
+              set((s) => ({
+                transactions: s.transactions.map((t) =>
+                  t.note?.includes(e.name) && t.note?.includes("攤位費") && t.createdAt > Date.now() - 5000
+                    ? { ...t, createdAt: dayTs }
+                    : t
+                ),
+              }));
+            }
+          }
+        }
+        return id;
+      },
+
+      deleteMarketEvent: (id) =>
+        set((s) => ({
+          marketEvents: s.marketEvents.filter((e) => e.id !== id),
+        })),
+
+      updateMarketEvent: (id, data) =>
+        set((s) => ({
+          marketEvents: s.marketEvents.map((e) => (e.id === id ? { ...e, ...data } : e)),
+        })),
 
       seedDemo: () => {
         const { demoSeeded, transactions, currency } = get();
