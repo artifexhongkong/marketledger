@@ -2,11 +2,12 @@
 
 import { useState, useMemo } from "react";
 import { useAppStore, formatCurrency, CURRENCIES, type MarketEvent, getCategoryInfo, getPaymentMethodInfo } from "@/lib/store";
+import { useAuthStore } from "@/lib/auth-store";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, X, MapPin, Calendar, Clock, Store, Trash2, ChevronLeft, ChevronRight, Eye, EyeOff, Pencil, Inbox, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { Plus, X, MapPin, Calendar, Clock, Store, Trash2, ChevronLeft, ChevronRight, Eye, EyeOff, Pencil, Inbox, ArrowUpRight, ArrowDownRight, User } from "lucide-react";
 
 const EVENT_COLORS = ["#1A1D24", "#059669", "#E11D48", "#F59E0B", "#7C3AED", "#0891B2"];
 const WEEKDAYS = ["日", "一", "二", "三", "四", "五", "六"];
@@ -22,6 +23,7 @@ function parseDateKey(key: string) {
 
 export function MarketsPage() {
   const { marketEvents, addMarketEvent, deleteMarketEvent, updateMarketEvent, currency, transactions, customPaymentMethods } = useAppStore();
+  const { user } = useAuthStore();
   const [showForm, setShowForm] = useState(false);
   const [editingEvent, setEditingEvent] = useState<MarketEvent | null>(null);
   const [viewYear, setViewYear] = useState(new Date().getFullYear());
@@ -154,6 +156,18 @@ export function MarketsPage() {
           <button onClick={handleAdd}
             className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-accent/15 text-accent text-xs font-medium hover:bg-accent/20 transition">
             <Plus className="w-3.5 h-3.5" />新增
+          </button>
+          {/* 帳號鈕 — 只顯示圖示，不含「帳號」文字 */}
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent("navigate-tab", { detail: "account" }))}
+            className="w-8 h-8 rounded-full bg-accent/10 hover:bg-accent/20 border border-accent/20 transition flex items-center justify-center overflow-hidden flex-shrink-0"
+            aria-label="帳號"
+          >
+            {user?.picture ? (
+              <img src={user.picture} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <User className="w-4 h-4 text-accent" />
+            )}
           </button>
         </div>
       </div>

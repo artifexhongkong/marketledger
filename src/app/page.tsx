@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Home, PencilLine, ClipboardList, Settings as SettingsIcon, Cloud, CloudOff, User, MapPin, Store } from "lucide-react";
+import { Home, PencilLine, ClipboardList, Settings as SettingsIcon, MapPin } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { useAuthStore } from "@/lib/auth-store";
 import { HomePage } from "@/components/app/home-page";
@@ -28,7 +28,7 @@ export default function Page() {
   const seedDemo = useAppStore((s) => s.seedDemo);
   const cleanupOrphanedTxs = useAppStore((s) => s.cleanupOrphanedTxs);
   const migrateCategories = useAppStore((s) => s.migrateCategories);
-  const { user, storageMode, testAuthed } = useAuthStore();
+  const { testAuthed } = useAuthStore();
 
   useEffect(() => {
     setHydrated(true);
@@ -72,53 +72,12 @@ export default function Page() {
         <div className="hidden md:block absolute top-3 left-1/2 -translate-x-1/2 w-32 h-7 bg-slate-900 rounded-b-2xl z-30" />
 
         <div className="w-full h-full bg-background md:rounded-[2rem] overflow-hidden flex flex-col relative">
-          {/* Top bar — 極簡，只放 logo + 帳號鈕 */}
-          {!showAccount && (
-            <div className="flex-shrink-0 bg-background/95 backdrop-blur-md relative">
-              <div className="flex items-center justify-between px-4 h-12">
-                {/* 左側：只有 logo */}
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-sm">
-                    <Store className="w-4 h-4 text-accent" strokeWidth={2.4} />
-                  </div>
-                </div>
-
-                {/* 右側：雲端狀態 + 帳號鈕（更顯眼） */}
-                <div className="flex items-center gap-2">
-                  {user && (
-                    storageMode === "drive" ? (
-                      <Cloud className="w-4 h-4 text-accent" fill="currentColor" />
-                    ) : (
-                      <CloudOff className="w-4 h-4 text-muted-foreground/50" />
-                    )
-                  )}
-                  <button
-                    onClick={() => setTab("account")}
-                    className="flex items-center gap-2 pl-1 pr-3 py-1 rounded-full bg-accent/10 hover:bg-accent/20 border border-accent/20 transition group"
-                    aria-label="帳號"
-                  >
-                    <div className="w-7 h-7 rounded-full bg-accent/20 flex items-center justify-center overflow-hidden">
-                      {user?.picture ? (
-                        <img src={user.picture} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <User className="w-4 h-4 text-accent" />
-                      )}
-                    </div>
-                    <span className="text-[11px] font-medium text-accent">
-                      {user?.name?.split(" ")[0] || user?.email?.split("@")[0] || "帳號"}
-                    </span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* 帳號頁面 — 獨立全螢幕 */}
           {showAccount ? (
             <AuthPage onBack={() => setTab("home")} />
           ) : (
             <>
-              {/* Content area */}
+              {/* Content area — 直接從頂部開始，無頂部 bar */}
               <div
                 className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide"
                 style={{ WebkitOverflowScrolling: "touch", overscrollBehavior: "contain", touchAction: "pan-y" }}
@@ -170,9 +129,6 @@ export default function Page() {
               </div>
             </>
           )}
-
-          {/* Home indicator */}
-          <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-32 h-1 bg-foreground/80 rounded-full" />
         </div>
       </div>
     </main>
