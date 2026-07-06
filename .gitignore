@@ -57,5 +57,19 @@ server.log
 /android/
 /.next.capacitor/
 next.config.mjs.bak
+
 # Tool intermediate outputs
 /tool-results/
+
+# Build artifacts & dev previews
+/preview-*.png
+/upload/
+/download/
+/db/
+/prisma/
+/examples/
+/scripts/
+*.apk
+*.db
+*.docx
+Caddyfile
