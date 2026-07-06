@@ -63,15 +63,14 @@ export interface MarketData {
 export interface MarketEvent {
   id: string;
   name: string;
-  startDate: string;  // YYYY-MM-DD
-  endDate: string;    // YYYY-MM-DD
+  startDate: string;
+  endDate: string;
   location: string;
   boothFee: number;
-  feeType: "total" | "daily";  // 總金額 or 每天
-  autoAddFee: boolean;          // 自動每天記帳攤位費
+  feeType: "total" | "daily";
+  autoAddFee: boolean;
   boothNumber: string;
   businessHours: string;
-  expectedCrowd: "low" | "medium" | "high";
   notes: string;
   color: string;
   createdAt: number;

@@ -6,23 +6,34 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, X, MapPin, Calendar, Clock, Users, Store, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, X, MapPin, Calendar, Clock, Store, Trash2, ChevronLeft, ChevronRight, Eye, EyeOff } from "lucide-react";
 
 const EVENT_COLORS = ["#1A1D24", "#059669", "#E11D48", "#F59E0B", "#7C3AED", "#0891B2"];
 const WEEKDAYS = ["日", "一", "二", "三", "四", "五", "六"];
 const MONTHS = ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"];
-const CROWD_LABELS = { low: "少", medium: "中", high: "多" };
 
 export function MarketsPage() {
-  const { marketEvents, addMarketEvent, deleteMarketEvent, currency } = useAppStore();
+  const { marketEvents, addMarketEvent, deleteMarketEvent, currency, transactions } = useAppStore();
   const [showForm, setShowForm] = useState(false);
   const [viewYear, setViewYear] = useState(new Date().getFullYear());
   const [viewMonth, setViewMonth] = useState(new Date().getMonth());
+  const [showProfit, setShowProfit] = useState(true); // 日曆顯示盈虧開關
 
   const prevMonth = () => { if (viewMonth === 0) { setViewMonth(11); setViewYear(viewYear - 1); } else setViewMonth(viewMonth - 1); };
   const nextMonth = () => { if (viewMonth === 11) { setViewMonth(0); setViewYear(viewYear + 1); } else setViewMonth(viewMonth + 1); };
 
-  // 找出這個月的市集活動
+  // 計算某天的盈虧
+  const getDayProfit = (dateKey: string) => {
+    const dayTxs = transactions.filter((t) => {
+      const d = new Date(t.createdAt);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      return key === dateKey;
+    });
+    const income = dayTxs.filter((t) => t.type === "income").reduce((a, b) => a + b.amount, 0);
+    const expense = dayTxs.filter((t) => t.type === "expense").reduce((a, b) => a + b.amount, 0);
+    return income - expense;
+  };
+
   const monthEvents = useMemo(() => {
     return marketEvents.filter((e) => {
       const start = new Date(e.startDate);
@@ -33,13 +44,11 @@ export function MarketsPage() {
     });
   }, [marketEvents, viewYear, viewMonth]);
 
-  // 即將到來的市集
   const upcomingEvents = useMemo(() => {
     const today = new Date().toISOString().slice(0, 10);
     return marketEvents.filter((e) => e.endDate >= today).sort((a, b) => a.startDate.localeCompare(b.startDate));
   }, [marketEvents]);
 
-  // 日曆天數
   const calendarDays = useMemo(() => {
     const firstDay = new Date(viewYear, viewMonth, 1);
     const lastDay = new Date(viewYear, viewMonth + 1, 0);
@@ -50,23 +59,34 @@ export function MarketsPage() {
     for (let i = 0; i < startWeekday; i++) days.push(null);
     for (let d = 1; d <= daysInMonth; d++) {
       const dateKey = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-      const dayEvents = marketEvents.filter((e) => {
-        return dateKey >= e.startDate && dateKey <= e.endDate;
-      });
-      days.push({ day: d, dateKey, isToday: dateKey === todayKey, events: dayEvents });
+      const dayEvents = marketEvents.filter((e) => dateKey >= e.startDate && dateKey <= e.endDate);
+      const profit = getDayProfit(dateKey);
+      days.push({ day: d, dateKey, isToday: dateKey === todayKey, events: dayEvents, profit, hasTx: transactions.some((t) => { const td = new Date(t.createdAt); return `${td.getFullYear()}-${String(td.getMonth()+1).padStart(2,"0")}-${String(td.getDate()).padStart(2,"0")}` === dateKey; }) });
     }
     return days;
-  }, [viewYear, viewMonth, marketEvents]);
+  }, [viewYear, viewMonth, marketEvents, transactions]);
+
+  // 月份總盈虧
+  const monthProfit = useMemo(() => {
+    return calendarDays.filter(Boolean).reduce((sum, d) => sum + (d.profit || 0), 0);
+  }, [calendarDays]);
 
   return (
     <div className="px-4 pb-6 space-y-3">
       {/* Header */}
       <div className="pt-4 flex items-center justify-between">
         <h1 className="text-xl font-bold text-foreground">市集日曆</h1>
-        <button onClick={() => setShowForm(true)}
-          className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-accent/15 text-accent text-xs font-medium hover:bg-accent/20 transition">
-          <Plus className="w-3.5 h-3.5" />新增
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setShowProfit(!showProfit)}
+            className={`w-7 h-7 rounded-md flex items-center justify-center transition ${showProfit ? "bg-accent/15 text-accent" : "bg-muted text-muted-foreground"}`}
+            title={showProfit ? "隱藏金額" : "顯示金額"}>
+            {showProfit ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+          </button>
+          <button onClick={() => setShowForm(true)}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-accent/15 text-accent text-xs font-medium hover:bg-accent/20 transition">
+            <Plus className="w-3.5 h-3.5" />新增
+          </button>
+        </div>
       </div>
 
       {/* 即將到來 */}
@@ -85,7 +105,14 @@ export function MarketsPage() {
           <button onClick={prevMonth} className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-muted">
             <ChevronLeft className="w-4 h-4 text-foreground" />
           </button>
-          <span className="text-sm font-bold text-foreground">{viewYear} {MONTHS[viewMonth]}</span>
+          <div className="text-center">
+            <span className="text-sm font-bold text-foreground">{viewYear} {MONTHS[viewMonth]}</span>
+            {showProfit && (
+              <span className={`block text-[10px] font-medium tabular-nums ${monthProfit >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                月盈虧 {monthProfit >= 0 ? "+" : "−"}{formatCurrency(Math.abs(monthProfit), currency)}
+              </span>
+            )}
+          </div>
           <button onClick={nextMonth} className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-muted">
             <ChevronRight className="w-4 h-4 text-foreground" />
           </button>
@@ -98,10 +125,17 @@ export function MarketsPage() {
             if (!day) return <div key={`e-${i}`} />;
             return (
               <div key={day.dateKey}
-                className={`relative aspect-square rounded-lg flex flex-col items-center justify-center text-[11px] border ${day.isToday ? "border-accent/40" : "border-transparent"} ${day.events.length > 0 ? "bg-muted/50" : ""}`}>
-                <span className={`font-medium ${day.isToday ? "text-accent" : "text-foreground"}`}>{day.day}</span>
+                className={`relative aspect-square rounded-lg flex flex-col items-center justify-center text-[11px] border ${day.isToday ? "border-accent/40" : "border-transparent"} ${day.events.length > 0 ? "bg-muted/40" : ""}`}>
+                <span className={`font-medium leading-none ${day.isToday ? "text-accent" : "text-foreground"}`}>{day.day}</span>
+                {/* 每日盈虧 */}
+                {showProfit && day.hasTx && (
+                  <span className={`text-[8px] tabular-nums mt-0.5 leading-none ${day.profit >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                    {day.profit >= 0 ? "+" : "−"}{Math.abs(day.profit) >= 1000 ? `${(Math.abs(day.profit) / 1000).toFixed(1)}k` : Math.abs(day.profit)}
+                  </span>
+                )}
+                {/* 市集標記 */}
                 {day.events.length > 0 && (
-                  <div className="absolute bottom-1 flex gap-0.5">
+                  <div className="absolute bottom-0.5 flex gap-0.5">
                     {day.events.slice(0, 3).map((e, ei) => (
                       <div key={ei} className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: e.color }} />
                     ))}
@@ -133,13 +167,8 @@ export function MarketsPage() {
         </Card>
       )}
 
-      {/* 新增表單 Modal */}
       {showForm && (
-        <EventFormModal
-          onClose={() => setShowForm(false)}
-          onSave={(data) => { addMarketEvent(data); setShowForm(false); }}
-          currency={currency}
-        />
+        <EventFormModal onClose={() => setShowForm(false)} onSave={(data) => { addMarketEvent(data); setShowForm(false); }} currency={currency} />
       )}
     </div>
   );
@@ -183,7 +212,6 @@ function EventCard({ event, currency, onDelete }: { event: MarketEvent; currency
         <div className="px-3 pb-3 pt-1 border-t border-border space-y-1.5 animate-[fadeIn_0.15s_ease-out]">
           {event.boothNumber && <InfoRow icon={<Store className="w-3 h-3" />} label="攤位編號" value={event.boothNumber} />}
           {event.businessHours && <InfoRow icon={<Clock className="w-3 h-3" />} label="營業時段" value={event.businessHours} />}
-          {event.expectedCrowd && <InfoRow icon={<Users className="w-3 h-3" />} label="預期客流" value={CROWD_LABELS[event.expectedCrowd]} />}
           {event.notes && <InfoRow icon={<Calendar className="w-3 h-3" />} label="備註" value={event.notes} />}
           {event.autoAddFee && <p className="text-[10px] text-emerald-600">✓ 已自動記帳攤位費</p>}
           <button onClick={onDelete} className="flex items-center gap-1 text-[11px] text-rose-500 hover:text-rose-600 mt-1">
@@ -215,7 +243,6 @@ function EventFormModal({ onClose, onSave, currency }: { onClose: () => void; on
   const [autoAddFee, setAutoAddFee] = useState(true);
   const [boothNumber, setBoothNumber] = useState("");
   const [businessHours, setBusinessHours] = useState("");
-  const [expectedCrowd, setExpectedCrowd] = useState<"low" | "medium" | "high">("medium");
   const [notes, setNotes] = useState("");
   const [color, setColor] = useState(EVENT_COLORS[0]);
 
@@ -226,7 +253,7 @@ function EventFormModal({ onClose, onSave, currency }: { onClose: () => void; on
       name: name.trim(), startDate, endDate, location: location.trim(),
       boothFee: parseFloat(boothFee) || 0, feeType, autoAddFee,
       boothNumber: boothNumber.trim(), businessHours: businessHours.trim(),
-      expectedCrowd, notes: notes.trim(), color,
+      notes: notes.trim(), color,
     });
   };
 
@@ -238,13 +265,11 @@ function EventFormModal({ onClose, onSave, currency }: { onClose: () => void; on
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
         </div>
 
-        {/* 名稱 */}
         <div>
           <p className="text-xs font-medium text-muted-foreground mb-1">市集名稱 *</p>
           <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="例如：PMQ 週末市集" className="bg-background h-9 text-sm" />
         </div>
 
-        {/* 日期範圍 */}
         <div className="grid grid-cols-2 gap-2">
           <div>
             <p className="text-xs font-medium text-muted-foreground mb-1">開始日期</p>
@@ -256,13 +281,11 @@ function EventFormModal({ onClose, onSave, currency }: { onClose: () => void; on
           </div>
         </div>
 
-        {/* 地點 */}
         <div>
           <p className="text-xs font-medium text-muted-foreground mb-1">地點</p>
           <Input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="例如：中環 PMQ" className="bg-background h-9 text-sm" />
         </div>
 
-        {/* 攤位費 */}
         <div>
           <p className="text-xs font-medium text-muted-foreground mb-1">攤位費用（{CURRENCIES[currency as keyof typeof CURRENCIES]?.symbol}）</p>
           <div className="flex gap-2">
@@ -274,7 +297,6 @@ function EventFormModal({ onClose, onSave, currency }: { onClose: () => void; on
           </div>
         </div>
 
-        {/* 自動記帳 */}
         <button onClick={() => setAutoAddFee(!autoAddFee)}
           className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg border transition ${autoAddFee ? "border-emerald-400 bg-emerald-50" : "border-border bg-background"}`}>
           <div>
@@ -286,32 +308,16 @@ function EventFormModal({ onClose, onSave, currency }: { onClose: () => void; on
           </div>
         </button>
 
-        {/* 攤位編號 */}
         <div>
           <p className="text-xs font-medium text-muted-foreground mb-1">攤位編號</p>
           <Input value={boothNumber} onChange={(e) => setBoothNumber(e.target.value)} placeholder="例如：A12" className="bg-background h-9 text-sm" />
         </div>
 
-        {/* 營業時段 */}
         <div>
           <p className="text-xs font-medium text-muted-foreground mb-1">營業時段</p>
           <Input value={businessHours} onChange={(e) => setBusinessHours(e.target.value)} placeholder="例如：10:00-18:00" className="bg-background h-9 text-sm" />
         </div>
 
-        {/* 預期客流 */}
-        <div>
-          <p className="text-xs font-medium text-muted-foreground mb-1">預期客流</p>
-          <div className="flex gap-1.5">
-            {(["low", "medium", "high"] as const).map((c) => (
-              <button key={c} onClick={() => setExpectedCrowd(c)}
-                className={`flex-1 py-1.5 text-xs rounded-lg border transition ${expectedCrowd === c ? "border-accent bg-accent/10 text-accent" : "border-border bg-card text-muted-foreground"}`}>
-                {CROWD_LABELS[c]}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* 顏色 */}
         <div>
           <p className="text-xs font-medium text-muted-foreground mb-1">標記顏色</p>
           <div className="flex gap-2">
@@ -323,7 +329,6 @@ function EventFormModal({ onClose, onSave, currency }: { onClose: () => void; on
           </div>
         </div>
 
-        {/* 備註 */}
         <div>
           <p className="text-xs font-medium text-muted-foreground mb-1">備註</p>
           <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="其他資訊..." className="bg-background text-sm min-h-[50px]" maxLength={200} />
