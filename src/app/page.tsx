@@ -72,25 +72,19 @@ export default function Page() {
         <div className="hidden md:block absolute top-3 left-1/2 -translate-x-1/2 w-32 h-7 bg-slate-900 rounded-b-2xl z-30" />
 
         <div className="w-full h-full bg-background md:rounded-[2rem] overflow-hidden flex flex-col relative">
-          {/* Top bar — 極簡風，淺色背景，跟整體風格一致 */}
+          {/* Top bar — 極簡，只放 logo + 帳號鈕 */}
           {!showAccount && (
-            <div className="flex-shrink-0 bg-background/80 backdrop-blur-md border-b border-border/50 relative">
+            <div className="flex-shrink-0 bg-background/95 backdrop-blur-md relative">
               <div className="flex items-center justify-between px-4 h-12">
-                {/* 左側：App 名 + 當前頁面 */}
-                <div className="flex items-center gap-2 min-w-0">
-                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center flex-shrink-0">
+                {/* 左側：只有 logo */}
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-sm">
                     <Store className="w-4 h-4 text-accent" strokeWidth={2.4} />
-                  </div>
-                  <div className="flex items-baseline gap-2 min-w-0">
-                    <span className="text-sm font-bold text-foreground truncate">市集記賬本</span>
-                    <span className="text-[10px] text-muted-foreground truncate hidden xs:inline">
-                      · {TABS.find((t) => t.id === tab)?.label}
-                    </span>
                   </div>
                 </div>
 
-                {/* 右側：雲端狀態 + 帳號 */}
-                <div className="flex items-center gap-2 flex-shrink-0">
+                {/* 右側：雲端狀態 + 帳號鈕（更顯眼） */}
+                <div className="flex items-center gap-2">
                   {user && (
                     storageMode === "drive" ? (
                       <Cloud className="w-4 h-4 text-accent" fill="currentColor" />
@@ -100,14 +94,19 @@ export default function Page() {
                   )}
                   <button
                     onClick={() => setTab("account")}
-                    className="relative w-8 h-8 rounded-full bg-accent/10 hover:bg-accent/20 flex items-center justify-center border border-accent/15 transition"
+                    className="flex items-center gap-2 pl-1 pr-3 py-1 rounded-full bg-accent/10 hover:bg-accent/20 border border-accent/20 transition group"
                     aria-label="帳號"
                   >
-                    {user?.picture ? (
-                      <img src={user.picture} alt="" className="w-7 h-7 rounded-full" />
-                    ) : (
-                      <User className="w-4 h-4 text-accent" />
-                    )}
+                    <div className="w-7 h-7 rounded-full bg-accent/20 flex items-center justify-center overflow-hidden">
+                      {user?.picture ? (
+                        <img src={user.picture} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <User className="w-4 h-4 text-accent" />
+                      )}
+                    </div>
+                    <span className="text-[11px] font-medium text-accent">
+                      {user?.name?.split(" ")[0] || user?.email?.split("@")[0] || "帳號"}
+                    </span>
                   </button>
                 </div>
               </div>
@@ -138,7 +137,7 @@ export default function Page() {
               </div>
 
               {/* Tab bar */}
-              <div className="bg-card border-t border-border flex items-stretch justify-between px-1 pt-2 pb-5 flex-shrink-0">
+              <div className="bg-card flex items-stretch justify-between px-1 pt-2 pb-5 flex-shrink-0">
                 {TABS.map(({ id, label, icon: Icon, featured }) => {
                   const active = tab === id;
                   return (
