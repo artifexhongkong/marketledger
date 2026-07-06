@@ -804,9 +804,9 @@ const CURRENCIES_SYMBOL: Record<string, string> = {
 };
 
 // ─────────────────────────────────────────────────────────────
-// ProductButton — 點擊記 1 筆 / 長按進入手勢模式
-// ↑+1  ↓−1  →取消（不記錄）
-// 用 pointer events 統一處理觸控和滑鼠，避免事件衝突
+// ProductButton — 簡潔版
+// 點擊 = 記 1 筆 | 長按 = 進入調數模式
+// 上滑 = +1 | 下滑 = −1 | 右滑 80px+ = 取消
 // ─────────────────────────────────────────────────────────────
 interface ProductButtonProps {
   product: Product;
@@ -824,33 +824,28 @@ function ProductButton({
   confirming, onConfirm, onRecord,
 }: ProductButtonProps) {
   const addTransaction = useAppStore((s) => s.addTransaction);
-  const btnRef = useRef<HTMLButtonElement | null>(null);
-  const pointerIdRef = useRef<number | null>(null);
+  const elRef = useRef<HTMLButtonElement | null>(null);
 
-  const [quantity, setQuantity] = useState(1);
-  const [gestureMode, setGestureMode] = useState(false);
-  const [showHint, setShowHint] = useState(false);
-  const [lastDir, setLastDir] = useState<"up" | "down" | null>(null);
-  const [cancelled, setCancelled] = useState(false);
+  // ── 唯一狀態來源：ref（不用 useState 避免渲染時序問題）──
+  const stateRef = useRef({
+    mode: "idle" as "idle" | "gesture" | "cancelled",
+    qty: 1,
+    startX: 0,
+    startY: 0,
+    lastY: 0,
+    lastX: 0,
+    accumY: 0,
+    accumX: 0,
+    timer: null as ReturnType<typeof setTimeout> | null,
+    captured: false,
+  });
 
-  // 所有狀態用 ref 同步，避免閉包問題
-  const gestureRef = useRef(false);
-  const cancelRef = useRef(false);
-  const qtyRef = useRef(1);
-  const startPosRef = useRef<{ x: number; y: number } | null>(null);
-  const accumDyRef = useRef(0);  // 累積垂直位移（連續滑動用）
-  const accumDxRef = useRef(0);  // 累積水平位移（取消判定用）
-  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const hintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // 防止 pointerup 後 click 重複觸發
-  const blockClickRef = useRef(false);
-  const lastMoveRef = useRef<{ x: number; y: number } | null>(null);
+  // ── 只用一個 useState 觸發渲染 ──
+  const [, forceUpdate] = useState(0);
+  const rerender = () => forceUpdate((n) => n + 1);
 
   useEffect(() => {
-    return () => {
-      if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
-      if (hintTimerRef.current) clearTimeout(hintTimerRef.current);
-    };
+    return () => { if (stateRef.current.timer) clearTimeout(stateRef.current.timer); };
   }, []);
 
   const doRecord = (qty: number) => {
@@ -864,170 +859,137 @@ function ProductButton({
     onRecord(txId, qty > 1 ? `${product.name} x${qty}` : product.name, product.price * qty);
   };
 
-  const enterGesture = () => {
-    gestureRef.current = true;
-    cancelRef.current = false;
-    qtyRef.current = 1;
-    accumDyRef.current = 0;
-    accumDxRef.current = 0;
-    // 進入手勢模式後才捕獲指標（之前不捕獲，讓頁面可以正常捲動）
-    if (btnRef.current && pointerIdRef.current !== null) {
-      try { btnRef.current.setPointerCapture(pointerIdRef.current); } catch {}
-    }
-    setGestureMode(true);
-    setCancelled(false);
-    setQuantity(1);
-    setShowHint(true);
-    if (hintTimerRef.current) clearTimeout(hintTimerRef.current);
-    hintTimerRef.current = setTimeout(() => setShowHint(false), 4000);
-    if (typeof navigator !== "undefined" && "vibrate" in navigator) (navigator as any).vibrate?.(30);
+  const reset = () => {
+    const s = stateRef.current;
+    s.mode = "idle"; s.qty = 1; s.accumY = 0; s.accumX = 0;
+    s.captured = false; s.startX = 0; s.startY = 0; s.lastY = 0; s.lastX = 0;
+    if (s.timer) { clearTimeout(s.timer); s.timer = null; }
+    rerender();
   };
 
-  const exitAndRecord = () => {
-    if (cancelRef.current) return; // 已取消就不記錄
-    doRecord(qtyRef.current);
-    resetGesture();
-  };
-
-  const exitAndCancel = () => {
-    cancelRef.current = true;
-    setCancelled(true);
-    if (typeof navigator !== "undefined" && "vibrate" in navigator) (navigator as any).vibrate?.([30, 30, 30]);
-    setTimeout(() => resetGesture(), 600);
-  };
-
-  const resetGesture = () => {
-    gestureRef.current = false;
-    cancelRef.current = false;
-    qtyRef.current = 1;
-    accumDyRef.current = 0;
-    accumDxRef.current = 0;
-    startPosRef.current = null;
-    lastMoveRef.current = null;
-    setGestureMode(false);
-    setCancelled(false);
-    setQuantity(1);
-    setShowHint(false);
-  };
-
-  // 連續滑動：用累積位移，不需重置起點
-  const handleSwipe = (clientX: number, clientY: number) => {
-    if (!gestureRef.current || cancelRef.current) return;
-    if (!lastMoveRef.current) { lastMoveRef.current = { x: clientX, y: clientY }; return; }
-    const ddy = clientY - lastMoveRef.current.y;
-    const ddx = clientX - lastMoveRef.current.x;
-    lastMoveRef.current = { x: clientX, y: clientY };
-    accumDyRef.current += ddy;
-    accumDxRef.current += ddx;
-    const TH = 25;
-    const CANCEL_TH = 80; // 向右取消需要滑 80px，避免誤觸
-    // 向右取消（水平位移大於垂直且超過較高閾值）
-    if (accumDxRef.current >= CANCEL_TH && Math.abs(accumDxRef.current) > Math.abs(accumDyRef.current) * 1.5) { exitAndCancel(); return; }
-    // 向上 +1（連續觸發）
-    while (accumDyRef.current <= -TH) {
-      qtyRef.current += 1; setQuantity(qtyRef.current); setLastDir("up");
-      accumDyRef.current += TH;
-      if (typeof navigator !== "undefined" && "vibrate" in navigator) (navigator as any).vibrate?.(15);
-      setTimeout(() => setLastDir(null), 200);
-    }
-    // 向下 −1（連續觸發，最低 1）
-    while (accumDyRef.current >= TH) {
-      if (qtyRef.current > 1) { qtyRef.current -= 1; setQuantity(qtyRef.current); setLastDir("down"); if (typeof navigator !== "undefined" && "vibrate" in navigator) (navigator as any).vibrate?.(15); setTimeout(() => setLastDir(null), 200); }
-      accumDyRef.current -= TH;
-    }
-  };
-
-  // pointer events — 不在 down 時捕獲指標，讓頁面可正常捲動
-  const onPointerDown = (e: React.PointerEvent) => {
+  // ── pointerdown ──
+  const onDown = (e: React.PointerEvent) => {
     if (e.pointerType === "mouse" && e.button !== 0) return;
-    pointerIdRef.current = e.pointerId;
-    startPosRef.current = { x: e.clientX, y: e.clientY };
-    lastMoveRef.current = { x: e.clientX, y: e.clientY };
-    blockClickRef.current = false;
-    longPressTimerRef.current = setTimeout(() => { enterGesture(); blockClickRef.current = true; }, 400);
+    const s = stateRef.current;
+    s.startX = e.clientX; s.startY = e.clientY;
+    s.lastX = e.clientX; s.lastY = e.clientY;
+    s.accumY = 0; s.accumX = 0; s.qty = 1; s.mode = "idle"; s.captured = false;
+    s.timer = setTimeout(() => {
+      // 進入手勢模式
+      s.mode = "gesture";
+      // 此時才捕獲指標（之前不捕獲，讓頁面可以捲動）
+      if (elRef.current) { try { elRef.current.setPointerCapture(e.pointerId); } catch {} s.captured = true; }
+      if (typeof navigator !== "undefined" && "vibrate" in navigator) (navigator as any).vibrate?.(30);
+      rerender();
+    }, 400);
   };
 
-  // 非手勢模式中，如果手指移動超過 10px，取消長按（讓瀏覽器接管捲動）
-  const onPointerMove = (e: React.PointerEvent) => {
-    if (gestureRef.current) {
-      handleSwipe(e.clientX, e.clientY);
-    } else if (longPressTimerRef.current && startPosRef.current) {
-      // 還在等待長按，手指移動了 → 取消長按（使用者在捲動頁面）
-      const dy = Math.abs(e.clientY - startPosRef.current.y);
-      const dx = Math.abs(e.clientX - startPosRef.current.x);
-      if (dy > 10 || dx > 10) {
-        clearTimeout(longPressTimerRef.current);
-        longPressTimerRef.current = null;
+  // ── pointermove ──
+  const onMove = (e: React.PointerEvent) => {
+    const s = stateRef.current;
+
+    if (s.mode === "gesture") {
+      // 手勢模式中：處理滑動
+      const dy = e.clientY - s.lastY;
+      const dx = e.clientX - s.lastX;
+      s.lastY = e.clientY; s.lastX = e.clientX;
+      s.accumY += dy; s.accumX += dx;
+
+      // 向右取消（80px + 水平為主）
+      if (s.accumX >= 80 && Math.abs(s.accumX) > Math.abs(s.accumY) * 1.5) {
+        s.mode = "cancelled";
+        if (typeof navigator !== "undefined" && "vibrate" in navigator) (navigator as any).vibrate?.([30, 30, 30]);
+        rerender();
+        setTimeout(() => reset(), 600);
+        return;
       }
+
+      // 向上 +1
+      while (s.accumY <= -25) {
+        s.qty++; s.accumY += 25;
+        if (typeof navigator !== "undefined" && "vibrate" in navigator) (navigator as any).vibrate?.(15);
+        rerender();
+      }
+      // 向下 −1
+      while (s.accumY >= 25) {
+        if (s.qty > 1) { s.qty--; if (typeof navigator !== "undefined" && "vibrate" in navigator) (navigator as any).vibrate?.(15); rerender(); }
+        s.accumY -= 25;
+      }
+    } else if (s.timer) {
+      // 非手勢模式，手指移動了 → 取消長按（讓瀏覽器捲動）
+      const moved = Math.abs(e.clientY - s.startY) > 10 || Math.abs(e.clientX - s.startX) > 10;
+      if (moved) { clearTimeout(s.timer); s.timer = null; }
     }
   };
 
-  const onPointerUp = (e: React.PointerEvent) => {
-    if (longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null; }
-    if (btnRef.current && pointerIdRef.current !== null) { try { btnRef.current.releasePointerCapture(pointerIdRef.current); } catch {} }
-    pointerIdRef.current = null;
-    if (gestureRef.current && !cancelRef.current) { exitAndRecord(); }
-    if (blockClickRef.current) { setTimeout(() => { blockClickRef.current = false; }, 500); }
+  // ── pointerup ──
+  const onUp = (e: React.PointerEvent) => {
+    const s = stateRef.current;
+    if (s.timer) { clearTimeout(s.timer); s.timer = null; }
+    if (s.captured && elRef.current) { try { elRef.current.releasePointerCapture(e.pointerId); } catch {} s.captured = false; }
+
+    if (s.mode === "gesture") {
+      // 手勢模式結束 → 記錄
+      doRecord(s.qty);
+      reset();
+    } else if (s.mode === "cancelled") {
+      reset();
+    }
   };
 
-  // click 只在「從未進入手勢模式」時記錄 1 筆
+  // ── click（只在 idle 時記錄 1 筆）──
   const onClick = (e: React.MouseEvent) => {
-    if (blockClickRef.current || gestureRef.current || cancelRef.current) {
-      e.preventDefault();
-      e.stopPropagation();
-      return;
-    }
-    // 清除長按計時器（如果還在）
-    if (longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null; }
+    const s = stateRef.current;
+    if (s.mode !== "idle") { e.preventDefault(); return; }
+    if (s.timer) { clearTimeout(s.timer); s.timer = null; }
     doRecord(1);
   };
 
+  const s = stateRef.current;
+
   return (
     <button
-      ref={btnRef}
+      ref={elRef}
       onClick={onClick}
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      style={{ touchAction: gestureMode ? "none" : "auto" }}
+      onPointerDown={onDown}
+      onPointerMove={onMove}
+      onPointerUp={onUp}
+      onPointerCancel={onUp}
+      style={{ touchAction: s.mode === "gesture" ? "none" : "auto" }}
       className={`relative bg-card border-2 rounded-xl p-2.5 text-center transition-all overflow-hidden min-h-[68px] flex flex-col justify-center select-none ${
-        cancelled ? "border-rose-500 bg-rose-50"
-        : gestureMode ? "border-primary bg-primary/5 scale-[1.03] shadow-lg"
+        s.mode === "cancelled" ? "border-rose-500 bg-rose-50"
+        : s.mode === "gesture" ? "border-primary bg-primary/5 scale-[1.03] shadow-lg"
         : confirming ? "border-emerald-500 bg-emerald-50 scale-[0.97]"
         : "border-primary/20 hover:border-primary active:scale-[0.95] cursor-pointer"
       }`}
     >
-      {confirming && !gestureMode && !cancelled && (
-        <div className="absolute inset-0 bg-emerald-50/95 flex items-center justify-center toast-fade-in">
+      {confirming && s.mode === "idle" && (
+        <div className="absolute inset-0 bg-emerald-50/95 flex items-center justify-center">
           <div className="w-7 h-7 rounded-full bg-emerald-500 flex items-center justify-center">
             <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />
           </div>
         </div>
       )}
-      {cancelled && (
-        <div className="absolute inset-0 bg-rose-50/95 flex flex-col items-center justify-center toast-fade-in">
+      {s.mode === "cancelled" && (
+        <div className="absolute inset-0 bg-rose-50/95 flex flex-col items-center justify-center">
           <X className="w-6 h-6 text-rose-500" strokeWidth={3} />
           <p className="text-[10px] font-semibold text-rose-600 mt-1">已取消</p>
         </div>
       )}
-      {gestureMode && !cancelled && (
+      {s.mode === "gesture" && (
         <div className="absolute inset-0 bg-primary/5 flex flex-col items-center justify-center px-1">
-          <div className={`text-2xl font-bold tabular-nums transition-transform ${lastDir ? "scale-125" : "scale-100"} ${lastDir === "up" ? "text-emerald-600" : lastDir === "down" ? "text-rose-600" : "text-primary"}`}>
-            ×{quantity}
-          </div>
+          <div className="text-2xl font-bold tabular-nums text-primary">×{s.qty}</div>
           <div className="text-[10px] text-muted-foreground tabular-nums mt-0.5">
-            {formatCurrency(product.price * quantity, currency as any)}
+            {formatCurrency(product.price * s.qty, currency as any)}
           </div>
-          {showHint && (
-            <div className="absolute inset-0 flex flex-col items-center justify-between py-1 pointer-events-none">
-              <div className={`text-[10px] font-medium ${lastDir === "up" ? "text-emerald-600 scale-110" : "text-muted-foreground/60"}`}>↑ +1</div>
-              <div className="text-[9px] text-muted-foreground/50 text-center leading-tight">↑+1 ↓−1<br/>→取消</div>
-              <div className={`text-[10px] font-medium ${lastDir === "down" ? "text-rose-600 scale-110" : "text-muted-foreground/60"}`}>↓ −1</div>
-            </div>
-          )}
+          <div className="absolute inset-0 flex flex-col items-center justify-between py-1 pointer-events-none">
+            <div className="text-[10px] font-medium text-muted-foreground/60">↑ +1</div>
+            <div className="text-[9px] text-muted-foreground/50 text-center">↑+1 ↓−1<br/>→取消</div>
+            <div className="text-[10px] font-medium text-muted-foreground/60">↓ −1</div>
+          </div>
         </div>
       )}
-      {!gestureMode && !cancelled && (
+      {s.mode === "idle" && !confirming && (
         <>
           <p className="text-xs font-medium text-foreground leading-tight line-clamp-2">{product.name}</p>
           <p className="text-sm font-bold text-primary tabular-nums mt-1 leading-none">
