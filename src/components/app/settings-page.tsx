@@ -45,10 +45,22 @@ export function SettingsPage() {
     setCheckError("");
     try {
       const res = await fetch(GITHUB_RELEASES_API, { cache: "no-store" });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data: LatestReleaseInfo = await res.json();
-      setLatestRelease(data);
-      const cmp = compareVersions(data.tag_name, APP_VERSION);
+      if (!res.ok) {
+        if (res.status === 403 || res.status === 429) {
+          throw new Error("GitHub API 存取頻率受限，請稍後再試");
+        }
+        if (res.status === 404) {
+          throw new Error("尚未發布任何版本");
+        }
+        throw new Error(`HTTP ${res.status}`);
+      }
+      const data: LatestReleaseInfo[] = await res.json();
+      if (!Array.isArray(data) || data.length === 0) {
+        throw new Error("尚未發布任何版本");
+      }
+      // /releases 回傳陣列，第一筆就是最新版（按建立時間倒序）
+      setLatestRelease(data[0]);
+      const cmp = compareVersions(data[0].tag_name, APP_VERSION);
       setVersionStatus(cmp > 0 ? "outdated" : "latest");
     } catch (e: any) {
       setCheckError(e?.message || "檢查失敗");
@@ -262,14 +274,24 @@ export function SettingsPage() {
               <div className="text-[11px] text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">
                 檢查失敗：{checkError}
               </div>
-              <Button
-                onClick={checkUpdate}
-                variant="outline"
-                className="w-full h-9 text-xs font-medium"
-              >
-                <RefreshCw className="w-3.5 h-3.5 mr-1" />
-                重試
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  onClick={checkUpdate}
+                  variant="outline"
+                  className="flex-1 h-9 text-xs font-medium"
+                >
+                  <RefreshCw className="w-3.5 h-3.5 mr-1" />
+                  重試
+                </Button>
+                <Button
+                  onClick={() => window.open(GITHUB_RELEASES_PAGE, "_blank")}
+                  variant="outline"
+                  className="flex-1 h-9 text-xs font-medium"
+                >
+                  <DownloadCloud className="w-3.5 h-3.5 mr-1" />
+                  手動查看
+                </Button>
+              </div>
             </div>
           )}
           {versionStatus === "checking" && (
