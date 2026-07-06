@@ -916,8 +916,9 @@ function ProductButton({
     accumDyRef.current += ddy;
     accumDxRef.current += ddx;
     const TH = 25;
-    // 向右取消
-    if (accumDxRef.current >= TH && Math.abs(accumDxRef.current) > Math.abs(accumDyRef.current)) { exitAndCancel(); return; }
+    const CANCEL_TH = 80; // 向右取消需要滑 80px，避免誤觸
+    // 向右取消（水平位移大於垂直且超過較高閾值）
+    if (accumDxRef.current >= CANCEL_TH && Math.abs(accumDxRef.current) > Math.abs(accumDyRef.current) * 1.5) { exitAndCancel(); return; }
     // 向上 +1（連續觸發）
     while (accumDyRef.current <= -TH) {
       qtyRef.current += 1; setQuantity(qtyRef.current); setLastDir("up");
@@ -974,7 +975,7 @@ function ProductButton({
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
-      style={{ touchAction: "none" }}
+      style={{ touchAction: gestureMode ? "none" : "auto" }}
       className={`relative bg-card border-2 rounded-xl p-2.5 text-center transition-all overflow-hidden min-h-[68px] flex flex-col justify-center select-none ${
         cancelled ? "border-rose-500 bg-rose-50"
         : gestureMode ? "border-primary bg-primary/5 scale-[1.03] shadow-lg"
