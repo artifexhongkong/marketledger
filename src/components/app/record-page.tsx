@@ -792,10 +792,31 @@ function ProductButton({
         if (s.qty > 1) { s.qty--; if (typeof navigator !== "undefined" && "vibrate" in navigator) (navigator as any).vibrate?.(15); rerender(); }
         s.accumY -= 25;
       }
-    } else if (s.timer) {
-      // 非手勢模式，手指移動了 → 取消長按（讓瀏覽器捲動）
-      const moved = Math.abs(e.clientY - s.startY) > 10 || Math.abs(e.clientX - s.startX) > 10;
-      if (moved) { clearTimeout(s.timer); s.timer = null; }
+    } else if (s.timer || s.mode === "idle") {
+      // idle 模式：手指移動了 → 判斷是否要立即進入手勢模式
+      const dy = e.clientY - s.startY;
+      const dx = e.clientX - s.startX;
+
+      // 垂直移動超過 12px 且垂直為主 → 立即進入手勢模式（不用等 400ms）
+      if (Math.abs(dy) > 12 && Math.abs(dy) > Math.abs(dx) * 1.2) {
+        // 取消長按計時器
+        if (s.timer) { clearTimeout(s.timer); s.timer = null; }
+        // 進入手勢模式
+        s.mode = "gesture";
+        // 捕獲指標
+        if (elRef.current) { try { elRef.current.setPointerCapture(e.pointerId); } catch {} s.captured = true; }
+        // 重置基準點為當前位置，讓後續移動從這裡開始累積
+        s.lastY = e.clientY; s.lastX = e.clientX;
+        s.accumY = 0; s.accumX = 0;
+        if (typeof navigator !== "undefined" && "vibrate" in navigator) (navigator as any).vibrate?.(30);
+        rerender();
+        return;
+      }
+
+      // 水平移動超過 10px → 取消長按（讓瀏覽器捲動或使用者取消）
+      if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) {
+        if (s.timer) { clearTimeout(s.timer); s.timer = null; }
+      }
     }
   };
 
@@ -832,7 +853,7 @@ function ProductButton({
       onPointerMove={onMove}
       onPointerUp={onUp}
       onPointerCancel={onUp}
-      style={{ touchAction: s.mode === "gesture" ? "none" : "pan-y" }}
+      style={{ touchAction: "none" }}
       className={`relative bg-card border-2 rounded-xl p-2.5 text-center transition-all overflow-hidden min-h-[68px] flex flex-col justify-center select-none ${
         s.mode === "cancelled" ? "border-rose-500 bg-rose-50"
         : s.mode === "gesture" ? "border-primary bg-primary/5 scale-[1.03] shadow-lg"
