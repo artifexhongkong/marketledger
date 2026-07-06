@@ -13,29 +13,21 @@ export function RecordPage() {
   const [mode, setMode] = useState<"record" | "products">("record");
   return (
     <div className="pb-4 flex flex-col h-full">
-      <h1 className="text-2xl font-semibold tracking-tight pt-2 px-5 text-foreground">記帳</h1>
+      <h1 className="text-xl font-bold pt-4 px-4 text-foreground">記帳</h1>
 
-      {/* Mode toggle */}
-      <div className="bg-muted p-1 rounded-xl flex mx-5 mt-3">
-        <button
-          onClick={() => setMode("record")}
-          className={`flex-1 py-2 text-sm font-medium rounded-lg transition ${
-            mode === "record" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
-          }`}
-        >
-          ✏️ 快速記帳
+      {/* Mode toggle — segmented control */}
+      <div className="mx-4 mt-2 flex bg-muted rounded-lg p-0.5">
+        <button onClick={() => setMode("record")}
+          className={`flex-1 py-1.5 text-xs font-medium rounded-md transition ${mode === "record" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}>
+          記帳
         </button>
-        <button
-          onClick={() => setMode("products")}
-          className={`flex-1 py-2 text-sm font-medium rounded-lg transition ${
-            mode === "products" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
-          }`}
-        >
-          📦 商品管理
+        <button onClick={() => setMode("products")}
+          className={`flex-1 py-1.5 text-xs font-medium rounded-md transition ${mode === "products" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}>
+          商品
         </button>
       </div>
 
-      <div className="flex-1 mt-4">
+      <div className="flex-1 mt-3">
         {mode === "record" ? <RecordView /> : <ProductsView />}
       </div>
     </div>
@@ -180,16 +172,13 @@ function RecordView() {
         </div>
       )}
 
-      <div className="px-5 flex-1 overflow-y-auto">
-        {/* ── 1. 支付方式：內建 + 自訂 + 新增按鈕 ── */}
-        <PaymentSelector
-          payment={payment}
-          setPayment={setPayment}
-        />
+      <div className="px-4 flex-1 overflow-y-auto">
+        {/* ── 1. 支付方式 ── */}
+        <PaymentSelector payment={payment} setPayment={setPayment} />
 
-        {/* ── 2. 商品快捷按鈕：3 列緊湊網格 + 長按手勢調數量 ── */}
+        {/* ── 2. 商品快捷按鈕 ── */}
         {products.length > 0 ? (
-          <div className="mt-5">
+          <div className="mt-4">
             <div className="flex items-center justify-between mb-2">
               <p className="text-xs text-muted-foreground font-medium">⚡ 點商品即記錄銷售</p>
               <div className="flex items-center gap-2">
