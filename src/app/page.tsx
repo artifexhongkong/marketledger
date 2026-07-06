@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Home, PencilLine, ClipboardList, Settings as SettingsIcon, Cloud, CloudOff, User, Store } from "lucide-react";
+import { Home, PencilLine, ClipboardList, Settings as SettingsIcon, Cloud, CloudOff, User, ShoppingBasket } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { useAuthStore } from "@/lib/auth-store";
 import { HomePage } from "@/components/app/home-page";
@@ -16,7 +16,7 @@ type TabId = "home" | "record" | "transactions" | "markets" | "settings" | "acco
 const TABS: { id: TabId; label: string; icon: typeof Home; featured?: boolean }[] = [
   { id: "home", label: "概況", icon: Home },
   { id: "record", label: "記帳", icon: PencilLine },
-  { id: "markets", label: "市集", icon: Store, featured: true },
+  { id: "markets", label: "市集", icon: ShoppingBasket, featured: true },
   { id: "transactions", label: "記錄", icon: ClipboardList },
   { id: "settings", label: "設定", icon: SettingsIcon },
 ];
@@ -129,15 +129,16 @@ export default function Page() {
                   const active = tab === id;
                   return (
                     <button key={id} onClick={() => setTab(id)}
-                      className="flex-1 flex flex-col items-center gap-1 py-1 transition min-w-0">
+                      className="flex-1 flex flex-col items-center justify-center gap-1 py-1 transition min-w-0">
                       {featured ? (
-                        // 市集：實心金色圓盤 + 深色圖示，視覺重量最強
+                        // 市集：放大版金色膠囊容器，圖示+文字一體，白色
                         <div
-                          className={`relative w-9 h-9 rounded-full flex items-center justify-center bg-accent shadow-md shadow-accent/40 transition-all duration-200 ${
-                            active ? "scale-110 ring-2 ring-accent/30 ring-offset-1 ring-offset-card" : "hover:scale-105"
+                          className={`flex items-center gap-1.5 px-4 py-2 rounded-full bg-accent shadow-lg shadow-accent/40 transition-all duration-200 ${
+                            active ? "scale-105 ring-2 ring-accent/30 ring-offset-1 ring-offset-card" : "hover:scale-105"
                           }`}
                         >
-                          <Icon className="w-5 h-5 text-background" strokeWidth={2.5} fill="currentColor" />
+                          <Icon className="w-5 h-5 text-white" strokeWidth={2.5} fill="currentColor" />
+                          <span className="text-xs font-bold text-white whitespace-nowrap">{label}</span>
                         </div>
                       ) : (
                         <Icon
@@ -145,13 +146,11 @@ export default function Page() {
                           strokeWidth={active ? 2.5 : 2}
                         />
                       )}
-                      <span className={`text-[10px] transition truncate ${
-                        featured
-                          ? "text-accent font-bold"
-                          : active ? "text-accent font-semibold" : "text-muted-foreground"
-                      }`}>
-                        {label}
-                      </span>
+                      {!featured && (
+                        <span className={`text-[10px] transition truncate ${active ? "text-accent font-semibold" : "text-muted-foreground"}`}>
+                          {label}
+                        </span>
+                      )}
                     </button>
                   );
                 })}
