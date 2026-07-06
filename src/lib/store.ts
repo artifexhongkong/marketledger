@@ -230,6 +230,9 @@ interface AppStore {
   currency: CurrencyCode;
   currentMarketId: string | null;
   demoSeeded: boolean;
+  // 震動回饋設定
+  hapticEnabled: boolean;
+  hapticStrength: "light" | "medium" | "strong";
   // Data
   transactions: Transaction[];
   products: Product[];
@@ -241,6 +244,8 @@ interface AppStore {
   // Actions
   setCurrency: (c: CurrencyCode) => void;
   setCurrentMarket: (id: string | null) => void;
+  setHapticEnabled: (enabled: boolean) => void;
+  setHapticStrength: (strength: "light" | "medium" | "strong") => void;
   addTransaction: (t: Omit<Transaction, "id" | "createdAt">) => string;
   deleteTransaction: (id: string) => void;
   clearAll: () => void;
@@ -265,6 +270,8 @@ export const useAppStore = create<AppStore>()(
       currency: "HKD",
       currentMarketId: null,
       demoSeeded: false,
+      hapticEnabled: true,
+      hapticStrength: "medium",
       transactions: [],
       products: [],
       markets: DEFAULT_MARKETS,
@@ -275,6 +282,8 @@ export const useAppStore = create<AppStore>()(
 
       setCurrency: (c) => set({ currency: c }),
       setCurrentMarket: (id) => set({ currentMarketId: id }),
+      setHapticEnabled: (enabled) => set({ hapticEnabled: enabled }),
+      setHapticStrength: (strength) => set({ hapticStrength: strength }),
 
       addTransaction: (t) => {
         const id = `tx_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;

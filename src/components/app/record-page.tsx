@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useAppStore, CATEGORIES, PAYMENT_METHODS, PAYMENT_CATEGORIES, CURRENCIES, formatCurrency, getPaymentMethodInfo } from "@/lib/store";
+import { haptic } from "@/lib/haptic";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -443,7 +444,7 @@ function PaymentSelector({
   const handleSortLongPress = () => {
     sortTimerRef.current = setTimeout(() => {
       setSortMode(true);
-      if (typeof navigator !== "undefined" && "vibrate" in navigator) (navigator as any).vibrate?.(30);
+      haptic("tap");
     }, 500);
   };
   const handleSortPressEnd = () => {
@@ -756,7 +757,7 @@ function ProductButton({
       s.mode = "gesture";
       // 此時才捕獲指標（之前不捕獲，讓頁面可以捲動）
       if (elRef.current) { try { elRef.current.setPointerCapture(e.pointerId); } catch {} s.captured = true; }
-      if (typeof navigator !== "undefined" && "vibrate" in navigator) (navigator as any).vibrate?.(30);
+      haptic("tap");
       rerender();
     }, 400);
   };
@@ -775,7 +776,7 @@ function ProductButton({
       // 向右取消（80px + 水平為主）
       if (s.accumX >= 80 && Math.abs(s.accumX) > Math.abs(s.accumY) * 1.5) {
         s.mode = "cancelled";
-        if (typeof navigator !== "undefined" && "vibrate" in navigator) (navigator as any).vibrate?.([30, 30, 30]);
+        haptic("warning");
         rerender();
         setTimeout(() => reset(), 600);
         return;
@@ -784,12 +785,12 @@ function ProductButton({
       // 向上 +1
       while (s.accumY <= -25) {
         s.qty++; s.accumY += 25;
-        if (typeof navigator !== "undefined" && "vibrate" in navigator) (navigator as any).vibrate?.(15);
+        haptic("tick");
         rerender();
       }
       // 向下 −1
       while (s.accumY >= 25) {
-        if (s.qty > 1) { s.qty--; if (typeof navigator !== "undefined" && "vibrate" in navigator) (navigator as any).vibrate?.(15); rerender(); }
+        if (s.qty > 1) { s.qty--; haptic("tick"); rerender(); }
         s.accumY -= 25;
       }
     } else if (s.timer || s.mode === "idle") {
@@ -808,7 +809,7 @@ function ProductButton({
         // 重置基準點為當前位置，讓後續移動從這裡開始累積
         s.lastY = e.clientY; s.lastX = e.clientX;
         s.accumY = 0; s.accumX = 0;
-        if (typeof navigator !== "undefined" && "vibrate" in navigator) (navigator as any).vibrate?.(30);
+        haptic("tap");
         rerender();
         return;
       }

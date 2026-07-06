@@ -365,10 +365,34 @@ function AgodaDatePicker({ startDate, endDate, onSelect }: { startDate: string; 
   }, [calYear, calMonth, tempStart, tempEnd]);
 
   const handleDayClick = (key: string) => {
-    if (selecting === "start" || (selecting === "end" && key <= tempStart)) {
-      setTempStart(key); setTempEnd(key); setSelecting("end");
+    // 狀態機（用 selecting + 是否已有範圍判斷）：
+    //   selecting === "end" → 正在選結束日
+    //     - key < start → 重設 start = end = key（重新開始）
+    //     - key === start → 單日市集，完成（selecting 回 start）
+    //     - key > start → 完成 end，selecting 回 start
+    //   selecting === "start" 且已有完整範圍（start !== end）→ 「已選好」狀態
+    //     - 點到 start 或 end → 清除變未選
+    //     - 點其他日期 → 重設 start = end = key（開始新選擇）
+    //   selecting === "start" 且未選過（start === end）→ 初次選
+    //     - 設 start = end = key，selecting 進入 end
+
+    const hasRange = tempStart !== "" && tempEnd !== "" && tempEnd !== tempStart;
+
+    if (selecting === "end") {
+      if (key < tempStart) {
+        setTempStart(key); setTempEnd(key);
+      } else {
+        setTempEnd(key); setSelecting("start");
+      }
     } else {
-      setTempEnd(key); setSelecting("start");
+      // selecting === "start"
+      if (hasRange && (key === tempStart || key === tempEnd)) {
+        // 已選好一輪，點到邊界 → 清除
+        setTempStart(""); setTempEnd("");
+      } else {
+        // 初次或重設
+        setTempStart(key); setTempEnd(key); setSelecting("end");
+      }
     }
     onSelect(tempStart, tempEnd);
   };
@@ -403,7 +427,9 @@ function AgodaDatePicker({ startDate, endDate, onSelect }: { startDate: string; 
         })}
       </div>
       <div className="flex items-center justify-between mt-3 px-1">
-        <span className="text-[10px] text-muted-foreground">{tempStart === tempEnd ? "點選市集結束日（單日市集只需點一次）" : `${tempStart} ~ ${tempEnd}`}</span>
+        <span className="text-[10px] text-muted-foreground">
+          {!tempStart ? "點選市集開始日" : tempStart === tempEnd ? "再點一次取消，或點結束日" : `${tempStart} ~ ${tempEnd}`}
+        </span>
         <button type="button" onClick={() => { setTempStart(toDateKey(new Date())); setTempEnd(toDateKey(new Date())); setSelecting("start"); }} className="text-[10px] text-accent">重設</button>
       </div>
     </div>

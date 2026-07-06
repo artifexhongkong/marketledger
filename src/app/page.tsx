@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Home, PencilLine, ClipboardList, Settings as SettingsIcon, Cloud, CloudOff, User, MapPin } from "lucide-react";
+import { Home, PencilLine, ClipboardList, Settings as SettingsIcon, Cloud, CloudOff, User, MapPin, Store } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { useAuthStore } from "@/lib/auth-store";
 import { HomePage } from "@/components/app/home-page";
@@ -72,44 +72,41 @@ export default function Page() {
         <div className="hidden md:block absolute top-3 left-1/2 -translate-x-1/2 w-32 h-7 bg-slate-900 rounded-b-2xl z-30" />
 
         <div className="w-full h-full bg-background md:rounded-[2rem] overflow-hidden flex flex-col relative">
-          {/* Top app bar — 漸層 + 動態內容 */}
+          {/* Top bar — 極簡風，淺色背景，跟整體風格一致 */}
           {!showAccount && (
-            <div className="flex-shrink-0 bg-gradient-to-r from-primary via-primary to-primary/90 text-primary-foreground relative overflow-hidden">
-              {/* 裝飾光暈 */}
-              <div className="absolute top-0 right-0 w-32 h-32 bg-accent/8 rounded-full blur-2xl" />
-              <div className="absolute bottom-0 left-0 w-24 h-24 bg-accent/5 rounded-full blur-xl" />
-
-              <div className="relative flex items-center justify-between px-4 h-14">
-                {/* 左側：頁面標題 */}
-                <div className="flex items-center gap-2">
-                  <h2 className="text-lg font-bold tracking-tight">
-                    {TABS.find((t) => t.id === tab)?.label || "市集記賬本"}
-                  </h2>
+            <div className="flex-shrink-0 bg-background/80 backdrop-blur-md border-b border-border/50 relative">
+              <div className="flex items-center justify-between px-4 h-12">
+                {/* 左側：App 名 + 當前頁面 */}
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center flex-shrink-0">
+                    <Store className="w-4 h-4 text-accent" strokeWidth={2.4} />
+                  </div>
+                  <div className="flex items-baseline gap-2 min-w-0">
+                    <span className="text-sm font-bold text-foreground truncate">市集記賬本</span>
+                    <span className="text-[10px] text-muted-foreground truncate hidden xs:inline">
+                      · {TABS.find((t) => t.id === tab)?.label}
+                    </span>
+                  </div>
                 </div>
 
-                {/* 右側：帳號 + 儲存指示 */}
-                <div className="flex items-center gap-2">
+                {/* 右側：雲端狀態 + 帳號 */}
+                <div className="flex items-center gap-2 flex-shrink-0">
                   {user && (
-                    <div className="flex items-center gap-1">
-                      {storageMode === "drive" ? (
-                        <Cloud className="w-4 h-4 text-accent" fill="currentColor" />
-                      ) : (
-                        <CloudOff className="w-4 h-4 text-primary-foreground/50" />
-                      )}
-                    </div>
-                  )}
-                  {/* 帳號頭像/登入按鈕 */}
-                  <button onClick={() => setTab("account")} className="relative">
-                    {user?.picture ? (
-                      <img src={user.picture} alt="" className="w-7 h-7 rounded-full border border-accent/30" />
-                    ) : user ? (
-                      <div className="w-7 h-7 rounded-full bg-accent/20 flex items-center justify-center">
-                        <User className="w-4 h-4 text-accent" />
-                      </div>
+                    storageMode === "drive" ? (
+                      <Cloud className="w-4 h-4 text-accent" fill="currentColor" />
                     ) : (
-                      <div className="w-7 h-7 rounded-full bg-accent/15 flex items-center justify-center border border-accent/20">
-                        <User className="w-4 h-4 text-accent/70" />
-                      </div>
+                      <CloudOff className="w-4 h-4 text-muted-foreground/50" />
+                    )
+                  )}
+                  <button
+                    onClick={() => setTab("account")}
+                    className="relative w-8 h-8 rounded-full bg-accent/10 hover:bg-accent/20 flex items-center justify-center border border-accent/15 transition"
+                    aria-label="帳號"
+                  >
+                    {user?.picture ? (
+                      <img src={user.picture} alt="" className="w-7 h-7 rounded-full" />
+                    ) : (
+                      <User className="w-4 h-4 text-accent" />
                     )}
                   </button>
                 </div>

@@ -9,9 +9,11 @@ import {
   Globe, Download, Trash2, Info, Coins,
   ChevronRight, FileSpreadsheet, FileJson,
   RefreshCw, DownloadCloud, LogOut, CheckCircle2, AlertCircle, Loader2,
+  Vibrate,
   type LucideIcon,
 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
+import { haptic } from "@/lib/haptic";
 
 interface LatestReleaseInfo {
   tag_name: string;
@@ -27,6 +29,8 @@ export function SettingsPage() {
   const {
     currency, setCurrency,
     transactions, clearAll,
+    hapticEnabled, hapticStrength,
+    setHapticEnabled, setHapticStrength,
   } = useAppStore();
   const { testUsername, testLogout } = useAuthStore();
 
@@ -171,6 +175,60 @@ export function SettingsPage() {
             ))}
           </div>
         </SettingsRow>
+
+        {/* 震動回饋 */}
+        <div className="px-4 py-3">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
+              <Vibrate className="w-4 h-4 text-purple-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-foreground">震動回饋</p>
+              <p className="text-[10px] text-muted-foreground">點擊按鈕、滑動商品時震動</p>
+            </div>
+            <button
+              onClick={() => {
+                const next = !hapticEnabled;
+                setHapticEnabled(next);
+                if (next) haptic("success");
+              }}
+              className={`w-10 h-6 rounded-full transition flex items-center ${hapticEnabled ? "bg-emerald-500 justify-end" : "bg-muted-foreground/30 justify-start"}`}
+            >
+              <div className="w-5 h-5 rounded-full bg-white shadow-sm mx-0.5" />
+            </button>
+          </div>
+
+          {/* 強弱選擇（只在開啟時顯示） */}
+          {hapticEnabled && (
+            <div className="mt-3 pl-11">
+              <p className="text-[10px] text-muted-foreground mb-1.5">震動強度</p>
+              <div className="flex gap-1.5">
+                {(["light", "medium", "strong"] as const).map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => {
+                      setHapticStrength(s);
+                      haptic("tap");
+                    }}
+                    className={`flex-1 py-2 rounded-lg text-[11px] font-medium transition border-2 ${
+                      hapticStrength === s
+                        ? "border-primary bg-primary/8 text-primary"
+                        : "border-border bg-card text-foreground hover:border-primary/30"
+                    }`}
+                  >
+                    {s === "light" ? "輕" : s === "medium" ? "中" : "強"}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={() => haptic("success")}
+                className="mt-2 text-[10px] text-purple-600 hover:text-purple-700 font-medium"
+              >
+                測試震動
+              </button>
+            </div>
+          )}
+        </div>
       </SettingsGroup>
 
       {/* 資料管理群組 */}
