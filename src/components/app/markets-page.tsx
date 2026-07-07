@@ -148,14 +148,24 @@ export function MarketsPage() {
     const start = parseDateKey(e.startDate); const end = parseDateKey(e.endDate);
     const dayMs = 86400000;
     const totalDays = Math.round((end.getTime() - start.getTime()) / dayMs) + 1;
-    const dailyAmount = e.feeType === "total" ? Math.round(e.boothFee / totalDays) : e.boothFee;
+    // 總計模式：平均分攤，尾差給最後一天
+    const baseDailyAmount = e.feeType === "total" ? Math.floor(e.boothFee / totalDays) : e.boothFee;
+    const remainder = e.feeType === "total" ? e.boothFee - baseDailyAmount * totalDays : 0;
     const newTxs: any[] = [];
+    const daysToAdd: { ts: number; amount: number }[] = [];
     for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
       const dayTs = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 9, 0).getTime();
+      daysToAdd.push({ ts: dayTs, amount: baseDailyAmount });
+    }
+    // 尾差加到最後一天
+    if (e.feeType === "total" && remainder > 0 && daysToAdd.length > 0) {
+      daysToAdd[daysToAdd.length - 1].amount += remainder;
+    }
+    for (const day of daysToAdd) {
       newTxs.push({
-        id: `tx_mkt_${dayTs}_${Math.random().toString(36).slice(2, 6)}`,
-        type: "expense", amount: dailyAmount, currency, category: "rent",
-        paymentMethod: "cash", note: `${e.name} 攤位費`, marketId: eventId, createdAt: dayTs,
+        id: `tx_mkt_${day.ts}_${Math.random().toString(36).slice(2, 6)}`,
+        type: "expense", amount: day.amount, currency, category: "rent",
+        paymentMethod: "cash", note: `${e.name} 攤位費`, marketId: eventId, createdAt: day.ts,
       });
     }
     if (newTxs.length > 0) useAppStore.setState({ transactions: [...useAppStore.getState().transactions, ...newTxs] });
@@ -426,7 +436,7 @@ export function MarketsPage() {
             </div>
             {selectedSummary && selectedSummary.count > 0 && (
               <span className={`text-xs font-bold tabular-nums ${selectedSummary.profit >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
-                淨 {selectedSummary.profit >= 0 ? "+" : "−"}{fc(Math.abs(selectedSummary.profit))}
+                {selectedSummary.profit >= 0 ? "+" : "−"}{fc(Math.abs(selectedSummary.profit))}
               </span>
             )}
           </div>

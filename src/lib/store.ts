@@ -463,12 +463,19 @@ export const useAppStore = create<AppStore>()(
           // 計算天數
           const dayMs = 86400000;
           const totalDays = Math.round((end.getTime() - start.getTime()) / dayMs) + 1;
-          // 總計模式：平均分攤到每天；每天模式：每天都是 boothFee
-          const dailyAmount = e.feeType === "total"
-            ? Math.round(e.boothFee / totalDays)
+          // 總計模式：平均分攤到每天，尾差給最後一天；每天模式：每天都是 boothFee
+          const baseDailyAmount = e.feeType === "total"
+            ? Math.floor(e.boothFee / totalDays)
             : e.boothFee;
+          // 總計模式的尾差（總費 - 平均分攤的總和）
+          const remainder = e.feeType === "total"
+            ? e.boothFee - baseDailyAmount * totalDays
+            : 0;
 
           const newTxs: Transaction[] = [];
+          let dayIndex = 0;
+          let actualDays = 0; // 實際記帳的天數（排除已存在的）
+          const daysToAdd: { ts: number; amount: number }[] = [];
           for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
             const dayTs = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 9, 0).getTime();
             const { transactions: txs } = get();
@@ -478,18 +485,27 @@ export const useAppStore = create<AppStore>()(
               Math.abs(t.createdAt - dayTs) < dayMs
             );
             if (!exists) {
-              newTxs.push({
-                id: `tx_mkt_${dayTs}_${Math.random().toString(36).slice(2, 6)}`,
-                type: "expense",
-                amount: dailyAmount,
-                currency,
-                category: "rent",
-                paymentMethod: "cash",
-                note: `${e.name} 攤位費`,
-                marketId: id,
-                createdAt: dayTs,
-              });
+              daysToAdd.push({ ts: dayTs, amount: baseDailyAmount });
+              actualDays++;
             }
+            dayIndex++;
+          }
+          // 總計模式：尾差加到最後一天
+          if (e.feeType === "total" && remainder > 0 && daysToAdd.length > 0) {
+            daysToAdd[daysToAdd.length - 1].amount += remainder;
+          }
+          for (const day of daysToAdd) {
+            newTxs.push({
+              id: `tx_mkt_${day.ts}_${Math.random().toString(36).slice(2, 6)}`,
+              type: "expense",
+              amount: day.amount,
+              currency,
+              category: "rent",
+              paymentMethod: "cash",
+              note: `${e.name} 攤位費`,
+              marketId: id,
+              createdAt: day.ts,
+            });
           }
           if (newTxs.length > 0) {
             set((s) => ({ transactions: [...s.transactions, ...newTxs] }));
