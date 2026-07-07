@@ -49,6 +49,18 @@ export interface Product {
   color?: string; // 按鈕顏色（hex），用於視覺分組
 }
 
+// 訂單項目（記帳頁的「這一單」清單）
+export interface OrderItem {
+  orderItemId: string; // 訂單項目 ID（跟交易 ID 不同）
+  txId: string; // 對應的交易 ID（用於撤銷時刪除交易）
+  productId: string;
+  name: string;
+  price: number; // 單價
+  qty: number;
+  color?: string;
+  createdAt: number;
+}
+
 export interface MarketData {
   id: string;
   name: string;
@@ -242,6 +254,8 @@ interface AppStore {
   customPaymentMethods: CustomPaymentMethod[];
   // 用戶自訂的首頁支付方式（從內建中選擇要顯示的）
   visiblePayments: string[];
+  // 當前訂單（記帳頁用，顯示這一單已點的商品 + 總金額）
+  currentOrder: OrderItem[];
   // Actions
   setCurrency: (c: CurrencyCode) => void;
   setCurrentMarket: (id: string | null) => void;
@@ -250,6 +264,11 @@ interface AppStore {
   addTransaction: (t: Omit<Transaction, "id" | "createdAt">) => string;
   deleteTransaction: (id: string) => void;
   clearAll: () => void;
+  // 當前訂單操作
+  addOrderItem: (txId: string, product: { id: string; name: string; price: number; color?: string }, qty: number) => void;
+  removeOrderItem: (orderItemId: string) => void;
+  updateOrderItemQty: (orderItemId: string, qty: number) => void;
+  clearOrder: () => void;
   addProduct: (p: Omit<Product, "id">) => void;
   updateProduct: (id: string, data: Partial<Omit<Product, "id">>) => void;
   deleteProduct: (id: string) => void;
@@ -281,6 +300,7 @@ export const useAppStore = create<AppStore>()(
       customPaymentMethods: [],
       // 預設首頁顯示通用支付方式
       visiblePayments: ["cash", "payme", "credit_card", "apple_pay", "google_pay", "bank_transfer", "paypal"],
+      currentOrder: [],
 
       setCurrency: (c) => set({ currency: c }),
       setCurrentMarket: (id) => set({ currentMarketId: id }),
@@ -301,7 +321,57 @@ export const useAppStore = create<AppStore>()(
       deleteTransaction: (id) =>
         set((s) => ({ transactions: s.transactions.filter((t) => t.id !== id) })),
 
-      clearAll: () => set({ transactions: [] }),
+      clearAll: () => set({ transactions: [], currentOrder: [] }),
+
+      // 當前訂單操作
+      addOrderItem: (txId, product, qty) =>
+        set((s) => ({
+          currentOrder: [
+            ...s.currentOrder,
+            {
+              orderItemId: `oi_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+              txId,
+              productId: product.id,
+              name: product.name,
+              price: product.price,
+              qty,
+              color: product.color,
+              createdAt: Date.now(),
+            },
+          ],
+        })),
+
+      removeOrderItem: (orderItemId) =>
+        set((s) => {
+          const item = s.currentOrder.find((i) => i.orderItemId === orderItemId);
+          if (item) {
+            // 同時刪除對應的交易
+            return {
+              currentOrder: s.currentOrder.filter((i) => i.orderItemId !== orderItemId),
+              transactions: s.transactions.filter((t) => t.id !== item.txId),
+            };
+          }
+          return {};
+        }),
+
+      updateOrderItemQty: (orderItemId, qty) =>
+        set((s) => {
+          const item = s.currentOrder.find((i) => i.orderItemId === orderItemId);
+          if (!item || qty < 1) return {};
+          // 更新訂單項目數量 + 對應交易的金額
+          return {
+            currentOrder: s.currentOrder.map((i) =>
+              i.orderItemId === orderItemId ? { ...i, qty } : i
+            ),
+            transactions: s.transactions.map((t) =>
+              t.id === item.txId
+                ? { ...t, amount: item.price * qty, note: qty > 1 ? `${item.name} x${qty}` : item.name }
+                : t
+            ),
+          };
+        }),
+
+      clearOrder: () => set({ currentOrder: [] }),
 
       addProduct: (p) =>
         set((s) => ({

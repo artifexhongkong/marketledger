@@ -100,7 +100,13 @@ export default function Page() {
                 {TABS.map(({ id, label, icon: Icon, featured }) => {
                   const active = tab === id;
                   return (
-                    <button key={id} onClick={() => setTab(id)}
+                    <button key={id} onClick={() => {
+                      // 離開記帳頁面時清空當前訂單（開始新一單）
+                      if (tab === "record" && id !== "record") {
+                        useAppStore.getState().clearOrder();
+                      }
+                      setTab(id);
+                    }}
                       className="flex-1 flex flex-col items-center justify-center gap-1 py-1 transition min-w-0">
                       {featured ? (
                         // 市集：放大版金色圓形容器，圖示上文字下，白色

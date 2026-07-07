@@ -79,7 +79,7 @@ interface ToastState {
 }
 
 function RecordView() {
-  const { currency, products, currentMarketId, markets, addTransaction, setCurrentMarket, deleteTransaction, customPaymentMethods } = useAppStore();
+  const { currency, products, currentMarketId, markets, addTransaction, setCurrentMarket, deleteTransaction, customPaymentMethods, currentOrder, addOrderItem, removeOrderItem, updateOrderItemQty, clearOrder } = useAppStore();
   const [payment, setPayment] = useState<PaymentMethod>("cash");
 
   // 取得支付方式標籤（支援自訂）
@@ -99,6 +99,9 @@ function RecordView() {
   const [lastTx, setLastTx] = useState<{ txId: string; productName: string; amount: number } | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // 修改數量的訂單項目 ID
+  const [editingOrderItem, setEditingOrderItem] = useState<string | null>(null);
+  const [editQtyValue, setEditQtyValue] = useState("");
 
   const currentMarket = markets.find((m) => m.id === currentMarketId);
 
@@ -122,6 +125,9 @@ function RecordView() {
 
     // 單筆記錄也震動（success 回饋）
     haptic("success");
+
+    // 加到當前訂單清單
+    addOrderItem(txId, p, 1);
 
     setConfirmId(p.id);
     setTimeout(() => setConfirmId(null), 600);
@@ -236,7 +242,7 @@ function RecordView() {
                   currentMarketId={currentMarketId}
                   confirming={confirmId === p.id}
                   onConfirm={(id) => { setConfirmId(id); setTimeout(() => setConfirmId(null), 600); }}
-                  onRecord={(txId, productName, amount) => {
+                  onRecord={(txId, productName, amount, qty) => {
                     setToast({
                       id: `toast_${Date.now()}`,
                       txId,
@@ -246,6 +252,8 @@ function RecordView() {
                       timestamp: Date.now(),
                     });
                     setLastTx({ txId, productName, amount });
+                    // 加到當前訂單清單
+                    addOrderItem(txId, p, qty);
                     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
                     toastTimerRef.current = setTimeout(() => setToast(null), 5000);
                   }}
@@ -253,20 +261,137 @@ function RecordView() {
                 />
               ))}
             </div>
-            {lastTx && (
-              <div className="mt-2 bg-muted/60 rounded-lg px-3 py-2 flex items-center justify-between gap-2 text-xs">
-                <div className="flex items-center gap-1.5 text-muted-foreground min-w-0">
-                  <RotateCcw className="w-3 h-3 flex-shrink-0" />
-                  <span className="truncate">
-                    最近：{lastTx.productName} · {formatCurrency(lastTx.amount, currency)}
+            {/* 訂單清單 — 顯示這一單已點的商品 + 總計 */}
+            {currentOrder.length > 0 && (
+              <div className="mt-2 bg-card border border-border rounded-xl overflow-hidden">
+                {/* 清單標題 + 新一單按鈕 */}
+                <div className="flex items-center justify-between px-3 py-2 bg-muted/40 border-b border-border">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] font-semibold text-foreground">本單明細</span>
+                    <span className="text-[10px] text-muted-foreground">({currentOrder.length} 項)</span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      if (confirm("開始新一單？本單清單會清空（交易記錄保留）")) {
+                        clearOrder();
+                        haptic("tap");
+                      }
+                    }}
+                    className="flex items-center gap-1 text-[10px] text-accent hover:text-foreground px-2 py-1 rounded-md hover:bg-accent/10 transition"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    新一單
+                  </button>
+                </div>
+                {/* 訂單項目列表 */}
+                <div className="divide-y divide-border max-h-[200px] overflow-y-auto">
+                  {currentOrder.map((item) => (
+                    <div key={item.orderItemId} className="px-3 py-2 flex items-center gap-2">
+                      {/* 商品色標 */}
+                      {item.color && (
+                        <div className="w-2 h-8 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
+                      )}
+                      {/* 商品名 + 數量 */}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-foreground truncate">{item.name}</p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {formatCurrency(item.price, currency)} × {item.qty}
+                        </p>
+                      </div>
+                      {/* 小計 */}
+                      <span className="text-xs font-bold tabular-nums text-primary flex-shrink-0">
+                        {formatCurrency(item.price * item.qty, currency)}
+                      </span>
+                      {/* 撤銷按鈕 */}
+                      <button
+                        onClick={() => {
+                          removeOrderItem(item.orderItemId);
+                          haptic("warning");
+                        }}
+                        className="w-6 h-6 rounded-md flex items-center justify-center text-rose-500 hover:bg-rose-50 transition flex-shrink-0"
+                        aria-label="撤銷"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                      {/* 修改按鈕 */}
+                      <button
+                        onClick={() => {
+                          setEditingOrderItem(item.orderItemId);
+                          setEditQtyValue(String(item.qty));
+                        }}
+                        className="w-6 h-6 rounded-md flex items-center justify-center text-accent hover:bg-accent/10 transition flex-shrink-0"
+                        aria-label="修改數量"
+                      >
+                        <Pencil className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                {/* 總計 */}
+                <div className="px-3 py-2 bg-primary/5 border-t border-border flex items-center justify-between">
+                  <span className="text-[11px] font-semibold text-foreground">總計</span>
+                  <span className="text-base font-bold tabular-nums text-primary">
+                    {formatCurrency(currentOrder.reduce((sum, item) => sum + item.price * item.qty, 0), currency)}
                   </span>
                 </div>
-                <button
-                  onClick={handleUndo}
-                  className="text-primary hover:text-primary/80 font-medium flex-shrink-0"
-                >
-                  撤銷
-                </button>
+              </div>
+            )}
+
+            {/* 修改數量 Modal */}
+            {editingOrderItem && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setEditingOrderItem(null)}>
+                <div className="bg-card rounded-xl p-4 w-full max-w-[240px] space-y-3" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-semibold text-foreground">修改數量</h4>
+                    <button onClick={() => setEditingOrderItem(null)} className="text-muted-foreground hover:text-foreground">
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                  {(() => {
+                    const item = currentOrder.find((i) => i.orderItemId === editingOrderItem);
+                    if (!item) return null;
+                    return (
+                      <>
+                        <p className="text-xs text-muted-foreground">{item.name}</p>
+                        <p className="text-[10px] text-muted-foreground">單價 {formatCurrency(item.price, currency)}</p>
+                        <Input
+                          type="text"
+                          inputMode="numeric"
+                          value={editQtyValue}
+                          onChange={(e) => setEditQtyValue(e.target.value.replace(/[^0-9]/g, ""))}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              const qty = parseInt(editQtyValue) || 0;
+                              if (qty > 0) {
+                                updateOrderItemQty(editingOrderItem, qty);
+                                haptic("tap");
+                              }
+                              setEditingOrderItem(null);
+                            }
+                          }}
+                          autoFocus
+                          className="bg-background text-center text-lg font-bold"
+                        />
+                        <p className="text-[11px] text-muted-foreground text-center">
+                          小計：{formatCurrency(item.price * (parseInt(editQtyValue) || 0), currency)}
+                        </p>
+                        <Button
+                          onClick={() => {
+                            const qty = parseInt(editQtyValue) || 0;
+                            if (qty > 0) {
+                              updateOrderItemQty(editingOrderItem, qty);
+                              haptic("tap");
+                            }
+                            setEditingOrderItem(null);
+                          }}
+                          className="w-full h-9"
+                        >
+                          確認
+                        </Button>
+                      </>
+                    );
+                  })()}
+                </div>
               </div>
             )}
           </div>
@@ -737,7 +862,7 @@ interface ProductButtonProps {
   currentMarketId: string | null;
   confirming: boolean;
   onConfirm: (id: string) => void;
-  onRecord: (txId: string, productName: string, amount: number) => void;
+  onRecord: (txId: string, productName: string, amount: number, qty: number) => void;
   onUndo: () => void;
 }
 
@@ -783,7 +908,7 @@ function ProductButton({
     // 每次記錄都震動（單筆用 success，多筆用 tap）
     haptic(qty > 1 ? "tap" : "success");
     onConfirm(product.id);
-    onRecord(txId, qty > 1 ? `${product.name} x${qty}` : product.name, totalAmount);
+    onRecord(txId, qty > 1 ? `${product.name} x${qty}` : product.name, totalAmount, qty);
   };
 
   const reset = () => {
