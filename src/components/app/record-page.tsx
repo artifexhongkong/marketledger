@@ -38,6 +38,18 @@ export function RecordPage() {
 // ── 主要支付方式（前 5 個，置頂大按鈕，不滑動）──
 const TOP_PAYMENTS: PaymentMethod[] = ["cash", "payme", "fps", "alipayhk", "wechat_pay"];
 
+// 商品按鈕顏色選項（用於視覺分組）
+const PRODUCT_COLORS = [
+  "#FEE2E2", // 淺紅
+  "#FED7AA", // 橘
+  "#FEF3C7", // 黃
+  "#D1FAE5", // 綠
+  "#DBEAFE", // 藍
+  "#E9D5FF", // 紫
+  "#FCE7F3", // 粉
+  "#E5E7EB", // 灰
+];
+
 // ── Toast 通知型別 ──
 interface ToastState {
   id: string;
@@ -89,6 +101,9 @@ function RecordView() {
       note: p.name,
       marketId: currentMarketId || undefined,
     });
+
+    // 單筆記錄也震動（success 回饋）
+    haptic("success");
 
     setConfirmId(p.id);
     setTimeout(() => setConfirmId(null), 600);
@@ -727,14 +742,15 @@ function ProductButton({
   }, []);
 
   const doRecord = (qty: number) => {
+    const totalAmount = product.price * qty;
     const txId = addTransaction({
-      type: "income", amount: product.price, currency: currency as any,
+      type: "income", amount: totalAmount, currency: currency as any,
       category: "sales", paymentMethod: payment, productId: product.id,
       note: qty > 1 ? `${product.name} x${qty}` : product.name,
       marketId: currentMarketId || undefined,
     });
     onConfirm(product.id);
-    onRecord(txId, qty > 1 ? `${product.name} x${qty}` : product.name, product.price * qty);
+    onRecord(txId, qty > 1 ? `${product.name} x${qty}` : product.name, totalAmount);
   };
 
   const reset = () => {
@@ -854,7 +870,7 @@ function ProductButton({
       onPointerMove={onMove}
       onPointerUp={onUp}
       onPointerCancel={onUp}
-      style={{ touchAction: "none" }}
+      style={{ touchAction: "none", backgroundColor: (s.mode === "idle" && !confirming && product.color) ? product.color : undefined }}
       className={`relative bg-card border-2 rounded-xl p-2.5 text-center transition-all overflow-hidden min-h-[68px] flex flex-col justify-center select-none ${
         s.mode === "cancelled" ? "border-rose-500 bg-rose-50"
         : s.mode === "gesture" ? "border-primary bg-primary/5 scale-[1.03] shadow-lg"
@@ -906,6 +922,8 @@ function ProductsView() {
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
   const [unit, setUnit] = useState("個");
+  // 按鈕顏色（可選，用於視覺分組）
+  const [color, setColor] = useState<string>("");
   // 顯示模式：grid（格子）或 list（列表）
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   // 多選刪除模式
@@ -937,8 +955,8 @@ function ProductsView() {
     const p = parseFloat(price);
     if (!name.trim()) return alert("請輸入商品名稱");
     if (!p || p <= 0) return alert("請輸入有效單價");
-    addProduct({ name: name.trim(), price: p, unit: unit.trim() || "個", categoryId: "sales" });
-    setName(""); setPrice(""); setUnit("個"); setShowForm(false);
+    addProduct({ name: name.trim(), price: p, unit: unit.trim() || "個", categoryId: "sales", color: color || undefined });
+    setName(""); setPrice(""); setUnit("個"); setColor(""); setShowForm(false);
   };
 
   // 長按商品 → 進入多選模式 + 選中該商品
@@ -1080,6 +1098,27 @@ function ProductsView() {
               <Input placeholder="單價" value={price} onChange={(e) => setPrice(e.target.value)} inputMode="decimal" className="bg-background flex-1" />
               <Input placeholder="單位" value={unit} onChange={(e) => setUnit(e.target.value)} className="bg-background w-24" />
             </div>
+            {/* 按鈕顏色（可選，用於視覺分組） */}
+            <div>
+              <p className="text-[11px] text-muted-foreground mb-1.5">按鈕顏色（選填，用於快速識別商品組）</p>
+              <div className="flex gap-1.5 flex-wrap">
+                <button
+                  onClick={() => setColor("")}
+                  className={`w-7 h-7 rounded-full border-2 transition ${color === "" ? "border-foreground ring-2 ring-offset-1 ring-foreground/30" : "border-border"}`}
+                  style={{ background: "#FFFFFF" }}
+                  aria-label="無顏色"
+                />
+                {PRODUCT_COLORS.map((c) => (
+                  <button
+                    key={c}
+                    onClick={() => setColor(c)}
+                    className={`w-7 h-7 rounded-full border-2 transition ${color === c ? "border-foreground ring-2 ring-offset-1 ring-foreground/30" : "border-border"}`}
+                    style={{ background: c }}
+                    aria-label={`顏色 ${c}`}
+                  />
+                ))}
+              </div>
+            </div>
           </div>
           <Button onClick={handleAdd} className="w-full">儲存商品</Button>
         </Card>
@@ -1138,6 +1177,7 @@ function ProductsView() {
                     onTouchStart={() => handleProductLongPress(p.id)}
                     onTouchEnd={handleProductPressEnd}
                     onClick={() => handleProductClick(p.id)}
+                    style={{ backgroundColor: (!isSelected && !isLongPressing && p.color) ? p.color : undefined }}
                     className={`relative bg-card border-2 rounded-xl p-2.5 cursor-pointer transition-all select-none ${
                       isSelected || isLongPressing
                         ? "border-rose-500 bg-rose-50 shake-once"

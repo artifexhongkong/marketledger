@@ -31,6 +31,8 @@ export function MarketsPage() {
   const [showProfit, setShowProfit] = useState(true);
   // 選中的日期（點擊日曆某天 → 顯示該天交易列表）
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  // 年份/月份 picker 狀態
+  const [showPicker, setShowPicker] = useState<"none" | "year" | "month">("none");
 
   const prevMonth = () => { if (viewMonth === 0) { setViewMonth(11); setViewYear(viewYear - 1); } else setViewMonth(viewMonth - 1); setSelectedDate(null); };
   const nextMonth = () => { if (viewMonth === 11) { setViewMonth(0); setViewYear(viewYear + 1); } else setViewMonth(viewMonth + 1); setSelectedDate(null); };
@@ -201,9 +203,60 @@ export function MarketsPage() {
       <Card className="p-3">
         <div className="flex items-center justify-between mb-2">
           <button onClick={prevMonth} className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-muted"><ChevronLeft className="w-4 h-4 text-foreground" /></button>
-          <span className="text-sm font-bold text-foreground">{viewYear} {MONTHS[viewMonth]}</span>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setShowPicker(showPicker === "year" ? "none" : "year")}
+              className={`px-2 py-0.5 rounded text-sm font-bold text-foreground hover:bg-muted transition ${showPicker === "year" ? "bg-muted" : ""}`}
+            >
+              {viewYear}年
+            </button>
+            <button
+              onClick={() => setShowPicker(showPicker === "month" ? "none" : "month")}
+              className={`px-2 py-0.5 rounded text-sm font-bold text-foreground hover:bg-muted transition ${showPicker === "month" ? "bg-muted" : ""}`}
+            >
+              {MONTHS[viewMonth]}
+            </button>
+          </div>
           <button onClick={nextMonth} className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-muted"><ChevronRight className="w-4 h-4 text-foreground" /></button>
         </div>
+
+        {/* 年份 picker */}
+        {showPicker === "year" && (
+          <div className="mb-2 p-2 bg-muted/40 rounded-lg">
+            <div className="grid grid-cols-4 gap-1">
+              {Array.from({ length: 9 }, (_, i) => viewYear - 4 + i).map((y) => (
+                <button
+                  key={y}
+                  onClick={() => { setViewYear(y); setShowPicker("none"); setSelectedDate(null); }}
+                  className={`py-1.5 rounded text-[11px] font-medium transition ${
+                    y === viewYear ? "bg-accent text-accent-foreground" : "bg-card text-foreground hover:bg-muted"
+                  }`}
+                >
+                  {y}年
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 月份 picker */}
+        {showPicker === "month" && (
+          <div className="mb-2 p-2 bg-muted/40 rounded-lg">
+            <div className="grid grid-cols-4 gap-1">
+              {MONTHS.map((m, i) => (
+                <button
+                  key={m}
+                  onClick={() => { setViewMonth(i); setShowPicker("none"); setSelectedDate(null); }}
+                  className={`py-1.5 rounded text-[11px] font-medium transition ${
+                    i === viewMonth ? "bg-accent text-accent-foreground" : "bg-card text-foreground hover:bg-muted"
+                  }`}
+                >
+                  {m}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         <div className="grid grid-cols-7 gap-0.5 mb-1">{WEEKDAYS.map((w) => <div key={w} className="text-center text-[9px] font-medium text-muted-foreground py-0.5">{w}</div>)}</div>
         <div className="grid grid-cols-7 gap-0.5">
           {calendarDays.map((day, i) => {

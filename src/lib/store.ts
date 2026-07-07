@@ -46,6 +46,7 @@ export interface Product {
   price: number;
   unit: string;
   categoryId: CategoryId;
+  color?: string; // 按鈕顏色（hex），用於視覺分組
 }
 
 export interface MarketData {
