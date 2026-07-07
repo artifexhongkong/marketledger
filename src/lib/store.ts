@@ -66,7 +66,7 @@ export interface OrderItem {
 export interface StickyNote {
   id: string;
   text: string;
-  color: "yellow" | "pink" | "blue" | "green"; // 黃=一般、粉=客戶反饋、藍=待辦、綠=庫存
+  color: string; // hex 色碼
   createdAt: number;
 }
 
@@ -288,7 +288,7 @@ interface AppStore {
   updateOrderItemNote: (orderItemId: string, note: string) => void;
   clearOrder: () => void;
   // 便條貼操作
-  addStickyNote: (text: string, color: StickyNote["color"]) => void;
+  addStickyNote: (text: string, color: string) => void;
   updateStickyNote: (id: string, text: string) => void;
   deleteStickyNote: (id: string) => void;
   addProduct: (p: Omit<Product, "id">) => void;

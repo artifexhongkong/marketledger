@@ -667,24 +667,28 @@ function EventFormModal({ onClose, onSave, currency, editingEvent }: { onClose: 
 }
 
 // ── 便條貼元件 ──
-const NOTE_COLORS = {
-  yellow: { bg: "#FEF3C7", border: "#FCD34D", label: "一般", icon: "📌" },
-  pink: { bg: "#FCE7F3", border: "#F9A8D4", label: "客戶反饋", icon: "💬" },
-  blue: { bg: "#DBEAFE", border: "#93C5FD", label: "待辦", icon: "✅" },
-  green: { bg: "#D1FAE5", border: "#6EE7B7", label: "庫存", icon: "📦" },
-};
+const NOTE_COLORS = [
+  "#FEF3C7", // 淺黃
+  "#FCE7F3", // 淺粉
+  "#DBEAFE", // 淺藍
+  "#D1FAE5", // 淺綠
+  "#FED7AA", // 淺橘
+  "#E9D5FF", // 淺紫
+  "#FECACA", // 淺紅
+  "#C7D2FE", // 淺靛
+];
 
 function StickyNotesSection({
   notes, onAdd, onUpdate, onDelete,
 }: {
-  notes: { id: string; text: string; color: "yellow" | "pink" | "blue" | "green"; createdAt: number }[];
-  onAdd: (text: string, color: "yellow" | "pink" | "blue" | "green") => void;
+  notes: { id: string; text: string; color: string; createdAt: number }[];
+  onAdd: (text: string, color: string) => void;
   onUpdate: (id: string, text: string) => void;
   onDelete: (id: string) => void;
 }) {
   const [showAdd, setShowAdd] = useState(false);
   const [newText, setNewText] = useState("");
-  const [newColor, setNewColor] = useState<"yellow" | "pink" | "blue" | "green">("yellow");
+  const [newColor, setNewColor] = useState(NOTE_COLORS[0]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
 
@@ -692,7 +696,7 @@ function StickyNotesSection({
     if (!newText.trim()) return;
     onAdd(newText.trim(), newColor);
     setNewText("");
-    setNewColor("yellow");
+    setNewColor(NOTE_COLORS[0]);
     setShowAdd(false);
   };
 
@@ -735,18 +739,15 @@ function StickyNotesSection({
       {showAdd && (
         <Card className="p-3 mb-2 animate-[fadeIn_0.2s_ease-out]">
           {/* 顏色選擇 */}
-          <div className="flex gap-1.5 mb-2">
-            {(Object.keys(NOTE_COLORS) as Array<keyof typeof NOTE_COLORS>).map((c) => (
+          <div className="flex gap-1.5 mb-2 flex-wrap">
+            {NOTE_COLORS.map((c) => (
               <button
                 key={c}
                 onClick={() => setNewColor(c)}
-                className={`px-2 py-1 rounded-md text-[10px] font-medium transition border-2 ${
-                  newColor === c ? "scale-105" : "opacity-60"
-                }`}
-                style={{ backgroundColor: NOTE_COLORS[c].bg, borderColor: NOTE_COLORS[c].border }}
-              >
-                {NOTE_COLORS[c].icon} {NOTE_COLORS[c].label}
-              </button>
+                className={`w-7 h-7 rounded-full border-2 transition ${newColor === c ? "border-foreground scale-110 ring-2 ring-offset-1 ring-foreground/20" : "border-white/60"}`}
+                style={{ backgroundColor: c }}
+                aria-label={`顏色 ${c}`}
+              />
             ))}
           </div>
           <textarea
@@ -775,27 +776,22 @@ function StickyNotesSection({
       ) : (
         <div className="grid grid-cols-2 gap-2">
           {notes.map((note, i) => {
-            const colorInfo = NOTE_COLORS[note.color];
             const isEditing = editingId === note.id;
-            // 微旋轉讓便條貼更自然
             const rotation = i % 2 === 0 ? "-rotate-1" : "rotate-1";
             return (
               <div
                 key={note.id}
                 className={`relative p-2.5 rounded-lg shadow-sm ${rotation} transition-all hover:rotate-0 hover:shadow-md`}
-                style={{ backgroundColor: colorInfo.bg, borderColor: colorInfo.border, borderWidth: 1 }}
+                style={{ backgroundColor: note.color }}
               >
-                {/* 顏色標籤 + 刪除按鈕 */}
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[9px] font-medium text-muted-foreground">{colorInfo.icon} {colorInfo.label}</span>
-                  <button
-                    onClick={() => onDelete(note.id)}
-                    className="w-4 h-4 rounded-full flex items-center justify-center text-muted-foreground hover:text-rose-500 hover:bg-rose-100/50 transition"
-                    aria-label="刪除"
-                  >
-                    <Trash2 className="w-2.5 h-2.5" />
-                  </button>
-                </div>
+                {/* 刪除按鈕 */}
+                <button
+                  onClick={() => onDelete(note.id)}
+                  className="absolute top-1 right-1 w-4 h-4 rounded-full flex items-center justify-center text-muted-foreground hover:text-rose-500 hover:bg-rose-100/50 transition"
+                  aria-label="刪除"
+                >
+                  <Trash2 className="w-2.5 h-2.5" />
+                </button>
                 {/* 內容 */}
                 {isEditing ? (
                   <textarea
@@ -810,7 +806,7 @@ function StickyNotesSection({
                 ) : (
                   <p
                     onClick={() => { setEditingId(note.id); setEditText(note.text); }}
-                    className="text-[11px] text-foreground leading-relaxed whitespace-pre-wrap break-words cursor-text min-h-[20px]"
+                    className="text-[11px] text-foreground leading-relaxed whitespace-pre-wrap break-words cursor-text min-h-[20px] pr-3"
                   >
                     {note.text}
                   </p>
