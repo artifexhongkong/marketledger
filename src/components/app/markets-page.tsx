@@ -31,6 +31,13 @@ export function MarketsPage() {
   const [showProfit, setShowProfit] = useState(true);
   // 選中的日期（點擊日曆某天 → 顯示該天交易列表）
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  // 年月選擇模式："none" | "selecting" | "returning"
+  const [pickerMode, setPickerMode] = useState<"none" | "selecting" | "returning">("none");
+  // 年份切換動畫方向
+  const [yearRollDir, setYearRollDir] = useState<"left" | "right" | null>(null);
+  // 漣漪效果（點擊的月份索引）
+  const [rippleMonth, setRippleMonth] = useState<number | null>(null);
+  const [pickerYear, setPickerYear] = useState(viewYear); // 選擇模式中的年份（可獨立切換）
 
   const prevMonth = () => { if (viewMonth === 0) { setViewMonth(11); setViewYear(viewYear - 1); } else setViewMonth(viewMonth - 1); setSelectedDate(null); };
   const nextMonth = () => { if (viewMonth === 11) { setViewMonth(0); setViewYear(viewYear + 1); } else setViewMonth(viewMonth + 1); setSelectedDate(null); };
@@ -199,92 +206,167 @@ export function MarketsPage() {
 
       {/* 日曆 — 同時顯示每日盈虧 + 市集活動彩色點 + 點擊選取日期 */}
       <Card className="p-3">
+        {/* Header — 點年份月份進入選擇模式 */}
         <div className="flex items-center justify-between mb-2">
           <button onClick={prevMonth} className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-muted"><ChevronLeft className="w-4 h-4 text-foreground" /></button>
-          <div className="flex items-center gap-1">
-            {/* 年份滾輪 */}
-            <div className="relative">
-              <select
-                value={viewYear}
-                onChange={(e) => { setViewYear(Number(e.target.value)); setSelectedDate(null); }}
-                onWheel={(e) => {
-                  e.preventDefault();
-                  const delta = e.deltaY > 0 ? 1 : -1;
-                  const newYear = viewYear + delta;
-                  const now = new Date().getFullYear();
-                  if (newYear >= now - 5 && newYear <= now + 5) {
-                    setViewYear(newYear);
-                    setSelectedDate(null);
-                  }
-                }}
-                className="appearance-none bg-transparent text-[11px] font-semibold text-foreground pr-3 py-0.5 cursor-pointer hover:bg-muted rounded transition outline-none"
-              >
-                {Array.from({ length: 11 }, (_, i) => new Date().getFullYear() - 5 + i).map((y) => (
-                  <option key={y} value={y}>{y}年</option>
-                ))}
-              </select>
-              <ChevronRight className="absolute right-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 text-muted-foreground pointer-events-none rotate-90" />
-            </div>
-            {/* 月份滾輪 */}
-            <div className="relative">
-              <select
-                value={viewMonth}
-                onChange={(e) => { setViewMonth(Number(e.target.value)); setSelectedDate(null); }}
-                onWheel={(e) => {
-                  e.preventDefault();
-                  const delta = e.deltaY > 0 ? 1 : -1;
-                  let newMonth = viewMonth + delta;
-                  let newYear = viewYear;
-                  if (newMonth > 11) { newMonth = 0; newYear++; }
-                  if (newMonth < 0) { newMonth = 11; newYear--; }
-                  const now = new Date().getFullYear();
-                  if (newYear >= now - 5 && newYear <= now + 5) {
-                    setViewMonth(newMonth);
-                    if (newYear !== viewYear) setViewYear(newYear);
-                    setSelectedDate(null);
-                  }
-                }}
-                className="appearance-none bg-transparent text-[11px] font-semibold text-foreground pr-3 py-0.5 cursor-pointer hover:bg-muted rounded transition outline-none"
-              >
-                {MONTHS.map((m, i) => (
-                  <option key={m} value={i}>{m}</option>
-                ))}
-              </select>
-              <ChevronRight className="absolute right-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 text-muted-foreground pointer-events-none rotate-90" />
-            </div>
-          </div>
+          <button
+            onClick={() => {
+              if (pickerMode === "none") {
+                setPickerYear(viewYear);
+                setPickerMode("selecting");
+              } else {
+                setPickerMode("none");
+              }
+            }}
+            className={`text-[11px] font-semibold text-foreground px-2 py-0.5 rounded hover:bg-muted transition ${pickerMode === "selecting" ? "bg-muted scale-110" : ""}`}
+          >
+            {viewYear}年 {MONTHS[viewMonth]}
+          </button>
           <button onClick={nextMonth} className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-muted"><ChevronRight className="w-4 h-4 text-foreground" /></button>
         </div>
-        <div className="grid grid-cols-7 gap-0.5 mb-1">{WEEKDAYS.map((w) => <div key={w} className="text-center text-[9px] font-medium text-muted-foreground py-0.5">{w}</div>)}</div>
-        <div className="grid grid-cols-7 gap-0.5">
-          {calendarDays.map((day, i) => {
-            if (!day) return <div key={`e-${i}`} />;
-            const isSelected = selectedDate === day.dateKey;
-            return (
-              <button key={day.dateKey} onClick={() => setSelectedDate(isSelected ? null : day.dateKey)}
-                className={`relative aspect-square rounded-lg flex flex-col items-center justify-center text-[11px] transition-all border
-                  ${isSelected ? "bg-accent text-accent-foreground border-accent shadow" : "border-transparent"}
-                  ${!isSelected && day.events.length > 0 ? "bg-muted/40" : ""}
-                  ${!isSelected && day.hasTx && day.events.length === 0 ? "bg-primary/5" : ""}
-                  ${!isSelected ? "hover:bg-muted" : ""}
-                  ${day.isToday && !isSelected ? "ring-1 ring-accent/40" : ""}`}>
-                <span className={`font-medium leading-none ${isSelected ? "text-accent-foreground" : day.isToday ? "text-accent" : "text-foreground"}`}>{day.day}</span>
-                {showProfit && day.hasTx && (
-                  <span className={`text-[8px] tabular-nums mt-0.5 leading-none ${isSelected ? "text-accent-foreground/80" : day.profit >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
-                    {day.profit >= 0 ? "+" : "−"}{Math.abs(day.profit) >= 1000 ? `${(Math.abs(day.profit) / 1000).toFixed(1)}k` : Math.abs(day.profit)}
-                  </span>
-                )}
-                {day.events.length > 0 && (
-                  <div className="absolute bottom-0.5 flex gap-0.5">
-                    {day.events.slice(0, 3).map((e: MarketEvent, ei: number) => (
-                      <div key={ei} className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: isSelected ? "rgba(255,255,255,0.85)" : e.color }} />
-                    ))}
-                  </div>
-                )}
+
+        {/* 日期網格（pickerMode === "none" 時顯示） */}
+        {pickerMode === "none" && (
+          <>
+            <div className="grid grid-cols-7 gap-0.5 mb-1">{WEEKDAYS.map((w) => <div key={w} className="text-center text-[9px] font-medium text-muted-foreground py-0.5">{w}</div>)}</div>
+            <div className="grid grid-cols-7 gap-0.5">
+              {calendarDays.map((day, i) => {
+                if (!day) return <div key={`e-${i}`} />;
+                const isSelected = selectedDate === day.dateKey;
+                return (
+                  <button key={day.dateKey} onClick={() => setSelectedDate(isSelected ? null : day.dateKey)}
+                    className={`relative aspect-square rounded-lg flex flex-col items-center justify-center text-[11px] transition-all border
+                      ${isSelected ? "bg-accent text-accent-foreground border-accent shadow" : "border-transparent"}
+                      ${!isSelected && day.events.length > 0 ? "bg-muted/40" : ""}
+                      ${!isSelected && day.hasTx && day.events.length === 0 ? "bg-primary/5" : ""}
+                      ${!isSelected ? "hover:bg-muted" : ""}
+                      ${day.isToday && !isSelected ? "ring-1 ring-accent/40" : ""}`}>
+                    <span className={`font-medium leading-none ${isSelected ? "text-accent-foreground" : day.isToday ? "text-accent" : "text-foreground"}`}>{day.day}</span>
+                    {showProfit && day.hasTx && (
+                      <span className={`text-[8px] tabular-nums mt-0.5 leading-none ${isSelected ? "text-accent-foreground/80" : day.profit >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                        {day.profit >= 0 ? "+" : "−"}{Math.abs(day.profit) >= 1000 ? `${(Math.abs(day.profit) / 1000).toFixed(1)}k` : Math.abs(day.profit)}
+                      </span>
+                    )}
+                    {day.events.length > 0 && (
+                      <div className="absolute bottom-0.5 flex gap-0.5">
+                        {day.events.slice(0, 3).map((e: MarketEvent, ei: number) => (
+                          <div key={ei} className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: isSelected ? "rgba(255,255,255,0.85)" : e.color }} />
+                        ))}
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        )}
+
+        {/* 日期網格淡出動畫（進入選擇模式時短暫顯示） */}
+        {pickerMode === "selecting" && (
+          <div className="animate-date-fade-out">
+            <div className="grid grid-cols-7 gap-0.5 mb-1 opacity-30">{WEEKDAYS.map((w) => <div key={w} className="text-center text-[9px] font-medium text-muted-foreground py-0.5">{w}</div>)}</div>
+          </div>
+        )}
+
+        {/* 月份選擇面板（pickerMode === "selecting" 時顯示） */}
+        {pickerMode === "selecting" && (
+          <div className="animate-fade-in" style={{ perspective: "600px" }}>
+            {/* 年份切換 */}
+            <div className="flex items-center justify-between mb-2">
+              <button
+                onClick={() => {
+                  setPickerYear(pickerYear - 1);
+                  setYearRollDir("left");
+                  setTimeout(() => setYearRollDir(null), 400);
+                }}
+                className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-muted"
+              >
+                <ChevronLeft className="w-4 h-4 text-foreground" />
               </button>
-            );
-          })}
-        </div>
+              <span
+                key={pickerYear}
+                className={`text-sm font-bold text-foreground ${yearRollDir === "left" ? "animate-year-roll-left" : yearRollDir === "right" ? "animate-year-roll-right" : ""}`}
+                style={{ transformStyle: "preserve-3d" }}
+              >
+                {pickerYear}年
+              </span>
+              <button
+                onClick={() => {
+                  setPickerYear(pickerYear + 1);
+                  setYearRollDir("right");
+                  setTimeout(() => setYearRollDir(null), 400);
+                }}
+                className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-muted"
+              >
+                <ChevronRight className="w-4 h-4 text-foreground" />
+              </button>
+            </div>
+            {/* 3x4 月份網格 — 交錯彈性放大 */}
+            <div className="grid grid-cols-3 gap-1.5" style={{ transformStyle: "preserve-3d" }}>
+              {MONTHS.map((m, i) => {
+                const isCurrent = i === viewMonth && pickerYear === viewYear;
+                const isRippling = rippleMonth === i;
+                return (
+                  <button
+                    key={m}
+                    onClick={() => {
+                      // 漣漪效果
+                      setRippleMonth(i);
+                      // 等 400ms 漣漪動畫完成後切換
+                      setTimeout(() => {
+                        setViewYear(pickerYear);
+                        setViewMonth(i);
+                        setSelectedDate(null);
+                        setRippleMonth(null);
+                        setPickerMode("returning");
+                        // 等 bounce-drop 動畫完成後回到 none
+                        setTimeout(() => setPickerMode("none"), 400);
+                      }, 400);
+                    }}
+                    className={`relative aspect-square rounded-lg flex items-center justify-center text-xs font-medium transition-all overflow-hidden ${
+                      isCurrent ? "bg-accent text-accent-foreground shadow" : "bg-muted/40 text-foreground hover:bg-muted"
+                    }`}
+                    style={{
+                      animation: `monthCellPopIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) ${i * 0.04}s both`,
+                    }}
+                  >
+                    {m}
+                    {isRippling && (
+                      <span
+                        className="absolute inset-0 rounded-lg bg-accent/40 animate-month-ripple"
+                        style={{ transformOrigin: "center" }}
+                      />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* 日期網格彈性落入（pickerMode === "returning" 時顯示） */}
+        {pickerMode === "returning" && (
+          <div className="animate-date-bounce-drop">
+            <div className="grid grid-cols-7 gap-0.5 mb-1">{WEEKDAYS.map((w) => <div key={w} className="text-center text-[9px] font-medium text-muted-foreground py-0.5">{w}</div>)}</div>
+            <div className="grid grid-cols-7 gap-0.5">
+              {calendarDays.map((day, i) => {
+                if (!day) return <div key={`e-${i}`} />;
+                return (
+                  <div key={day.dateKey} className="relative aspect-square rounded-lg flex flex-col items-center justify-center text-[11px]">
+                    <span className="font-medium leading-none text-foreground">{day.day}</span>
+                    {day.events.length > 0 && (
+                      <div className="absolute bottom-0.5 flex gap-0.5">
+                        {day.events.slice(0, 3).map((e: MarketEvent, ei: number) => (
+                          <div key={ei} className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: e.color }} />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </Card>
 
       {/* 選中日期的交易列表 */}
