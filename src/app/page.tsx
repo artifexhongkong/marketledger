@@ -102,7 +102,7 @@ export default function Page() {
             <>
               {/* 頂部 bar — 極簡，logo + 帳號鈕 */}
               <div className="flex-shrink-0 bg-background/95 backdrop-blur-md flex items-center justify-between px-4 h-11">
-                <img src="/logo.png" alt="市集記賬本" className="h-8 w-auto rounded-lg" />
+                <img src="/logo.png" alt="市集記賬本" className="h-9 w-9 object-contain rounded-lg flex-shrink-0" />
                 <button
                   onClick={() => setTab("account")}
                   className="w-8 h-8 rounded-full bg-accent/10 hover:bg-accent/20 flex items-center justify-center border border-accent/15 transition"
