@@ -3,6 +3,8 @@
 import { useState, useMemo, useEffect } from "react";
 import { useAppStore, formatCurrency, CURRENCIES, type MarketEvent, getCategoryInfo, getPaymentMethodInfo } from "@/lib/store";
 import { useAuthStore } from "@/lib/auth-store";
+import { groupTransactions } from "@/lib/tx-group";
+import { TxGroupCard } from "@/components/app/transactions-page";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,6 +36,8 @@ export function MarketsPage() {
   // 用戶備註（持久化到 localStorage）
   const [userNote, setUserNote] = useState("");
   const [noteLoaded, setNoteLoaded] = useState(false);
+  // 日期記錄展開的訂單組
+  const [expandedTxGroup, setExpandedTxGroup] = useState<string | null>(null);
   // 年月選擇抽屜狀態："none" | "opening" | "open" | "closing" | "returning"
   const [drawerState, setDrawerState] = useState<"none" | "open" | "closing" | "returning">("none");
   // 年份切換 — 3D Barrel Roll 觸發 key（改變就重播動畫）
@@ -430,33 +434,18 @@ export function MarketsPage() {
               <p className="text-[11px] text-muted-foreground">這天沒有交易</p>
             </Card>
           ) : (
-            <Card className="divide-y divide-border overflow-hidden">
-              {selectedTxs.map((t) => {
-                const cat = getCategoryInfo(t.category);
-                const pay = t.paymentMethod ? getPaymentMethodInfo(t.paymentMethod, customPaymentMethods) : null;
-                return (
-                  <div key={t.id} className="flex items-center gap-2.5 px-3 py-2.5">
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm flex-shrink-0"
-                      style={{ backgroundColor: (cat?.color || "#6B7280") + "15" }}>
-                      {cat?.icon || "📝"}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <p className="text-xs font-medium text-foreground truncate">{cat?.label || t.category}</p>
-                        {pay && <span className="text-[9px] text-muted-foreground bg-muted px-1 rounded">{pay.label}</span>}
-                      </div>
-                      <p className="text-[10px] text-muted-foreground">
-                        {new Date(t.createdAt).toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit" })}{t.note && ` · ${t.note}`}
-                      </p>
-                    </div>
-                    <span className="text-sm font-bold tabular-nums flex-shrink-0"
-                      style={{ color: t.type === "income" ? "#059669" : "#E11D48" }}>
-                      {t.type === "income" ? "+" : "−"}{t.amount.toLocaleString()}
-                    </span>
-                  </div>
-                );
-              })}
-            </Card>
+            <div className="space-y-2">
+              {groupTransactions(selectedTxs).map((group) => (
+                <TxGroupCard
+                  key={group.id}
+                  group={group}
+                  currency={currency}
+                  compact
+                  isExpanded={expandedTxGroup === group.id}
+                  onToggle={() => setExpandedTxGroup(expandedTxGroup === group.id ? null : group.id)}
+                />
+              ))}
+            </div>
           )}
         </div>
       )}

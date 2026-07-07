@@ -1,18 +1,23 @@
 "use client";
 
+import { useState } from "react";
 import { useAppStore, getDailySummary, formatCurrency, formatDateTime, getCategoryInfo, getPaymentMethodInfo } from "@/lib/store";
+import { groupTransactions } from "@/lib/tx-group";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowUpRight, ArrowDownRight, MapPin, ChevronRight, Receipt, TrendingUp, Wallet } from "lucide-react";
+import { TxGroupCard } from "@/components/app/transactions-page";
 
 export function HomePage() {
   const { transactions, currency, currentMarketId, markets, customPaymentMethods } = useAppStore();
   const summary = getDailySummary(transactions);
   const currentMarket = markets.find((m) => m.id === currentMarketId);
+  const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
 
   const PREVIEW_COUNT = 5;
   const todaySorted = summary.todayTransactions.slice().sort((a, b) => b.createdAt - a.createdAt);
-  const previewToday = todaySorted.slice(0, PREVIEW_COUNT);
+  // 分組後取前 5 組
+  const previewGroups = groupTransactions(todaySorted).slice(0, PREVIEW_COUNT);
   const avgOrder = summary.count > 0 ? Math.round(summary.income / summary.count) : 0;
 
   return (
@@ -80,38 +85,25 @@ export function HomePage() {
           <h2 className="text-sm font-bold text-foreground">今日記錄</h2>
           <Badge variant="secondary" className="text-[10px]">{summary.count} 筆</Badge>
         </div>
-        {previewToday.length === 0 ? (
+        {previewGroups.length === 0 ? (
           <Card className="p-6 text-center border-dashed">
             <p className="text-2xl mb-1">📊</p>
             <p className="text-xs text-muted-foreground">今日還沒有交易</p>
           </Card>
         ) : (
           <>
-            <Card className="divide-y divide-border overflow-hidden">
-              {previewToday.map((t) => {
-                const cat = getCategoryInfo(t.category);
-                const pay = t.paymentMethod ? getPaymentMethodInfo(t.paymentMethod, customPaymentMethods) : null;
-                return (
-                  <div key={t.id} className="flex items-center gap-2.5 px-3 py-2.5">
-                    <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm flex-shrink-0"
-                      style={{ backgroundColor: (cat?.color || "#6B7280") + "15" }}>
-                      {cat?.icon || "📝"}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <p className="text-xs font-medium text-foreground truncate">{cat?.label || t.category}</p>
-                        {pay && <span className="text-[9px] text-muted-foreground bg-muted px-1 rounded">{pay.label}</span>}
-                      </div>
-                      <p className="text-[10px] text-muted-foreground">{formatDateTime(t.createdAt)}{t.note && ` · ${t.note}`}</p>
-                    </div>
-                    <span className="text-sm font-bold tabular-nums flex-shrink-0"
-                      style={{ color: t.type === "income" ? "#059669" : "#E11D48" }}>
-                      {t.type === "income" ? "+" : "−"}{t.amount.toLocaleString()}
-                    </span>
-                  </div>
-                );
-              })}
-            </Card>
+            <div className="space-y-2">
+              {previewGroups.map((group) => (
+                <TxGroupCard
+                  key={group.id}
+                  group={group}
+                  currency={currency}
+                  compact
+                  isExpanded={expandedGroup === group.id}
+                  onToggle={() => setExpandedGroup(expandedGroup === group.id ? null : group.id)}
+                />
+              ))}
+            </div>
             {todaySorted.length > PREVIEW_COUNT && (
               <button onClick={() => window.dispatchEvent(new CustomEvent("navigate-tab", { detail: "transactions" }))}
                 className="w-full mt-1.5 py-2 flex items-center justify-center gap-1 text-[11px] font-medium text-primary bg-card border border-border rounded-lg hover:bg-primary/5">
