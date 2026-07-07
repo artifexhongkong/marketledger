@@ -602,9 +602,8 @@ function PaymentSelector({
                       active={active}
                       manageMode={false}
                       noActiveStyle // 備用支付方式不顯示 active 樣式，保持原色
-                      // 點擊圖示即選用 + 添加到主頁，保持更多開啟
+                      // 點擊圖示只添加到主頁，不自動選中（避免變色）
                       onClick={() => {
-                        setPayment(m as PaymentMethod);
                         togglePaymentVisibility(m);
                       }}
                       onDelete={null}
