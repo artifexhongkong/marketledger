@@ -48,7 +48,9 @@ export function SettingsPage() {
     setVersionStatus("checking");
     setCheckError("");
     try {
-      const res = await fetch(GITHUB_RELEASES_API, { cache: "no-store" });
+      // 加 timestamp 參數避免 GitHub CDN 快取
+      const url = `${GITHUB_RELEASES_API}&_t=${Date.now()}`;
+      const res = await fetch(url, { cache: "no-store" });
       if (!res.ok) {
         if (res.status === 403 || res.status === 429) {
           throw new Error("GitHub API 存取頻率受限，請稍後再試");
