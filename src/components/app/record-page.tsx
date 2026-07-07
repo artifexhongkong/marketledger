@@ -535,8 +535,7 @@ function PaymentSelector({
               onDragEnd={() => { setDragIndex(null); setDragOverIndex(null); }}
               className={`relative transition-all duration-200 ease-out ${dragIndex === vi ? "opacity-30 scale-90" : ""} ${sortMode ? "cursor-move" : ""}`}>
               <PaymentButton2 icon={info.icon} label={shortLabel(info.label)} active={active}
-                manageMode={false} onClick={() => !sortMode && !showMore && setPayment(m as PaymentMethod)} onDelete={null}
-                badge={{ shortLabel: info.shortLabel, color: info.color }} />
+                manageMode={false} onClick={() => !sortMode && !showMore && setPayment(m as PaymentMethod)} onDelete={null} />
               {showMore && !sortMode && (
                 <button onClick={(e) => { e.stopPropagation(); togglePaymentVisibility(m); }}
                   className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-rose-500 text-white flex items-center justify-center shadow-sm z-10 animate-[fadeIn_0.15s_ease-out] text-[13px] leading-none font-bold pb-0.5">
@@ -559,8 +558,7 @@ function PaymentSelector({
               className={`relative transition-all duration-200 ease-out ${dragIndex === vi ? "opacity-30 scale-90" : ""} ${sortMode ? "cursor-move" : ""}`}>
               <PaymentButton2 icon={c.icon} label={shortLabel(c.label)} active={active}
                 manageMode={sortMode} onClick={() => !sortMode && !showMore && setPayment(m)}
-                onDelete={() => { if (confirm(`刪除支付方式「${c.label}」？`)) { deleteCustomPaymentMethod(c.id); if (payment === m) setPayment("cash"); } }}
-                badge={{ shortLabel: c.label.slice(0, 2).toUpperCase(), color: "#6B7280" }} />
+                onDelete={() => { if (confirm(`刪除支付方式「${c.label}」？`)) { deleteCustomPaymentMethod(c.id); if (payment === m) setPayment("cash"); } }} />
               {showMore && !sortMode && (
                 <button onClick={(e) => { e.stopPropagation(); togglePaymentVisibility(`custom_${c.id}`); }}
                   className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-rose-500 text-white flex items-center justify-center shadow-sm z-10 animate-[fadeIn_0.15s_ease-out] text-[13px] leading-none font-bold pb-0.5">
@@ -622,7 +620,6 @@ function PaymentSelector({
                       active={active}
                       manageMode={false}
                       noActiveStyle // 備用支付方式不顯示 active 樣式，保持原色
-                      badge={{ shortLabel: info.shortLabel, color: info.color }}
                       // 點擊圖示只添加到主頁，不自動選中（避免變色）
                       onClick={() => {
                         togglePaymentVisibility(m);
@@ -654,12 +651,11 @@ function PaymentSelector({
 
 // ── 單個支付方式按鈕 ──
 function PaymentButton2({
-  icon, label, active, manageMode, onClick, onDelete, noActiveStyle, badge,
+  icon, label, active, manageMode, onClick, onDelete, noActiveStyle,
 }: {
   icon: string; label: string; active: boolean; manageMode: boolean;
   onClick: () => void; onDelete: (() => void) | null;
   noActiveStyle?: boolean; // 不顯示 active 樣式（用於「更多」面板）
-  badge?: { shortLabel: string; color: string }; // logo 風格圓形 badge
 }) {
   return (
     <div className="relative">
@@ -669,17 +665,7 @@ function PaymentButton2({
             ? "border-accent bg-accent/15 text-accent shadow-sm scale-[1.02]"
             : "border-border bg-card text-foreground hover:border-accent/40"
         } ${manageMode && onDelete ? "opacity-70" : ""}`}>
-        {badge ? (
-          // logo 風格圓形 badge（品牌色背景 + 首字母）
-          <div
-            className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white leading-none"
-            style={{ backgroundColor: badge.color }}
-          >
-            {badge.shortLabel}
-          </div>
-        ) : (
-          <span className="text-base leading-none">{icon}</span>
-        )}
+        <span className="text-base leading-none">{icon}</span>
         <span className={`text-[10px] font-medium leading-none ${active && !noActiveStyle ? "text-accent" : "text-muted-foreground"}`}>{label}</span>
       </button>
       {manageMode && onDelete && (
@@ -857,9 +843,21 @@ function ProductButton({
         s.accumY -= 25;
       }
     } else if (s.timer || s.mode === "idle") {
-      // idle 模式：手指移動了 → 判斷是否要立即進入手勢模式
+      // idle 模式：手指移動了 → 判斷要進入哪種模式
       const dy = e.clientY - s.startY;
       const dx = e.clientX - s.startX;
+
+      // 向左滑超過 40px 且水平為主 → 進入數量輸入模式（優先檢查）
+      if (dx < -40 && Math.abs(dx) > Math.abs(dy) * 1.2) {
+        if (s.timer) { clearTimeout(s.timer); s.timer = null; }
+        // 捕獲指標，避免後續 pointermove 干擾
+        if (elRef.current) { try { elRef.current.setPointerCapture(e.pointerId); } catch {} s.captured = true; }
+        s.mode = "qtyInput";
+        setQtyInputValue("");
+        haptic("tap");
+        rerender();
+        return;
+      }
 
       // 垂直移動超過 12px 且垂直為主 → 立即進入手勢模式（不用等 400ms）
       if (Math.abs(dy) > 12 && Math.abs(dy) > Math.abs(dx) * 1.2) {
@@ -877,19 +875,9 @@ function ProductButton({
         return;
       }
 
-      // 水平移動超過 10px → 取消長按（讓瀏覽器捲動或使用者取消）
-      if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) {
+      // 水平移動超過 10px（向右）→ 取消長按（讓瀏覽器捲動或使用者取消）
+      if (dx > 10 && Math.abs(dx) > Math.abs(dy)) {
         if (s.timer) { clearTimeout(s.timer); s.timer = null; }
-      }
-
-      // 向左滑超過 60px 且水平為主 → 進入數量輸入模式
-      if (dx < -60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
-        if (s.timer) { clearTimeout(s.timer); s.timer = null; }
-        s.mode = "qtyInput";
-        setQtyInputValue("");
-        haptic("tap");
-        rerender();
-        return;
       }
     }
   };

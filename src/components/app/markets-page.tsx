@@ -564,36 +564,33 @@ function AgodaDatePicker({ startDate, endDate, onSelect }: { startDate: string; 
   }, [calYear, calMonth, tempStart, tempEnd]);
 
   const handleDayClick = (key: string) => {
-    // 狀態機（用 selecting + 是否已有範圍判斷）：
-    //   selecting === "end" → 正在選結束日
-    //     - key < start → 重設 start = end = key（重新開始）
-    //     - key === start → 單日市集，完成（selecting 回 start）
-    //     - key > start → 完成 end，selecting 回 start
-    //   selecting === "start" 且已有完整範圍（start !== end）→ 「已選好」狀態
-    //     - 點到 start 或 end → 清除變未選
-    //     - 點其他日期 → 重設 start = end = key（開始新選擇）
-    //   selecting === "start" 且未選過（start === end）→ 初次選
-    //     - 設 start = end = key，selecting 進入 end
-
+    // 狀態機（用 selecting + 是否已有範圍判斷）
     const hasRange = tempStart !== "" && tempEnd !== "" && tempEnd !== tempStart;
+    let newStart = tempStart;
+    let newEnd = tempEnd;
 
     if (selecting === "end") {
       if (key < tempStart) {
+        newStart = key; newEnd = key;
         setTempStart(key); setTempEnd(key);
       } else {
+        newEnd = key;
         setTempEnd(key); setSelecting("start");
       }
     } else {
       // selecting === "start"
       if (hasRange && (key === tempStart || key === tempEnd)) {
         // 已選好一輪，點到邊界 → 清除
+        newStart = ""; newEnd = "";
         setTempStart(""); setTempEnd("");
       } else {
         // 初次或重設
+        newStart = key; newEnd = key;
         setTempStart(key); setTempEnd(key); setSelecting("end");
       }
     }
-    onSelect(tempStart, tempEnd);
+    // 用新值通知父元件（不能用 tempStart/tempEnd，因為 setState 還沒生效）
+    onSelect(newStart, newEnd);
   };
 
   const prev = () => { if (calMonth === 0) { setCalMonth(11); setCalYear(calYear - 1); } else setCalMonth(calMonth - 1); };
@@ -662,15 +659,15 @@ function EventFormModal({ onClose, onSave, currency, editingEvent }: { onClose: 
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
         </div>
 
-        <div><p className="text-xs font-medium text-muted-foreground mb-1">市集名稱 *</p><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="例如：PMQ 週末市集" className="bg-background h-9 text-sm" /></div>
-
-        {/* Agoda 風格日期選擇 */}
+        {/* Agoda 風格日期選擇 — 移到最上面 */}
         <div>
           <p className="text-xs font-medium text-muted-foreground mb-1">日期範圍</p>
           <div className="bg-muted/30 rounded-lg p-3">
             <AgodaDatePicker startDate={startDate} endDate={endDate} onSelect={(s, e) => { setStartDate(s); setEndDate(e); }} />
           </div>
         </div>
+
+        <div><p className="text-xs font-medium text-muted-foreground mb-1">市集名稱 *</p><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="例如：PMQ 週末市集" className="bg-background h-9 text-sm" /></div>
 
         <div><p className="text-xs font-medium text-muted-foreground mb-1">地點</p><Input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="例如：中環 PMQ" className="bg-background h-9 text-sm" /></div>
 
