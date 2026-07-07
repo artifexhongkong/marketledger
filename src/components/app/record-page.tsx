@@ -79,7 +79,7 @@ interface ToastState {
 }
 
 function RecordView() {
-  const { currency, products, currentMarketId, markets, addTransaction, setCurrentMarket, deleteTransaction, customPaymentMethods, currentOrder, addOrderItem, removeOrderItem, updateOrderItemQty, clearOrder } = useAppStore();
+  const { currency, products, currentMarketId, markets, addTransaction, setCurrentMarket, deleteTransaction, customPaymentMethods, currentOrder, addOrderItem, removeOrderItem, updateOrderItemQty, updateOrderItemNote, clearOrder } = useAppStore();
   const [payment, setPayment] = useState<PaymentMethod>("cash");
 
   // 取得支付方式標籤（支援自訂）
@@ -102,6 +102,7 @@ function RecordView() {
   // 修改數量的訂單項目 ID
   const [editingOrderItem, setEditingOrderItem] = useState<string | null>(null);
   const [editQtyValue, setEditQtyValue] = useState("");
+  const [editNoteValue, setEditNoteValue] = useState("");
 
   const currentMarket = markets.find((m) => m.id === currentMarketId);
 
@@ -291,12 +292,15 @@ function RecordView() {
                       {item.color && (
                         <div className="w-2 h-8 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
                       )}
-                      {/* 商品名 + 數量 */}
+                      {/* 商品名 + 數量 + 備註 */}
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-medium text-foreground truncate">{item.name}</p>
                         <p className="text-[10px] text-muted-foreground">
                           {formatCurrency(item.price, currency)} × {item.qty}
                         </p>
+                        {item.note && (
+                          <p className="text-[10px] text-accent truncate mt-0.5">📝 {item.note}</p>
+                        )}
                       </div>
                       {/* 小計 */}
                       <span className="text-xs font-bold tabular-nums text-primary flex-shrink-0">
@@ -318,6 +322,7 @@ function RecordView() {
                         onClick={() => {
                           setEditingOrderItem(item.orderItemId);
                           setEditQtyValue(String(item.qty));
+                          setEditNoteValue(item.note || "");
                         }}
                         className="w-6 h-6 rounded-md flex items-center justify-center text-accent hover:bg-accent/10 transition flex-shrink-0"
                         aria-label="修改數量"
@@ -337,12 +342,12 @@ function RecordView() {
               </div>
             )}
 
-            {/* 修改數量 Modal */}
+            {/* 修改數量 + 備註 Modal */}
             {editingOrderItem && (
               <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setEditingOrderItem(null)}>
-                <div className="bg-card rounded-xl p-4 w-full max-w-[240px] space-y-3" onClick={(e) => e.stopPropagation()}>
+                <div className="bg-card rounded-xl p-4 w-full max-w-[280px] space-y-3" onClick={(e) => e.stopPropagation()}>
                   <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-semibold text-foreground">修改數量</h4>
+                    <h4 className="text-sm font-semibold text-foreground">修改項目</h4>
                     <button onClick={() => setEditingOrderItem(null)} className="text-muted-foreground hover:text-foreground">
                       <X className="w-4 h-4" />
                     </button>
@@ -350,36 +355,42 @@ function RecordView() {
                   {(() => {
                     const item = currentOrder.find((i) => i.orderItemId === editingOrderItem);
                     if (!item) return null;
+                    const qty = parseInt(editQtyValue) || 0;
                     return (
                       <>
-                        <p className="text-xs text-muted-foreground">{item.name}</p>
+                        <p className="text-xs font-medium text-foreground">{item.name}</p>
                         <p className="text-[10px] text-muted-foreground">單價 {formatCurrency(item.price, currency)}</p>
-                        <Input
-                          type="text"
-                          inputMode="numeric"
-                          value={editQtyValue}
-                          onChange={(e) => setEditQtyValue(e.target.value.replace(/[^0-9]/g, ""))}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              const qty = parseInt(editQtyValue) || 0;
-                              if (qty > 0) {
-                                updateOrderItemQty(editingOrderItem, qty);
-                                haptic("tap");
-                              }
-                              setEditingOrderItem(null);
-                            }
-                          }}
-                          autoFocus
-                          className="bg-background text-center text-lg font-bold"
-                        />
+                        {/* 數量 */}
+                        <div>
+                          <label className="text-[11px] text-muted-foreground mb-1 block">數量</label>
+                          <Input
+                            type="text"
+                            inputMode="numeric"
+                            value={editQtyValue}
+                            onChange={(e) => setEditQtyValue(e.target.value.replace(/[^0-9]/g, ""))}
+                            autoFocus
+                            className="bg-background text-center text-lg font-bold h-10"
+                          />
+                        </div>
+                        {/* 備註 */}
+                        <div>
+                          <label className="text-[11px] text-muted-foreground mb-1 block">備註（選填）</label>
+                          <Textarea
+                            value={editNoteValue}
+                            onChange={(e) => setEditNoteValue(e.target.value)}
+                            placeholder="例如：客人要求、客製化、不加蔥…"
+                            className="bg-background text-xs min-h-[50px] resize-none"
+                            maxLength={100}
+                          />
+                        </div>
                         <p className="text-[11px] text-muted-foreground text-center">
-                          小計：{formatCurrency(item.price * (parseInt(editQtyValue) || 0), currency)}
+                          小計：{formatCurrency(item.price * qty, currency)}
                         </p>
                         <Button
                           onClick={() => {
-                            const qty = parseInt(editQtyValue) || 0;
                             if (qty > 0) {
                               updateOrderItemQty(editingOrderItem, qty);
+                              updateOrderItemNote(editingOrderItem, editNoteValue);
                               haptic("tap");
                             }
                             setEditingOrderItem(null);

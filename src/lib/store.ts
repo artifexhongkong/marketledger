@@ -58,6 +58,7 @@ export interface OrderItem {
   price: number; // 單價
   qty: number;
   color?: string;
+  note?: string; // 備註（例如：客人要求、客製化）
   createdAt: number;
 }
 
@@ -268,6 +269,7 @@ interface AppStore {
   addOrderItem: (txId: string, product: { id: string; name: string; price: number; color?: string }, qty: number) => void;
   removeOrderItem: (orderItemId: string) => void;
   updateOrderItemQty: (orderItemId: string, qty: number) => void;
+  updateOrderItemNote: (orderItemId: string, note: string) => void;
   clearOrder: () => void;
   addProduct: (p: Omit<Product, "id">) => void;
   updateProduct: (id: string, data: Partial<Omit<Product, "id">>) => void;
@@ -358,14 +360,33 @@ export const useAppStore = create<AppStore>()(
         set((s) => {
           const item = s.currentOrder.find((i) => i.orderItemId === orderItemId);
           if (!item || qty < 1) return {};
-          // 更新訂單項目數量 + 對應交易的金額
+          // 更新訂單項目數量 + 對應交易的金額和備註
+          const noteSuffix = item.note ? ` · ${item.note}` : "";
           return {
             currentOrder: s.currentOrder.map((i) =>
               i.orderItemId === orderItemId ? { ...i, qty } : i
             ),
             transactions: s.transactions.map((t) =>
               t.id === item.txId
-                ? { ...t, amount: item.price * qty, note: qty > 1 ? `${item.name} x${qty}` : item.name }
+                ? { ...t, amount: item.price * qty, note: qty > 1 ? `${item.name} x${qty}${noteSuffix}` : `${item.name}${noteSuffix}` }
+                : t
+            ),
+          };
+        }),
+
+      updateOrderItemNote: (orderItemId, note) =>
+        set((s) => {
+          const item = s.currentOrder.find((i) => i.orderItemId === orderItemId);
+          if (!item) return {};
+          // 更新訂單項目備註 + 對應交易的 note
+          const noteSuffix = note.trim() ? ` · ${note.trim()}` : "";
+          return {
+            currentOrder: s.currentOrder.map((i) =>
+              i.orderItemId === orderItemId ? { ...i, note: note.trim() || undefined } : i
+            ),
+            transactions: s.transactions.map((t) =>
+              t.id === item.txId
+                ? { ...t, note: item.qty > 1 ? `${item.name} x${item.qty}${noteSuffix}` : `${item.name}${noteSuffix}` }
                 : t
             ),
           };
