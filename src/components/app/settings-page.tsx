@@ -9,7 +9,7 @@ import {
   Globe, Download, Trash2, Info, Coins,
   ChevronRight, FileSpreadsheet, FileJson,
   RefreshCw, DownloadCloud, LogOut, CheckCircle2, AlertCircle, Loader2,
-  Vibrate,
+  Vibrate, Moon,
   type LucideIcon,
 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
@@ -31,6 +31,7 @@ export function SettingsPage() {
     transactions, clearAll,
     hapticEnabled, hapticStrength,
     setHapticEnabled, setHapticStrength,
+    darkMode, setDarkMode,
   } = useAppStore();
   const { testUsername, testLogout } = useAuthStore();
 
@@ -237,6 +238,29 @@ export function SettingsPage() {
               </button>
             </div>
           )}
+        </div>
+
+        {/* Dark Mode 開關 */}
+        <div className="px-4 py-3 flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-slate-700 flex items-center justify-center flex-shrink-0">
+            <Moon className="w-4 h-4 text-slate-300" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-foreground">深色模式</p>
+            <p className="text-[10px] text-muted-foreground">護眼模式，夜間使用更舒適</p>
+          </div>
+          <button
+            onClick={() => {
+              const next = !darkMode;
+              setDarkMode(next);
+              if (typeof document !== "undefined") {
+                document.documentElement.classList.toggle("dark", next);
+              }
+            }}
+            className={`w-10 h-6 rounded-full transition flex items-center ${darkMode ? "bg-accent justify-end" : "bg-muted-foreground/30 justify-start"}`}
+          >
+            <div className="w-5 h-5 rounded-full bg-white shadow-sm mx-0.5" />
+          </button>
         </div>
       </SettingsGroup>
 

@@ -32,6 +32,7 @@ export default function Page() {
   const cleanupOrphanedTxs = useAppStore((s) => s.cleanupOrphanedTxs);
   const migrateCategories = useAppStore((s) => s.migrateCategories);
   const currencyInitialized = useAppStore((s) => s.currencyInitialized);
+  const darkMode = useAppStore((s) => s.darkMode);
   const { testAuthed, user } = useAuthStore();
 
   useEffect(() => {
@@ -39,7 +40,11 @@ export default function Page() {
     migrateCategories();
     cleanupOrphanedTxs();
     seedDemo();
-  }, [seedDemo, cleanupOrphanedTxs, migrateCategories]);
+    // 同步 dark mode class
+    if (typeof document !== "undefined") {
+      document.documentElement.classList.toggle("dark", darkMode);
+    }
+  }, [seedDemo, cleanupOrphanedTxs, migrateCategories, darkMode]);
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -97,9 +102,7 @@ export default function Page() {
             <>
               {/* 頂部 bar — 極簡，logo + 帳號鈕 */}
               <div className="flex-shrink-0 bg-background/95 backdrop-blur-md flex items-center justify-between px-4 h-11">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-sm">
-                  <Store className="w-4 h-4 text-accent" strokeWidth={2.4} />
-                </div>
+                <img src="/logo.png" alt="市集記賬本" className="h-8 w-auto rounded-lg" />
                 <button
                   onClick={() => setTab("account")}
                   className="w-8 h-8 rounded-full bg-accent/10 hover:bg-accent/20 flex items-center justify-center border border-accent/15 transition"

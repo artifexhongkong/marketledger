@@ -23,9 +23,9 @@ export interface CustomPaymentMethod {
 }
 export type CategoryId =
   | "sales" | "other_income"
-  | "rent" | "stock" | "misc" | "other_expense"
+  | "rent" | "stock" | "transport" | "food" | "packaging" | "misc" | "other_expense"
   // 舊版分類 ID（保留相容性，會被 CATEGORY_MIGRATION 自動轉成新版）
-  | "ingredients" | "packaging" | "equipment" | "utilities" | "transport" | "marketing";
+  | "ingredients" | "equipment" | "utilities" | "marketing";
 
 export interface Transaction {
   id: string;
@@ -110,18 +110,20 @@ export const CATEGORIES: { id: CategoryId; label: string; icon: string; type: Tr
   { id: "other_income", label: "其他收入", icon: "➕", type: "income", color: "#10B981" },
   { id: "rent", label: "攤位費", icon: "🏪", type: "expense", color: "#DC2626" },
   { id: "stock", label: "進貨", icon: "📦", type: "expense", color: "#F59E0B" },
-  { id: "misc", label: "雜費", icon: "💡", type: "expense", color: "#0891B2" },
-  { id: "other_expense", label: "其他", icon: "📝", type: "expense", color: "#6B7280" },
+  { id: "transport", label: "交通", icon: "🚌", type: "expense", color: "#7C3AED" },
+  { id: "food", label: "餐飲", icon: "🍜", type: "expense", color: "#E11D48" },
+  { id: "packaging", label: "包裝材料", icon: "🏷️", type: "expense", color: "#0891B2" },
+  { id: "misc", label: "雜費", icon: "💡", type: "expense", color: "#6B7280" },
+  { id: "other_expense", label: "其他", icon: "📝", type: "expense", color: "#9CA3AF" },
 ];
 
 // 舊分類 ID → 新分類 ID 映射（用於資料遷移與顯示相容）
 export const CATEGORY_MIGRATION: Record<string, string> = {
   ingredients: "stock",  // 食材 → 進貨
-  packaging: "stock",    // 包裝 → 進貨
   equipment: "stock",    // 設備 → 進貨
   utilities: "misc",     // 水電雜費 → 雜費
-  transport: "misc",     // 交通 → 雜費
   marketing: "misc",     // 行銷 → 雜費
+  // 舊版 packaging（包裝）現在新版也有 packaging，不用遷移
 };
 
 /**
@@ -248,6 +250,7 @@ interface AppStore {
   // 震動回饋設定
   hapticEnabled: boolean;
   hapticStrength: "light" | "medium" | "strong";
+  darkMode: boolean;
   // Data
   transactions: Transaction[];
   products: Product[];
@@ -264,6 +267,7 @@ interface AppStore {
   setCurrentMarket: (id: string | null) => void;
   setHapticEnabled: (enabled: boolean) => void;
   setHapticStrength: (strength: "light" | "medium" | "strong") => void;
+  setDarkMode: (enabled: boolean) => void;
   addTransaction: (t: Omit<Transaction, "id" | "createdAt">) => string;
   deleteTransaction: (id: string) => void;
   clearAll: () => void;
@@ -298,6 +302,7 @@ export const useAppStore = create<AppStore>()(
       demoSeeded: false,
       hapticEnabled: true,
       hapticStrength: "medium",
+      darkMode: false,
       transactions: [],
       products: [],
       markets: DEFAULT_MARKETS,
@@ -312,6 +317,7 @@ export const useAppStore = create<AppStore>()(
       setCurrentMarket: (id) => set({ currentMarketId: id }),
       setHapticEnabled: (enabled) => set({ hapticEnabled: enabled }),
       setHapticStrength: (strength) => set({ hapticStrength: strength }),
+      setDarkMode: (enabled) => set({ darkMode: enabled }),
 
       addTransaction: (t) => {
         const id = `tx_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;

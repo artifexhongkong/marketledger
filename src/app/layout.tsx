@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { useAppStore } from "@/lib/store";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -20,8 +21,14 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // 在 client 端透過 useEffect 切換 dark class
   return (
     <html lang="zh-Hant" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{
+          __html: `try{var d=JSON.parse(localStorage.getItem('marketledger-preview')||'{}');if(d.state&&d.state.darkMode){document.documentElement.classList.add('dark');}}catch(e){}`
+        }} />
+      </head>
       <body
         className={`${inter.variable} font-sans antialiased bg-background text-foreground`}
       >

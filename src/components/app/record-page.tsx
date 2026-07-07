@@ -836,7 +836,7 @@ function AddPaymentModal({ onClose, onAdd }: { onClose: () => void; onAdd: (labe
         </div>
         <div>
           <p className="text-xs font-medium text-muted-foreground mb-1.5">圖示</p>
-          <div className="grid grid-cols-8 gap-1">
+          <div className="grid grid-cols-6 gap-1.5">
             {PAYMENT_ICONS.map((ic) => (
               <button key={ic} onClick={() => setIcon(ic)}
                 className={`aspect-square rounded-lg flex items-center justify-center text-lg transition ${icon === ic ? "bg-primary/15 ring-2 ring-primary" : "bg-muted hover:bg-muted/70"}`}>{ic}</button>
@@ -1388,7 +1388,7 @@ function ProductsView() {
               {showColorPalette && (
                 <div className="mt-2 p-2.5 bg-muted/40 rounded-lg animate-[fadeIn_0.15s_ease-out]">
                   <p className="text-[10px] text-muted-foreground mb-1.5">飽和色</p>
-                  <div className="grid grid-cols-8 gap-1 mb-2">
+                  <div className="grid grid-cols-6 gap-1.5 mb-2">
                     {EXTENDED_COLORS.map((c) => (
                       <button
                         key={c}
