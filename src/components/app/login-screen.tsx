@@ -55,7 +55,7 @@ export function LoginScreen() {
         <div className="absolute top-0 left-0 right-0 h-48 bg-gradient-to-br from-primary/8 via-accent/5 to-transparent pointer-events-none" />
         <div className="relative flex flex-col items-center">
           {/* Logo icon */}
-          <img src="/logo.png" alt="市集記賬本" className="w-16 h-16 rounded-2xl shadow-lg mb-4 object-cover" />
+          <img src="/logo.png" alt="市集記賬本" className="w-16 h-16 shadow-lg mb-4 object-contain" />
           <h1 className="text-2xl font-bold text-foreground tracking-tight">市集記賬本</h1>
           <p className="text-xs text-muted-foreground mt-1 tracking-wide">MarketLedger · 測試版</p>
         </div>
