@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { Home, PencilLine, ClipboardList, Settings as SettingsIcon, MapPin } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { useAuthStore } from "@/lib/auth-store";
-import { getExchangeRates } from "@/lib/exchange-rates";
 import { HomePage } from "@/components/app/home-page";
 import { RecordPage } from "@/components/app/record-page";
 import { TransactionsPage } from "@/components/app/transactions-page";
@@ -30,7 +29,6 @@ export default function Page() {
   const seedDemo = useAppStore((s) => s.seedDemo);
   const cleanupOrphanedTxs = useAppStore((s) => s.cleanupOrphanedTxs);
   const migrateCategories = useAppStore((s) => s.migrateCategories);
-  const setExchangeRates = useAppStore((s) => s.setExchangeRates);
   const currencyInitialized = useAppStore((s) => s.currencyInitialized);
   const { testAuthed } = useAuthStore();
 
@@ -39,11 +37,7 @@ export default function Page() {
     migrateCategories();
     cleanupOrphanedTxs();
     seedDemo();
-    // 載入即時匯率
-    getExchangeRates().then((rates) => {
-      if (rates) setExchangeRates(rates);
-    });
-  }, [seedDemo, cleanupOrphanedTxs, migrateCategories, setExchangeRates]);
+  }, [seedDemo, cleanupOrphanedTxs, migrateCategories]);
 
   useEffect(() => {
     const handler = (e: Event) => {

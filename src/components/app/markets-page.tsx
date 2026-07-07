@@ -4,7 +4,6 @@ import { useState, useMemo, useEffect } from "react";
 import { useAppStore, formatCurrency, CURRENCIES, type MarketEvent, getCategoryInfo, getPaymentMethodInfo } from "@/lib/store";
 import { useAuthStore } from "@/lib/auth-store";
 import { groupTransactions } from "@/lib/tx-group";
-import { useFormatCurrency } from "@/lib/exchange-rates";
 import { TxGroupCard } from "@/components/app/transactions-page";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -27,7 +26,6 @@ function parseDateKey(key: string) {
 export function MarketsPage() {
   const { marketEvents, addMarketEvent, deleteMarketEvent, updateMarketEvent, currency, transactions, customPaymentMethods } = useAppStore();
   const { user } = useAuthStore();
-  const fc = useFormatCurrency();
   const [showForm, setShowForm] = useState(false);
   const [editingEvent, setEditingEvent] = useState<MarketEvent | null>(null);
   const [viewYear, setViewYear] = useState(new Date().getFullYear());
@@ -224,19 +222,19 @@ export function MarketsPage() {
           <div>
             <p className="text-[11px] text-primary-foreground/60 uppercase tracking-wider">{viewYear}年 {MONTHS[viewMonth]}</p>
             <p className="text-2xl font-bold tabular-nums mt-0.5">
-              {monthSummary.profit >= 0 ? "+" : "−"}{fc(Math.abs(monthSummary.profit))}
+              {monthSummary.profit >= 0 ? "+" : "−"}{formatCurrency(Math.abs(monthSummary.profit), currency)}
             </p>
           </div>
           <div className="text-right space-y-1">
             <div className="flex items-center gap-1 justify-end">
               <ArrowUpRight className="w-3 h-3 text-emerald-300" />
               <span className="text-[11px] text-primary-foreground/60">收入</span>
-              <span className="text-xs font-semibold tabular-nums">{fc(monthSummary.income)}</span>
+              <span className="text-xs font-semibold tabular-nums">{formatCurrency(monthSummary.income, currency)}</span>
             </div>
             <div className="flex items-center gap-1 justify-end">
               <ArrowDownRight className="w-3 h-3 text-rose-300" />
               <span className="text-[11px] text-primary-foreground/60">支出</span>
-              <span className="text-xs font-semibold tabular-nums">{fc(monthSummary.expense)}</span>
+              <span className="text-xs font-semibold tabular-nums">{formatCurrency(monthSummary.expense, currency)}</span>
             </div>
             <p className="text-[11px] text-primary-foreground/60">{monthSummary.count} 筆交易</p>
           </div>
@@ -436,7 +434,7 @@ export function MarketsPage() {
             </div>
             {selectedSummary && selectedSummary.count > 0 && (
               <span className={`text-xs font-bold tabular-nums ${selectedSummary.profit >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
-                {selectedSummary.profit >= 0 ? "+" : "−"}{fc(Math.abs(selectedSummary.profit))}
+                {selectedSummary.profit >= 0 ? "+" : "−"}{formatCurrency(Math.abs(selectedSummary.profit), currency)}
               </span>
             )}
           </div>
@@ -502,7 +500,6 @@ export function MarketsPage() {
 }
 
 function EventCard({ event, currency, onEdit, onDelete }: { event: MarketEvent; currency: string; onEdit: () => void; onDelete: () => void }) {
-  const fc = useFormatCurrency();
   const [expanded, setExpanded] = useState(false);
   const days = Math.ceil((parseDateKey(event.endDate).getTime() - parseDateKey(event.startDate).getTime()) / 86400000) + 1;
   const dailyFee = event.feeType === "daily" ? event.boothFee : Math.round(event.boothFee / days);
@@ -518,7 +515,7 @@ function EventCard({ event, currency, onEdit, onDelete }: { event: MarketEvent; 
               <span className="text-[10px] text-muted-foreground flex items-center gap-0.5"><Calendar className="w-2.5 h-2.5" />{event.startDate === event.endDate ? event.startDate : `${event.startDate.slice(5)} ~ ${event.endDate.slice(5)}`}</span>
               {event.location && <span className="text-[10px] text-muted-foreground flex items-center gap-0.5"><MapPin className="w-2.5 h-2.5" />{event.location}</span>}
             </div>
-            {event.boothFee > 0 && <p className="text-[10px] text-muted-foreground mt-0.5">攤位費 {fc(dailyFee)}{event.feeType === "daily" ? "/天" : ""}<span className="text-muted-foreground/60"> · 共 {fc(totalFee)}</span></p>}
+            {event.boothFee > 0 && <p className="text-[10px] text-muted-foreground mt-0.5">攤位費 {formatCurrency(dailyFee, currency as any)}{event.feeType === "daily" ? "/天" : ""}<span className="text-muted-foreground/60"> · 共 {formatCurrency(totalFee, currency as any)}</span></p>}
           </div>
           <ChevronRight className={`w-4 h-4 text-muted-foreground transition-transform ${expanded ? "rotate-90" : ""}`} />
         </div>

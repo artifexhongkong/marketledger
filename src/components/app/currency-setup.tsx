@@ -1,25 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useAppStore, CURRENCIES, type CurrencyCode } from "@/lib/store";
-import { getExchangeRates, getRateDisplay } from "@/lib/exchange-rates";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Check, Globe } from "lucide-react";
 
 export function CurrencySetup() {
-  const { currency, setCurrency, setCurrencyInitialized, setExchangeRates } = useAppStore();
+  const { currency, setCurrency, setCurrencyInitialized } = useAppStore();
   const [selected, setSelected] = useState<CurrencyCode>(currency || "HKD");
-  const [rates, setRates] = useState<Record<string, number> | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    getExchangeRates().then((r) => {
-      setRates(r);
-      if (r) setExchangeRates(r);
-      setLoading(false);
-    });
-  }, []);
 
   const handleConfirm = () => {
     setCurrency(selected);
@@ -38,15 +26,6 @@ export function CurrencySetup() {
           選擇你主要使用的貨幣，之後可隨時在設定中更改
         </p>
       </div>
-
-      {/* 匯率狀態 */}
-      {loading ? (
-        <p className="text-[11px] text-muted-foreground text-center mb-3">正在取得即時匯率...</p>
-      ) : rates ? (
-        <p className="text-[11px] text-emerald-600 text-center mb-3">✓ 已取得即時匯率</p>
-      ) : (
-        <p className="text-[11px] text-amber-600 text-center mb-3">無法取得匯率，將以港幣顯示</p>
-      )}
 
       {/* 貨幣選擇 */}
       <div className="flex-1 overflow-y-auto">
@@ -69,13 +48,8 @@ export function CurrencySetup() {
                   {isSelected && <Check className="w-4 h-4 text-accent" strokeWidth={3} />}
                 </div>
                 <p className="text-xs font-semibold text-foreground">{code}</p>
-                {rates && code !== "HKD" && rates[code] && (
-                  <p className="text-[9px] text-muted-foreground mt-0.5">
-                    1 HKD = {rates[code].toFixed(2)} {code}
-                  </p>
-                )}
                 {code === "HKD" && (
-                  <p className="text-[9px] text-muted-foreground mt-0.5">基準貨幣</p>
+                  <p className="text-[9px] text-muted-foreground mt-0.5">預設貨幣</p>
                 )}
               </button>
             );
