@@ -81,13 +81,20 @@ export function SettingsPage() {
     checkUpdate();
   }, [checkUpdate]);
 
-  const handleUpdate = () => {
+  const handleUpdate = async () => {
     if (!latestRelease) return;
     // 找出 APK 下載連結
     const apkAsset = latestRelease.assets.find((a) => a.name.endsWith(".apk"));
     const url = apkAsset?.browser_download_url || latestRelease.html_url;
-    // 在新視窗開啟下載頁
-    window.open(url, "_blank");
+    // 在原生瀏覽器打開下載連結（自動下載 + 提示安裝）
+    try {
+      // 動態載入 Capacitor Browser（web 環境 fallback 到 window.open）
+      const { Browser } = await import("@capacitor/browser");
+      await Browser.open({ url });
+    } catch {
+      // web 環境 fallback
+      window.open(url, "_blank");
+    }
   };
 
   const exportData = (format: "csv" | "json") => {
