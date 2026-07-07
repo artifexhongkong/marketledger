@@ -259,6 +259,8 @@ interface AppStore {
   hapticEnabled: boolean;
   hapticStrength: "light" | "medium" | "strong";
   darkMode: boolean;
+  language: string; // 語言代碼：zh-TW / zh-CN / en / th / ms
+  languageInitialized: boolean; // 首次使用提示
   // Data
   transactions: Transaction[];
   products: Product[];
@@ -278,6 +280,8 @@ interface AppStore {
   setHapticEnabled: (enabled: boolean) => void;
   setHapticStrength: (strength: "light" | "medium" | "strong") => void;
   setDarkMode: (enabled: boolean) => void;
+  setLanguage: (lang: string) => void;
+  setLanguageInitialized: (v: boolean) => void;
   addTransaction: (t: Omit<Transaction, "id" | "createdAt">) => string;
   deleteTransaction: (id: string) => void;
   clearAll: () => void;
@@ -317,6 +321,8 @@ export const useAppStore = create<AppStore>()(
       hapticEnabled: true,
       hapticStrength: "medium",
       darkMode: false,
+      language: "zh-TW",
+      languageInitialized: false,
       transactions: [],
       products: [],
       markets: DEFAULT_MARKETS,
@@ -333,6 +339,8 @@ export const useAppStore = create<AppStore>()(
       setHapticEnabled: (enabled) => set({ hapticEnabled: enabled }),
       setHapticStrength: (strength) => set({ hapticStrength: strength }),
       setDarkMode: (enabled) => set({ darkMode: enabled }),
+      setLanguage: (lang) => set({ language: lang }),
+      setLanguageInitialized: (v) => set({ languageInitialized: v }),
 
       addTransaction: (t) => {
         const id = `tx_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;

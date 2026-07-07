@@ -3,6 +3,7 @@
 import { useAppStore, CURRENCIES, type CurrencyCode } from "@/lib/store";
 import { useAuthStore } from "@/lib/auth-store";
 import { APP_VERSION, APP_VERSION_DISPLAY, GITHUB_RELEASES_API, GITHUB_RELEASES_PAGE, compareVersions } from "@/lib/version";
+import { LANGUAGES } from "@/components/app/language-setup";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,10 +33,12 @@ export function SettingsPage() {
     hapticEnabled, hapticStrength,
     setHapticEnabled, setHapticStrength,
     darkMode, setDarkMode,
+    language, setLanguage,
   } = useAppStore();
   const { testUsername, testLogout } = useAuthStore();
 
   const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
+  const [showLanguagePicker, setShowLanguagePicker] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
@@ -181,6 +184,35 @@ export function SettingsPage() {
               >
                 <div className="font-bold">{CURRENCIES[code].symbol}</div>
                 <div className="text-[10px] text-muted-foreground mt-0.5">{code}</div>
+              </button>
+            ))}
+          </div>
+        </SettingsRow>
+
+        {/* 語言設定 */}
+        <SettingsRow
+          icon={Globe}
+          iconBg="bg-blue-100"
+          iconColor="text-blue-600"
+          label="語言"
+          value={LANGUAGES.find((l) => l.code === language)?.native || language}
+          onClick={() => { setShowLanguagePicker(!showLanguagePicker); setShowCurrencyPicker(false); }}
+          expanded={showLanguagePicker}
+        >
+          <div className="grid grid-cols-2 gap-1.5 pt-2">
+            {LANGUAGES.map((lang) => (
+              <button
+                key={lang.code}
+                onClick={() => { setLanguage(lang.code); setShowLanguagePicker(false); }}
+                className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm transition ${
+                  language === lang.code
+                    ? "bg-primary/8 text-primary font-medium"
+                    : "text-foreground hover:bg-muted"
+                }`}
+              >
+                <span className="text-lg">{lang.flag}</span>
+                <span>{lang.native}</span>
+                {language === lang.code && <span className="ml-auto text-primary">✓</span>}
               </button>
             ))}
           </div>

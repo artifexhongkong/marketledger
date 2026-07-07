@@ -13,6 +13,7 @@ import { SettingsPage } from "@/components/app/settings-page";
 import { AuthPage } from "@/components/app/auth-section";
 import { LoginScreen } from "@/components/app/login-screen";
 import { CurrencySetup } from "@/components/app/currency-setup";
+import { LanguageSetup } from "@/components/app/language-setup";
 
 type TabId = "home" | "record" | "transactions" | "markets" | "stats" | "settings" | "account";
 
@@ -32,6 +33,7 @@ export default function Page() {
   const cleanupOrphanedTxs = useAppStore((s) => s.cleanupOrphanedTxs);
   const migrateCategories = useAppStore((s) => s.migrateCategories);
   const currencyInitialized = useAppStore((s) => s.currencyInitialized);
+  const languageInitialized = useAppStore((s) => s.languageInitialized);
   const darkMode = useAppStore((s) => s.darkMode);
   const { testAuthed, user } = useAuthStore();
 
@@ -67,6 +69,21 @@ export default function Page() {
           <div className="hidden md:block absolute top-3 left-1/2 -translate-x-1/2 w-32 h-7 bg-slate-900 rounded-b-2xl z-30" />
           <div className="w-full h-full bg-background md:rounded-[2rem] overflow-hidden flex flex-col relative">
             <LoginScreen />
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  // 已登入但未選擇語言 → 顯示語言選擇畫面
+  if (hydrated && testAuthed && !languageInitialized) {
+    return (
+      <main className="min-h-screen bg-slate-200 flex items-center justify-center overflow-hidden">
+        <div className="relative w-full h-screen md:w-[390px] md:h-[780px] md:max-h-[calc(100vh-4rem)] md:rounded-[2.5rem] md:bg-slate-900 md:p-3 md:shadow-2xl md:shadow-slate-900/30"
+          style={{ maxHeight: "100dvh" }}>
+          <div className="hidden md:block absolute top-3 left-1/2 -translate-x-1/2 w-32 h-7 bg-slate-900 rounded-b-2xl z-30" />
+          <div className="w-full h-full bg-background md:rounded-[2rem] overflow-hidden flex flex-col relative">
+            <LanguageSetup />
           </div>
         </div>
       </main>

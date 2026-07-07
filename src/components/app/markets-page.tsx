@@ -25,7 +25,6 @@ function parseDateKey(key: string) {
 
 export function MarketsPage() {
   const { marketEvents, addMarketEvent, deleteMarketEvent, updateMarketEvent, currency, transactions, customPaymentMethods, stickyNotes, addStickyNote, updateStickyNote, deleteStickyNote } = useAppStore();
-  const { user } = useAuthStore();
   const [showForm, setShowForm] = useState(false);
   const [editingEvent, setEditingEvent] = useState<MarketEvent | null>(null);
   const [viewYear, setViewYear] = useState(new Date().getFullYear());
@@ -177,18 +176,6 @@ export function MarketsPage() {
           <button onClick={handleAdd}
             className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-accent/15 text-accent text-xs font-medium hover:bg-accent/20 transition">
             <Plus className="w-3.5 h-3.5" />新增
-          </button>
-          {/* 帳號鈕 — 只顯示圖示，不含「帳號」文字 */}
-          <button
-            onClick={() => window.dispatchEvent(new CustomEvent("navigate-tab", { detail: "account" }))}
-            className="w-8 h-8 rounded-full bg-accent/10 hover:bg-accent/20 border border-accent/20 transition flex items-center justify-center overflow-hidden flex-shrink-0"
-            aria-label="帳號"
-          >
-            {user?.picture ? (
-              <img src={user.picture} alt="" className="w-full h-full object-cover" />
-            ) : (
-              <User className="w-4 h-4 text-accent" />
-            )}
           </button>
         </div>
       </div>
