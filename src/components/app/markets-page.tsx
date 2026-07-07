@@ -31,13 +31,13 @@ export function MarketsPage() {
   const [showProfit, setShowProfit] = useState(true);
   // 選中的日期（點擊日曆某天 → 顯示該天交易列表）
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  // 年月選擇模式："none" | "selecting" | "returning"
-  const [pickerMode, setPickerMode] = useState<"none" | "selecting" | "returning">("none");
-  // 年份切換動畫方向
-  const [yearRollDir, setYearRollDir] = useState<"left" | "right" | null>(null);
-  // 漣漪效果（點擊的月份索引）
-  const [rippleMonth, setRippleMonth] = useState<number | null>(null);
-  const [pickerYear, setPickerYear] = useState(viewYear); // 選擇模式中的年份（可獨立切換）
+  // 年月選擇抽屜狀態："none" | "opening" | "open" | "closing" | "returning"
+  const [drawerState, setDrawerState] = useState<"none" | "open" | "closing" | "returning">("none");
+  // 年份切換 — 3D Barrel Roll 觸發 key（改變就重播動畫）
+  const [barrelKey, setBarrelKey] = useState(0);
+  // 點擊的月份/日期 cell（觸發凹陷動畫）
+  const [pressedCell, setPressedCell] = useState<string | null>(null);
+  const [pickerYear, setPickerYear] = useState(viewYear); // 抽屜中的年份（可獨立切換）
 
   const prevMonth = () => { if (viewMonth === 0) { setViewMonth(11); setViewYear(viewYear - 1); } else setViewMonth(viewMonth - 1); setSelectedDate(null); };
   const nextMonth = () => { if (viewMonth === 11) { setViewMonth(0); setViewYear(viewYear + 1); } else setViewMonth(viewMonth + 1); setSelectedDate(null); };
@@ -205,42 +205,54 @@ export function MarketsPage() {
       </div>
 
       {/* 日曆 — 同時顯示每日盈虧 + 市集活動彩色點 + 點擊選取日期 */}
-      <Card className="p-3">
-        {/* Header — 點年份月份進入選擇模式 */}
+      <Card className="p-3 relative overflow-visible">
+        {/* Header — 點年份月份拉開抽屜 */}
         <div className="flex items-center justify-between mb-2">
           <button onClick={prevMonth} className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-muted"><ChevronLeft className="w-4 h-4 text-foreground" /></button>
           <button
             onClick={() => {
-              if (pickerMode === "none") {
+              if (drawerState === "none" || drawerState === "returning") {
                 setPickerYear(viewYear);
-                setPickerMode("selecting");
+                setDrawerState("open");
               } else {
-                setPickerMode("none");
+                // 正在開啟中 → 關閉
+                setDrawerState("closing");
+                setTimeout(() => setDrawerState("none"), 350);
               }
             }}
-            className={`text-[11px] font-semibold text-foreground px-2 py-0.5 rounded hover:bg-muted transition ${pickerMode === "selecting" ? "bg-muted scale-110" : ""}`}
+            className={`text-[11px] font-semibold text-foreground px-2 py-0.5 rounded hover:bg-muted transition ${drawerState === "open" ? "bg-muted" : ""}`}
           >
             {viewYear}年 {MONTHS[viewMonth]}
           </button>
           <button onClick={nextMonth} className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-muted"><ChevronRight className="w-4 h-4 text-foreground" /></button>
         </div>
 
-        {/* 日期網格（pickerMode === "none" 時顯示） */}
-        {pickerMode === "none" && (
-          <>
+        {/* 日期網格（drawerState === "none" 或 "returning" 時顯示） */}
+        {(drawerState === "none" || drawerState === "returning") && (
+          <div className={drawerState === "returning" ? "animate-date-bounce-drop" : ""}>
             <div className="grid grid-cols-7 gap-0.5 mb-1">{WEEKDAYS.map((w) => <div key={w} className="text-center text-[9px] font-medium text-muted-foreground py-0.5">{w}</div>)}</div>
             <div className="grid grid-cols-7 gap-0.5">
               {calendarDays.map((day, i) => {
                 if (!day) return <div key={`e-${i}`} />;
                 const isSelected = selectedDate === day.dateKey;
+                const cellKey = `day-${day.dateKey}`;
+                const isPressed = pressedCell === cellKey;
                 return (
-                  <button key={day.dateKey} onClick={() => setSelectedDate(isSelected ? null : day.dateKey)}
-                    className={`relative aspect-square rounded-lg flex flex-col items-center justify-center text-[11px] transition-all border
+                  <button
+                    key={day.dateKey}
+                    onClick={() => {
+                      // 觸發凹陷動畫
+                      setPressedCell(cellKey);
+                      setTimeout(() => setPressedCell(null), 200);
+                      setSelectedDate(isSelected ? null : day.dateKey);
+                    }}
+                    className={`relative aspect-square rounded-lg flex flex-col items-center justify-center text-[11px] transition-all border ${isPressed ? "animate-cell-press" : ""}
                       ${isSelected ? "bg-accent text-accent-foreground border-accent shadow" : "border-transparent"}
                       ${!isSelected && day.events.length > 0 ? "bg-muted/40" : ""}
                       ${!isSelected && day.hasTx && day.events.length === 0 ? "bg-primary/5" : ""}
                       ${!isSelected ? "hover:bg-muted" : ""}
-                      ${day.isToday && !isSelected ? "ring-1 ring-accent/40" : ""}`}>
+                      ${day.isToday && !isSelected ? "ring-1 ring-accent/40" : ""}`}
+                  >
                     <span className={`font-medium leading-none ${isSelected ? "text-accent-foreground" : day.isToday ? "text-accent" : "text-foreground"}`}>{day.day}</span>
                     {showProfit && day.hasTx && (
                       <span className={`text-[8px] tabular-nums mt-0.5 leading-none ${isSelected ? "text-accent-foreground/80" : day.profit >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
@@ -258,112 +270,117 @@ export function MarketsPage() {
                 );
               })}
             </div>
-          </>
-        )}
-
-        {/* 日期網格淡出動畫（進入選擇模式時短暫顯示） */}
-        {pickerMode === "selecting" && (
-          <div className="animate-date-fade-out">
-            <div className="grid grid-cols-7 gap-0.5 mb-1 opacity-30">{WEEKDAYS.map((w) => <div key={w} className="text-center text-[9px] font-medium text-muted-foreground py-0.5">{w}</div>)}</div>
           </div>
         )}
 
-        {/* 月份選擇面板（pickerMode === "selecting" 時顯示） */}
-        {pickerMode === "selecting" && (
-          <div className="animate-fade-in" style={{ perspective: "600px" }}>
-            {/* 年份切換 */}
-            <div className="flex items-center justify-between mb-2">
-              <button
-                onClick={() => {
-                  setPickerYear(pickerYear - 1);
-                  setYearRollDir("left");
-                  setTimeout(() => setYearRollDir(null), 400);
-                }}
-                className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-muted"
-              >
-                <ChevronLeft className="w-4 h-4 text-foreground" />
-              </button>
-              <span
-                key={pickerYear}
-                className={`text-sm font-bold text-foreground ${yearRollDir === "left" ? "animate-year-roll-left" : yearRollDir === "right" ? "animate-year-roll-right" : ""}`}
-                style={{ transformStyle: "preserve-3d" }}
-              >
-                {pickerYear}年
-              </span>
-              <button
-                onClick={() => {
-                  setPickerYear(pickerYear + 1);
-                  setYearRollDir("right");
-                  setTimeout(() => setYearRollDir(null), 400);
-                }}
-                className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-muted"
-              >
-                <ChevronRight className="w-4 h-4 text-foreground" />
-              </button>
+        {/* 年月選擇抽屜 — 從頂部向下滑出（拉開布簾效果） */}
+        {drawerState === "open" && (
+          <div
+            className="absolute left-0 right-0 top-full z-20 animate-drawer-down"
+            style={{
+              maxHeight: "33vh",
+              overflowY: "auto",
+            }}
+          >
+            <div className="bg-card/95 backdrop-blur-md border border-border/60 rounded-b-2xl shadow-xl p-3 mx-1">
+              {/* 年份切換 — 3D Barrel Roll */}
+              <div className="flex items-center justify-between mb-2" style={{ perspective: "400px" }}>
+                <button
+                  onClick={() => {
+                    setPickerYear(pickerYear - 1);
+                    setBarrelKey((k) => k + 1);
+                  }}
+                  className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-muted active:scale-90 transition"
+                >
+                  <ChevronLeft className="w-4 h-4 text-foreground" />
+                </button>
+                <span
+                  key={`${pickerYear}-${barrelKey}`}
+                  className="text-sm font-bold text-foreground animate-barrel-roll"
+                  style={{ transformStyle: "preserve-3d", transformOrigin: "center" }}
+                >
+                  {pickerYear}年
+                </span>
+                <button
+                  onClick={() => {
+                    setPickerYear(pickerYear + 1);
+                    setBarrelKey((k) => k + 1);
+                  }}
+                  className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-muted active:scale-90 transition"
+                >
+                  <ChevronRight className="w-4 h-4 text-foreground" />
+                </button>
+              </div>
+
+              {/* 3x4 月份網格 — 緊湊佈局 */}
+              <div className="grid grid-cols-4 gap-1">
+                {MONTHS.map((m, i) => {
+                  const isCurrent = i === viewMonth && pickerYear === viewYear;
+                  const cellKey = `month-${i}`;
+                  const isPressed = pressedCell === cellKey;
+                  return (
+                    <button
+                      key={m}
+                      onClick={() => {
+                        // 觸發凹陷動畫
+                        setPressedCell(cellKey);
+                        // 等 150ms 凹陷動畫完成後關閉抽屜
+                        setTimeout(() => {
+                          setViewYear(pickerYear);
+                          setViewMonth(i);
+                          setSelectedDate(null);
+                          setPressedCell(null);
+                          // 開始關閉抽屜（Spring 收回）
+                          setDrawerState("closing");
+                          // 等 350ms 收回動畫完成後切到 returning
+                          setTimeout(() => {
+                            setDrawerState("returning");
+                            // 等 350ms bounce-drop 完成後回到 none
+                            setTimeout(() => setDrawerState("none"), 350);
+                          }, 350);
+                        }, 150);
+                      }}
+                      className={`py-2 rounded-md text-xs font-medium transition-all ${isPressed ? "animate-cell-press" : ""} ${
+                        isCurrent ? "bg-accent text-accent-foreground shadow-sm" : "bg-muted/40 text-foreground hover:bg-muted active:scale-95"
+                      }`}
+                      style={{
+                        animation: `monthCellFadeIn 0.25s cubic-bezier(0.25, 1, 0.5, 1) ${i * 0.03}s both`,
+                      }}
+                    >
+                      {m}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-            {/* 3x4 月份網格 — 交錯彈性放大 */}
-            <div className="grid grid-cols-3 gap-1.5" style={{ transformStyle: "preserve-3d" }}>
-              {MONTHS.map((m, i) => {
-                const isCurrent = i === viewMonth && pickerYear === viewYear;
-                const isRippling = rippleMonth === i;
-                return (
-                  <button
-                    key={m}
-                    onClick={() => {
-                      // 漣漪效果
-                      setRippleMonth(i);
-                      // 等 400ms 漣漪動畫完成後切換
-                      setTimeout(() => {
-                        setViewYear(pickerYear);
-                        setViewMonth(i);
-                        setSelectedDate(null);
-                        setRippleMonth(null);
-                        setPickerMode("returning");
-                        // 等 bounce-drop 動畫完成後回到 none
-                        setTimeout(() => setPickerMode("none"), 400);
-                      }, 400);
-                    }}
-                    className={`relative aspect-square rounded-lg flex items-center justify-center text-xs font-medium transition-all overflow-hidden ${
-                      isCurrent ? "bg-accent text-accent-foreground shadow" : "bg-muted/40 text-foreground hover:bg-muted"
-                    }`}
-                    style={{
-                      animation: `monthCellPopIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) ${i * 0.04}s both`,
-                    }}
-                  >
-                    {m}
-                    {isRippling && (
-                      <span
-                        className="absolute inset-0 rounded-lg bg-accent/40 animate-month-ripple"
-                        style={{ transformOrigin: "center" }}
-                      />
-                    )}
-                  </button>
-                );
-              })}
-            </div>
+            {/* 點擊抽屜外區域關閉 */}
+            <div
+              className="fixed inset-0 -z-10"
+              onClick={() => {
+                setDrawerState("closing");
+                setTimeout(() => setDrawerState("none"), 350);
+              }}
+            />
           </div>
         )}
 
-        {/* 日期網格彈性落入（pickerMode === "returning" 時顯示） */}
-        {pickerMode === "returning" && (
-          <div className="animate-date-bounce-drop">
-            <div className="grid grid-cols-7 gap-0.5 mb-1">{WEEKDAYS.map((w) => <div key={w} className="text-center text-[9px] font-medium text-muted-foreground py-0.5">{w}</div>)}</div>
-            <div className="grid grid-cols-7 gap-0.5">
-              {calendarDays.map((day, i) => {
-                if (!day) return <div key={`e-${i}`} />;
-                return (
-                  <div key={day.dateKey} className="relative aspect-square rounded-lg flex flex-col items-center justify-center text-[11px]">
-                    <span className="font-medium leading-none text-foreground">{day.day}</span>
-                    {day.events.length > 0 && (
-                      <div className="absolute bottom-0.5 flex gap-0.5">
-                        {day.events.slice(0, 3).map((e: MarketEvent, ei: number) => (
-                          <div key={ei} className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: e.color }} />
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+        {/* 抽屜關閉中動畫 */}
+        {drawerState === "closing" && (
+          <div
+            className="absolute left-0 right-0 top-full z-20 animate-drawer-up"
+            style={{ maxHeight: "33vh" }}
+          >
+            <div className="bg-card/95 backdrop-blur-md border border-border/60 rounded-b-2xl shadow-xl p-3 mx-1">
+              <div className="flex items-center justify-between mb-2">
+                <div className="w-7 h-7" />
+                <span className="text-sm font-bold text-foreground">{pickerYear}年</span>
+                <div className="w-7 h-7" />
+              </div>
+              <div className="grid grid-cols-4 gap-1">
+                {MONTHS.map((m) => (
+                  <div key={m} className="py-2 rounded-md text-xs font-medium bg-muted/40 text-foreground text-center">{m}</div>
+                ))}
+              </div>
             </div>
           </div>
         )}
