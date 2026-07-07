@@ -3,12 +3,14 @@
 import { useState, useMemo } from "react";
 import { useAppStore, getDailySummary, formatCurrency, formatDateTime, getCategoryInfo, getPaymentMethodInfo } from "@/lib/store";
 import { groupTransactions, getOrderSummary, type TxGroup } from "@/lib/tx-group";
+import { useFormatCurrency } from "@/lib/exchange-rates";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowUpRight, ArrowDownRight, Inbox, ChevronRight, Receipt, ShoppingBag } from "lucide-react";
 
 export function TransactionsPage() {
   const { transactions, currency, currentMarketId, markets } = useAppStore();
+  const fc = useFormatCurrency();
   const summary = getDailySummary(transactions);
   const currentMarket = markets.find((m) => m.id === currentMarketId);
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
@@ -36,18 +38,18 @@ export function TransactionsPage() {
       <div className="bg-gradient-to-br from-primary to-primary/85 rounded-2xl p-4 text-primary-foreground shadow-lg">
         <p className="text-[11px] text-primary-foreground/60 uppercase tracking-wider">今日淨利</p>
         <p className="text-3xl font-bold tabular-nums mt-0.5">
-          {summary.profit >= 0 ? "+" : "−"}{formatCurrency(Math.abs(summary.profit), currency)}
+          {summary.profit >= 0 ? "+" : "−"}{fc(Math.abs(summary.profit))}
         </p>
         <div className="flex items-center gap-4 mt-3 text-xs">
           <div className="flex items-center gap-1">
             <ArrowUpRight className="w-3 h-3 text-emerald-300" />
             <span className="text-primary-foreground/60">收</span>
-            <span className="font-semibold tabular-nums">{formatCurrency(summary.income, currency)}</span>
+            <span className="font-semibold tabular-nums">{fc(summary.income)}</span>
           </div>
           <div className="flex items-center gap-1">
             <ArrowDownRight className="w-3 h-3 text-rose-300" />
             <span className="text-primary-foreground/60">支</span>
-            <span className="font-semibold tabular-nums">{formatCurrency(summary.expense, currency)}</span>
+            <span className="font-semibold tabular-nums">{fc(summary.expense)}</span>
           </div>
           <span className="text-primary-foreground/60">{summary.count} 筆</span>
         </div>
@@ -94,6 +96,7 @@ export function TxGroupCard({
   compact?: boolean; // 緊湊模式（首頁用）
 }) {
   const customPaymentMethods = useAppStore((s) => s.customPaymentMethods);
+  const fc = useFormatCurrency();
   const firstTx = group.txs[0];
   const cat = getCategoryInfo(firstTx.category);
   const pay = firstTx.paymentMethod ? getPaymentMethodInfo(firstTx.paymentMethod, useAppStore.getState().customPaymentMethods) : null;
@@ -127,7 +130,7 @@ export function TxGroupCard({
             className={`text-sm font-bold tabular-nums flex-shrink-0 ${compact ? "text-xs" : ""}`}
             style={{ color: isIncome ? "#059669" : "#E11D48" }}
           >
-            {isIncome ? "+" : "−"}{firstTx.amount.toLocaleString()}
+            {isIncome ? "+" : "−"}{fc(firstTx.amount)}
           </span>
         </div>
       </Card>
@@ -147,7 +150,7 @@ export function TxGroupCard({
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
-            <p className="text-xs font-medium text-foreground">訂單</p>
+            <p className="text-xs font-medium text-foreground">商品</p>
             <span className="text-[9px] text-muted-foreground bg-muted px-1 rounded">{group.txs.length} 項</span>
             {pay && (
               <span className="text-[9px] text-muted-foreground bg-muted px-1 rounded">{pay.label}</span>
@@ -163,7 +166,7 @@ export function TxGroupCard({
         </div>
         <div className="flex items-center gap-1.5 flex-shrink-0">
           <span className="text-sm font-bold tabular-nums text-primary">
-            +{group.totalAmount.toLocaleString()}
+            +{fc(group.totalAmount)}
           </span>
           <ChevronRight className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${isExpanded ? "rotate-90" : ""}`} />
         </div>
@@ -193,16 +196,16 @@ export function TxGroupCard({
                   )}
                 </div>
                 <span className="text-[11px] font-semibold tabular-nums text-primary flex-shrink-0">
-                  +{tx.amount.toLocaleString()}
+                  +{fc(tx.amount)}
                 </span>
               </div>
             );
           })}
           {/* 訂單總計 */}
           <div className="px-3 py-2 bg-primary/5 flex items-center justify-between">
-            <span className="text-[10px] font-semibold text-foreground">訂單總計</span>
+            <span className="text-[10px] font-semibold text-foreground">合計</span>
             <span className="text-xs font-bold tabular-nums text-primary">
-              {formatCurrency(group.totalAmount, currency as any)}
+              {fc(group.totalAmount)}
             </span>
           </div>
         </div>

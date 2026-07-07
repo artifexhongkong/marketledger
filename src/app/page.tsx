@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Home, PencilLine, ClipboardList, Settings as SettingsIcon, MapPin } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { useAuthStore } from "@/lib/auth-store";
+import { getExchangeRates } from "@/lib/exchange-rates";
 import { HomePage } from "@/components/app/home-page";
 import { RecordPage } from "@/components/app/record-page";
 import { TransactionsPage } from "@/components/app/transactions-page";
@@ -11,6 +12,7 @@ import { MarketsPage } from "@/components/app/markets-page";
 import { SettingsPage } from "@/components/app/settings-page";
 import { AuthPage } from "@/components/app/auth-section";
 import { LoginScreen } from "@/components/app/login-screen";
+import { CurrencySetup } from "@/components/app/currency-setup";
 
 type TabId = "home" | "record" | "transactions" | "markets" | "settings" | "account";
 
@@ -28,14 +30,20 @@ export default function Page() {
   const seedDemo = useAppStore((s) => s.seedDemo);
   const cleanupOrphanedTxs = useAppStore((s) => s.cleanupOrphanedTxs);
   const migrateCategories = useAppStore((s) => s.migrateCategories);
+  const setExchangeRates = useAppStore((s) => s.setExchangeRates);
+  const currencyInitialized = useAppStore((s) => s.currencyInitialized);
   const { testAuthed } = useAuthStore();
 
   useEffect(() => {
     setHydrated(true);
-    migrateCategories(); // 一次性遷移：舊分類 ID → 新版精簡分類
-    cleanupOrphanedTxs(); // 清理孤兒交易（已刪除市集的攤位費）
+    migrateCategories();
+    cleanupOrphanedTxs();
     seedDemo();
-  }, [seedDemo, cleanupOrphanedTxs, migrateCategories]);
+    // 載入即時匯率
+    getExchangeRates().then((rates) => {
+      if (rates) setExchangeRates(rates);
+    });
+  }, [seedDemo, cleanupOrphanedTxs, migrateCategories, setExchangeRates]);
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -58,7 +66,21 @@ export default function Page() {
           <div className="hidden md:block absolute top-3 left-1/2 -translate-x-1/2 w-32 h-7 bg-slate-900 rounded-b-2xl z-30" />
           <div className="w-full h-full bg-background md:rounded-[2rem] overflow-hidden flex flex-col relative">
             <LoginScreen />
-            <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-32 h-1 bg-foreground/80 rounded-full" />
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  // 已登入但未選擇貨幣 → 顯示貨幣選擇畫面
+  if (hydrated && testAuthed && !currencyInitialized) {
+    return (
+      <main className="min-h-screen bg-slate-200 flex items-center justify-center overflow-hidden">
+        <div className="relative w-full h-screen md:w-[390px] md:h-[780px] md:max-h-[calc(100vh-4rem)] md:rounded-[2.5rem] md:bg-slate-900 md:p-3 md:shadow-2xl md:shadow-slate-900/30"
+          style={{ maxHeight: "100dvh" }}>
+          <div className="hidden md:block absolute top-3 left-1/2 -translate-x-1/2 w-32 h-7 bg-slate-900 rounded-b-2xl z-30" />
+          <div className="w-full h-full bg-background md:rounded-[2rem] overflow-hidden flex flex-col relative">
+            <CurrencySetup />
           </div>
         </div>
       </main>

@@ -241,7 +241,9 @@ function isToday(ts: number): boolean {
 // ── Stores ──
 interface AppStore {
   // Settings
-  currency: CurrencyCode;
+  currency: CurrencyCode; // 用戶選擇的顯示貨幣（預設 HKD）
+  currencyInitialized: boolean; // 用戶是否已選擇過貨幣（首次使用提示用）
+  exchangeRates: Record<string, number> | null; // 即時匯率（以 HKD 為基準）
   currentMarketId: string | null;
   demoSeeded: boolean;
   // 震動回饋設定
@@ -259,6 +261,8 @@ interface AppStore {
   currentOrder: OrderItem[];
   // Actions
   setCurrency: (c: CurrencyCode) => void;
+  setCurrencyInitialized: (v: boolean) => void;
+  setExchangeRates: (rates: Record<string, number> | null) => void;
   setCurrentMarket: (id: string | null) => void;
   setHapticEnabled: (enabled: boolean) => void;
   setHapticStrength: (strength: "light" | "medium" | "strong") => void;
@@ -291,6 +295,8 @@ export const useAppStore = create<AppStore>()(
   persist(
     (set, get) => ({
       currency: "HKD",
+      currencyInitialized: false,
+      exchangeRates: null,
       currentMarketId: null,
       demoSeeded: false,
       hapticEnabled: true,
@@ -305,6 +311,8 @@ export const useAppStore = create<AppStore>()(
       currentOrder: [],
 
       setCurrency: (c) => set({ currency: c }),
+      setCurrencyInitialized: (v) => set({ currencyInitialized: v }),
+      setExchangeRates: (rates) => set({ exchangeRates: rates }),
       setCurrentMarket: (id) => set({ currentMarketId: id }),
       setHapticEnabled: (enabled) => set({ hapticEnabled: enabled }),
       setHapticStrength: (strength) => set({ hapticStrength: strength }),

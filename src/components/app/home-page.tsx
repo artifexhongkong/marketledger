@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useAppStore, getDailySummary, formatCurrency, formatDateTime, getCategoryInfo, getPaymentMethodInfo } from "@/lib/store";
 import { groupTransactions } from "@/lib/tx-group";
+import { useFormatCurrency } from "@/lib/exchange-rates";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowUpRight, ArrowDownRight, MapPin, ChevronRight, Receipt, TrendingUp, Wallet } from "lucide-react";
@@ -10,6 +11,7 @@ import { TxGroupCard } from "@/components/app/transactions-page";
 
 export function HomePage() {
   const { transactions, currency, currentMarketId, markets, customPaymentMethods } = useAppStore();
+  const fc = useFormatCurrency();
   const summary = getDailySummary(transactions);
   const currentMarket = markets.find((m) => m.id === currentMarketId);
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
@@ -42,18 +44,18 @@ export function HomePage() {
       <div className="bg-gradient-to-br from-primary to-primary/85 rounded-2xl p-4 text-primary-foreground shadow-lg">
         <p className="text-[11px] text-primary-foreground/60 uppercase tracking-wider">今日淨利</p>
         <p className="text-3xl font-bold tabular-nums mt-1">
-          {summary.profit >= 0 ? "+" : "−"}{formatCurrency(Math.abs(summary.profit), currency)}
+          {summary.profit >= 0 ? "+" : "−"}{fc(Math.abs(summary.profit))}
         </p>
         <div className="flex gap-4 mt-3">
           <div className="flex items-center gap-1">
             <ArrowUpRight className="w-3.5 h-3.5 text-emerald-300" />
             <span className="text-[11px] text-primary-foreground/60">收</span>
-            <span className="text-xs font-semibold tabular-nums">{formatCurrency(summary.income, currency)}</span>
+            <span className="text-xs font-semibold tabular-nums">{fc(summary.income)}</span>
           </div>
           <div className="flex items-center gap-1">
             <ArrowDownRight className="w-3.5 h-3.5 text-rose-300" />
             <span className="text-[11px] text-primary-foreground/60">支</span>
-            <span className="text-xs font-semibold tabular-nums">{formatCurrency(summary.expense, currency)}</span>
+            <span className="text-xs font-semibold tabular-nums">{fc(summary.expense)}</span>
           </div>
         </div>
       </div>
@@ -67,7 +69,7 @@ export function HomePage() {
         </Card>
         <Card className="p-3 text-center">
           <Wallet className="w-4 h-4 text-muted-foreground mx-auto" />
-          <p className="text-lg font-bold tabular-nums mt-1">{summary.count > 0 ? formatCurrency(avgOrder, currency) : "—"}</p>
+          <p className="text-lg font-bold tabular-nums mt-1">{summary.count > 0 ? fc(avgOrder) : "—"}</p>
           <p className="text-[10px] text-muted-foreground">平均客單</p>
         </Card>
         <Card className="p-3 text-center">
@@ -128,7 +130,7 @@ export function HomePage() {
                   <span className="text-[11px] text-muted-foreground">{cat.label}</span>
                   <span className="text-xs font-bold tabular-nums"
                     style={{ color: cat.type === "income" ? "#059669" : "#E11D48" }}>
-                    {cat.type === "income" ? "+" : "−"}{formatCurrency(amount, currency)}
+                    {cat.type === "income" ? "+" : "−"}{fc(amount)}
                   </span>
                 </div>
               );

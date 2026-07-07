@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useAppStore, CATEGORIES, PAYMENT_METHODS, PAYMENT_CATEGORIES, CURRENCIES, formatCurrency, getPaymentMethodInfo } from "@/lib/store";
 import { haptic } from "@/lib/haptic";
+import { useFormatCurrency } from "@/lib/exchange-rates";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -80,6 +81,7 @@ interface ToastState {
 
 function RecordView() {
   const { currency, products, currentMarketId, markets, addTransaction, setCurrentMarket, deleteTransaction, customPaymentMethods, currentOrder, addOrderItem, removeOrderItem, updateOrderItemQty, updateOrderItemNote, clearOrder } = useAppStore();
+  const fc = useFormatCurrency();
   const [payment, setPayment] = useState<PaymentMethod>("cash");
 
   // 取得支付方式標籤（支援自訂）
@@ -190,7 +192,7 @@ function RecordView() {
             <div className="flex-1 min-w-0">
               <p className="text-[10px] text-muted-foreground leading-tight">已記錄銷售 · {getPaymentMethodLabel(payment)}</p>
               <p className="text-xs font-semibold text-foreground truncate leading-tight mt-0.5">
-                {toast.productName} · {formatCurrency(toast.amount, currency)}
+                {toast.productName} · {fc(toast.amount)}
               </p>
             </div>
             <button
@@ -296,7 +298,7 @@ function RecordView() {
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-medium text-foreground truncate">{item.name}</p>
                         <p className="text-[10px] text-muted-foreground">
-                          {formatCurrency(item.price, currency)} × {item.qty}
+                          {fc(item.price)} × {item.qty}
                         </p>
                         {item.note && (
                           <p className="text-[10px] text-accent truncate mt-0.5">📝 {item.note}</p>
@@ -304,7 +306,7 @@ function RecordView() {
                       </div>
                       {/* 小計 */}
                       <span className="text-xs font-bold tabular-nums text-primary flex-shrink-0">
-                        {formatCurrency(item.price * item.qty, currency)}
+                        {fc(item.price * item.qty)}
                       </span>
                       {/* 撤銷按鈕 */}
                       <button
@@ -336,7 +338,7 @@ function RecordView() {
                 <div className="px-3 py-2 bg-primary/5 border-t border-border flex items-center justify-between">
                   <span className="text-[11px] font-semibold text-foreground">總計</span>
                   <span className="text-base font-bold tabular-nums text-primary">
-                    {formatCurrency(currentOrder.reduce((sum, item) => sum + item.price * item.qty, 0), currency)}
+                    {fc(currentOrder.reduce((sum, item) => sum + item.price * item.qty, 0))}
                   </span>
                 </div>
               </div>
@@ -359,7 +361,7 @@ function RecordView() {
                     return (
                       <>
                         <p className="text-xs font-medium text-foreground">{item.name}</p>
-                        <p className="text-[10px] text-muted-foreground">單價 {formatCurrency(item.price, currency)}</p>
+                        <p className="text-[10px] text-muted-foreground">單價 {fc(item.price)}</p>
                         {/* 數量 */}
                         <div>
                           <label className="text-[11px] text-muted-foreground mb-1 block">數量</label>
@@ -384,7 +386,7 @@ function RecordView() {
                           />
                         </div>
                         <p className="text-[11px] text-muted-foreground text-center">
-                          小計：{formatCurrency(item.price * qty, currency)}
+                          小計：{fc(item.price * qty)}
                         </p>
                         <Button
                           onClick={() => {
@@ -882,6 +884,7 @@ function ProductButton({
   confirming, onConfirm, onRecord,
 }: ProductButtonProps) {
   const addTransaction = useAppStore((s) => s.addTransaction);
+  const fc = useFormatCurrency();
   const elRef = useRef<HTMLButtonElement | null>(null);
 
   // ── 唯一狀態來源：ref（不用 useState 避免渲染時序問題）──
@@ -1112,7 +1115,7 @@ function ProductButton({
           />
           {qtyInputValue && parseInt(qtyInputValue) > 0 && (
             <p className="text-[9px] text-muted-foreground mt-0.5 tabular-nums">
-              = {formatCurrency(product.price * (parseInt(qtyInputValue) || 0), currency as any)}
+              = {fc(product.price * (parseInt(qtyInputValue) || 0))}
             </p>
           )}
           <p className="text-[8px] text-muted-foreground/60 mt-0.5">Enter 確認 · Esc 取消</p>
@@ -1122,7 +1125,7 @@ function ProductButton({
         <div className="absolute inset-0 bg-primary/5 flex flex-col items-center justify-center px-1">
           <div className="text-2xl font-bold tabular-nums text-primary">×{s.qty}</div>
           <div className="text-[10px] text-muted-foreground tabular-nums mt-0.5">
-            {formatCurrency(product.price * s.qty, currency as any)}
+            {fc(product.price * s.qty)}
           </div>
           <div className="absolute inset-0 flex flex-col items-center justify-between py-1 pointer-events-none">
             <div className="text-[10px] font-medium text-muted-foreground/60">↑ +1</div>
@@ -1135,7 +1138,7 @@ function ProductButton({
         <>
           <p className="text-xs font-medium text-foreground leading-tight line-clamp-2">{product.name}</p>
           <p className="text-sm font-bold text-primary tabular-nums mt-1 leading-none">
-            {formatCurrency(product.price, currency as any)}
+            {fc(product.price)}
           </p>
         </>
       )}
@@ -1145,6 +1148,7 @@ function ProductButton({
 
 function ProductsView() {
   const { products, currency, addProduct, updateProduct, deleteProduct } = useAppStore();
+  const fc = useFormatCurrency();
   const [showForm, setShowForm] = useState(false);
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [name, setName] = useState("");
@@ -1506,7 +1510,7 @@ function ProductsView() {
                     <p className={`text-sm font-bold tabular-nums mt-1 ${
                       isSelected || isLongPressing ? "text-rose-600" : "text-primary"
                     }`}>
-                      {formatCurrency(p.price, currency)}
+                      {fc(p.price)}
                     </p>
                     <p className="text-[10px] text-muted-foreground mt-0.5">/ {p.unit}</p>
                   </div>
@@ -1549,7 +1553,7 @@ function ProductsView() {
                           {p.name}
                         </p>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          {formatCurrency(p.price, currency)} / {p.unit}
+                          {fc(p.price)} / {p.unit}
                         </p>
                       </div>
                     </div>

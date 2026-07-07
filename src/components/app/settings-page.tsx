@@ -3,6 +3,7 @@
 import { useAppStore, CURRENCIES, type CurrencyCode } from "@/lib/store";
 import { useAuthStore } from "@/lib/auth-store";
 import { APP_VERSION, APP_VERSION_DISPLAY, GITHUB_RELEASES_API, GITHUB_RELEASES_PAGE, compareVersions } from "@/lib/version";
+import { getExchangeRates } from "@/lib/exchange-rates";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,6 +32,7 @@ export function SettingsPage() {
     transactions, clearAll,
     hapticEnabled, hapticStrength,
     setHapticEnabled, setHapticStrength,
+    exchangeRates, setExchangeRates,
   } = useAppStore();
   const { testUsername, testLogout } = useAuthStore();
 
@@ -176,6 +178,21 @@ export function SettingsPage() {
               </button>
             ))}
           </div>
+          {/* 匯率資訊 */}
+          {exchangeRates && currency !== "HKD" && exchangeRates[currency] && (
+            <div className="mt-2 text-[10px] text-muted-foreground bg-muted/40 rounded-lg px-2.5 py-1.5">
+              即時匯率：1 HKD = {exchangeRates[currency].toFixed(2)} {currency}
+            </div>
+          )}
+          <button
+            onClick={async () => {
+              const rates = await getExchangeRates();
+              if (rates) setExchangeRates(rates);
+            }}
+            className="mt-2 text-[10px] text-blue-600 hover:text-blue-700 font-medium"
+          >
+            更新匯率
+          </button>
         </SettingsRow>
 
         {/* 震動回饋 */}
