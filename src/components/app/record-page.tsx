@@ -50,6 +50,24 @@ const PRODUCT_COLORS = [
   "#E5E7EB", // 灰
 ];
 
+// 擴充色板 — 點「+」按鈕展開，直觀選色（不用 HSV slider）
+// 8 系顏色 × 6 深淺 = 48 色 + 6 灰階
+const EXTENDED_COLORS: string[] = [];
+// 8 系飽和色（每系 6 個深淺）
+const COLOR_FAMILIES: { name: string; hues: string[] }[] = [
+  { name: "紅", hues: ["#FECACA", "#FCA5A5", "#F87171", "#EF4444", "#DC2626", "#991B1B"] },
+  { name: "橘", hues: ["#FED7AA", "#FDBA74", "#FB923C", "#F97316", "#EA580C", "#9A3412"] },
+  { name: "黃", hues: ["#FEF08A", "#FDE047", "#FACC15", "#EAB308", "#CA8A04", "#854D0E"] },
+  { name: "綠", hues: ["#BBF7D0", "#86EFAC", "#4ADE80", "#22C55E", "#16A34A", "#166534"] },
+  { name: "藍", hues: ["#BFDBFE", "#93C5FD", "#60A5FA", "#3B82F6", "#2563EB", "#1E40AF"] },
+  { name: "紫", hues: ["#DDD6FE", "#C4B5FD", "#A78BFA", "#8B5CF6", "#7C3AED", "#5B21B6"] },
+  { name: "粉", hues: ["#FBCFE8", "#F9A8D4", "#F472B6", "#EC4899", "#DB2777", "#9D174D"] },
+  { name: "青", hues: ["#A5F3FC", "#67E8F9", "#22D3EE", "#06B6D4", "#0891B2", "#155E75"] },
+];
+COLOR_FAMILIES.forEach((f) => EXTENDED_COLORS.push(...f.hues));
+// 灰階 6 階
+const GRAYSCALE = ["#F3F4F6", "#D1D5DB", "#9CA3AF", "#6B7280", "#374151", "#111827"];
+
 // ── Toast 通知型別 ──
 interface ToastState {
   id: string;
@@ -937,6 +955,8 @@ function ProductsView() {
   const [unit, setUnit] = useState("個");
   // 按鈕顏色（可選，用於視覺分組）
   const [color, setColor] = useState<string>("");
+  // 是否展開自訂色板
+  const [showColorPalette, setShowColorPalette] = useState(false);
   // 顯示模式：grid（格子）或 list（列表）
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   // 多選刪除模式
@@ -969,7 +989,7 @@ function ProductsView() {
     if (!name.trim()) return alert("請輸入商品名稱");
     if (!p || p <= 0) return alert("請輸入有效單價");
     addProduct({ name: name.trim(), price: p, unit: unit.trim() || "個", categoryId: "sales", color: color || undefined });
-    setName(""); setPrice(""); setUnit("個"); setColor(""); setShowForm(false);
+    setName(""); setPrice(""); setUnit("個"); setColor(""); setShowColorPalette(false); setShowForm(false);
   };
 
   // 長按商品 → 進入多選模式 + 選中該商品
@@ -1130,28 +1150,59 @@ function ProductsView() {
                     aria-label={`顏色 ${c}`}
                   />
                 ))}
-                {/* HSV 調色盤 — 初始值 H=210 S=15 V=96 (#d0e2f4) */}
-                <div className="relative w-7 h-7">
-                  <input
-                    type="color"
-                    value={color && !PRODUCT_COLORS.includes(color) ? color : "#d0e2f4"}
-                    onChange={(e) => setColor(e.target.value)}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                    aria-label="自訂顏色"
-                  />
-                  <div
-                    className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition ${
-                      color && !PRODUCT_COLORS.includes(color)
-                        ? "border-foreground ring-2 ring-offset-1 ring-foreground/30"
-                        : "border-border"
-                    }`}
-                    style={{ background: color && !PRODUCT_COLORS.includes(color) ? color : "conic-gradient(from 0deg, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000)" }}
-                  >
-                    <Plus className="w-3 h-3 text-white drop-shadow" strokeWidth={3} />
+                {/* 更多顏色 — 點擊展開色板（不用 HSV slider，避免手機原生 picker 難用） */}
+                <button
+                  onClick={() => setShowColorPalette(!showColorPalette)}
+                  className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition ${
+                    showColorPalette || (color && !PRODUCT_COLORS.includes(color))
+                      ? "border-foreground ring-2 ring-offset-1 ring-foreground/30"
+                      : "border-border"
+                  }`}
+                  style={{ background: "conic-gradient(from 0deg, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000)" }}
+                  aria-label="更多顏色"
+                >
+                  <Plus className="w-3 h-3 text-white drop-shadow" strokeWidth={3} />
+                </button>
+              </div>
+
+              {/* 展開的色板 — 8 系飽和色 + 灰階，直接點選 */}
+              {showColorPalette && (
+                <div className="mt-2 p-2.5 bg-muted/40 rounded-lg animate-[fadeIn_0.15s_ease-out]">
+                  <p className="text-[10px] text-muted-foreground mb-1.5">飽和色</p>
+                  <div className="grid grid-cols-8 gap-1 mb-2">
+                    {EXTENDED_COLORS.map((c) => (
+                      <button
+                        key={c}
+                        onClick={() => setColor(c)}
+                        className={`aspect-square rounded-md border transition hover:scale-110 ${color === c ? "border-foreground scale-110 ring-1 ring-foreground/40" : "border-white/40"}`}
+                        style={{ background: c }}
+                        aria-label={`顏色 ${c}`}
+                      />
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mb-1.5">灰階</p>
+                  <div className="grid grid-cols-6 gap-1">
+                    {GRAYSCALE.map((c) => (
+                      <button
+                        key={c}
+                        onClick={() => setColor(c)}
+                        className={`aspect-square rounded-md border transition hover:scale-110 ${color === c ? "border-foreground scale-110 ring-1 ring-foreground/40" : "border-white/40"}`}
+                        style={{ background: c }}
+                        aria-label={`灰階 ${c}`}
+                      />
+                    ))}
+                  </div>
+                  {/* 已選顏色預覽 */}
+                  <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/40">
+                    <span className="text-[10px] text-muted-foreground">已選</span>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-5 h-5 rounded border border-border" style={{ background: color || "#FFFFFF" }} />
+                      <span className="text-[10px] font-mono text-foreground">{color || "未選"}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-              {color && !PRODUCT_COLORS.includes(color) && (
+              )}
+              {color && !PRODUCT_COLORS.includes(color) && !showColorPalette && (
                 <p className="text-[10px] text-muted-foreground mt-1">自訂顏色：{color}</p>
               )}
             </div>
