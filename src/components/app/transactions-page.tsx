@@ -165,7 +165,7 @@ export function TxGroupCard({
           </p>
         </div>
         <div className="flex items-center gap-1.5 flex-shrink-0">
-          <span className="text-sm font-bold tabular-nums text-primary">
+          <span className="text-sm font-bold tabular-nums flex-shrink-0" style={{ color: "#059669" }}>
             +{fc(group.totalAmount)}
           </span>
           <ChevronRight className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${isExpanded ? "rotate-90" : ""}`} />
@@ -195,7 +195,7 @@ export function TxGroupCard({
                     </p>
                   )}
                 </div>
-                <span className="text-[11px] font-semibold tabular-nums text-primary flex-shrink-0">
+                <span className="text-[11px] font-semibold tabular-nums flex-shrink-0" style={{ color: "#059669" }}>
                   +{fc(tx.amount)}
                 </span>
               </div>
@@ -204,7 +204,7 @@ export function TxGroupCard({
           {/* 訂單總計 */}
           <div className="px-3 py-2 bg-primary/5 flex items-center justify-between">
             <span className="text-[10px] font-semibold text-foreground">合計</span>
-            <span className="text-xs font-bold tabular-nums text-primary">
+            <span className="text-xs font-bold tabular-nums" style={{ color: "#059669" }}>
               {fc(group.totalAmount)}
             </span>
           </div>

@@ -275,10 +275,8 @@ function RecordView() {
                   </div>
                   <button
                     onClick={() => {
-                      if (confirm("開始新一單？本單清單會清空（交易記錄保留）")) {
                         clearOrder();
                         haptic("tap");
-                      }
                     }}
                     className="flex items-center gap-1 text-[10px] text-accent hover:text-foreground px-2 py-1 rounded-md hover:bg-accent/10 transition"
                   >
