@@ -592,24 +592,31 @@ function PaymentSelector({
                 {hidden.map(({ m, info }) => {
                   const active = payment === (m as PaymentMethod);
                   return (
-                    <div key={m} className="relative">
-                      <PaymentButton2 icon={info.icon} label={shortLabel(info.label)} active={active}
-                        manageMode={false} onClick={() => { setPayment(m as PaymentMethod); setShowMore(false); }} onDelete={null} />
-                      <button onClick={(e) => { e.stopPropagation(); togglePaymentVisibility(m); }}
-                        className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-sm z-10 animate-[fadeIn_0.15s_ease-out] text-[13px] leading-none font-bold pb-0.5">
-                        +
-                      </button>
-                    </div>
+                    <button
+                      key={m}
+                      onClick={() => {
+                        // 點擊圖示即選用 + 添加到主頁
+                        setPayment(m as PaymentMethod);
+                        togglePaymentVisibility(m);
+                        setShowMore(false);
+                      }}
+                      className={`flex flex-col items-center justify-center gap-0.5 py-2.5 rounded-xl border-2 transition-all select-none ${
+                        active
+                          ? "border-accent bg-accent/15 text-accent shadow-sm scale-[1.02]"
+                          : "border-border bg-card text-foreground hover:border-accent/40 hover:bg-accent/5"
+                      }`}
+                    >
+                      <span className="text-base leading-none">{info.icon}</span>
+                      <span className={`text-[10px] font-medium leading-none ${active ? "text-accent" : "text-muted-foreground"}`}>{shortLabel(info.label)}</span>
+                    </button>
                   );
                 })}
                 {/* 新增自訂支付 */}
-                <div className="relative">
-                  <button onClick={() => setShowAddModal(true)}
-                    className="w-full flex flex-col items-center justify-center gap-0.5 py-2.5 rounded-xl border-2 border-dashed border-accent/40 bg-accent/5 text-accent hover:bg-accent/10 transition">
-                    <Plus className="w-4 h-4" />
-                    <span className="text-[10px] font-medium">新增</span>
-                  </button>
-                </div>
+                <button onClick={() => setShowAddModal(true)}
+                  className="flex flex-col items-center justify-center gap-0.5 py-2.5 rounded-xl border-2 border-dashed border-accent/40 bg-accent/5 text-accent hover:bg-accent/10 transition select-none">
+                  <Plus className="w-4 h-4" />
+                  <span className="text-[10px] font-medium">新增</span>
+                </button>
               </div>
             );
           })()}
@@ -635,9 +642,9 @@ function PaymentButton2({
   return (
     <div className="relative">
       <button onClick={onClick} disabled={manageMode && !onDelete}
-        className={`w-full flex flex-col items-center justify-center gap-0.5 py-2.5 rounded-xl border-2 transition-all ${active ? "border-primary bg-primary text-primary-foreground shadow-sm scale-[1.02]" : "border-border bg-card text-foreground hover:border-primary/40"} ${manageMode && onDelete ? "opacity-70" : ""}`}>
+        className={`w-full flex flex-col items-center justify-center gap-0.5 py-2.5 rounded-xl border-2 transition-all select-none ${active ? "border-accent bg-accent/15 text-accent shadow-sm scale-[1.02]" : "border-border bg-card text-foreground hover:border-accent/40"} ${manageMode && onDelete ? "opacity-70" : ""}`}>
         <span className="text-base leading-none">{icon}</span>
-        <span className={`text-[10px] font-medium leading-none ${active ? "" : "text-muted-foreground"}`}>{label}</span>
+        <span className={`text-[10px] font-medium leading-none ${active ? "text-accent" : "text-muted-foreground"}`}>{label}</span>
       </button>
       {manageMode && onDelete && (
         <button onClick={onDelete}
@@ -1101,7 +1108,7 @@ function ProductsView() {
             {/* 按鈕顏色（可選，用於視覺分組） */}
             <div>
               <p className="text-[11px] text-muted-foreground mb-1.5">按鈕顏色（選填，用於快速識別商品組）</p>
-              <div className="flex gap-1.5 flex-wrap">
+              <div className="flex gap-1.5 flex-wrap items-center">
                 <button
                   onClick={() => setColor("")}
                   className={`w-7 h-7 rounded-full border-2 transition ${color === "" ? "border-foreground ring-2 ring-offset-1 ring-foreground/30" : "border-border"}`}
@@ -1117,7 +1124,30 @@ function ProductsView() {
                     aria-label={`顏色 ${c}`}
                   />
                 ))}
+                {/* 自訂顏色調色盤 */}
+                <div className="relative w-7 h-7">
+                  <input
+                    type="color"
+                    value={color && !PRODUCT_COLORS.includes(color) ? color : "#6B7280"}
+                    onChange={(e) => setColor(e.target.value)}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    aria-label="自訂顏色"
+                  />
+                  <div
+                    className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition ${
+                      color && !PRODUCT_COLORS.includes(color)
+                        ? "border-foreground ring-2 ring-offset-1 ring-foreground/30"
+                        : "border-border"
+                    }`}
+                    style={{ background: color && !PRODUCT_COLORS.includes(color) ? color : "conic-gradient(from 0deg, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000)" }}
+                  >
+                    <Plus className="w-3 h-3 text-white drop-shadow" strokeWidth={3} />
+                  </div>
+                </div>
               </div>
+              {color && !PRODUCT_COLORS.includes(color) && (
+                <p className="text-[10px] text-muted-foreground mt-1">自訂顏色：{color}</p>
+              )}
             </div>
           </div>
           <Button onClick={handleAdd} className="w-full">儲存商品</Button>
