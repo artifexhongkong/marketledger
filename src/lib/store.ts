@@ -62,6 +62,14 @@ export interface OrderItem {
   createdAt: number;
 }
 
+// 便條貼
+export interface StickyNote {
+  id: string;
+  text: string;
+  color: "yellow" | "pink" | "blue" | "green"; // 黃=一般、粉=客戶反饋、藍=待辦、綠=庫存
+  createdAt: number;
+}
+
 export interface MarketData {
   id: string;
   name: string;
@@ -261,6 +269,8 @@ interface AppStore {
   visiblePayments: string[];
   // 當前訂單（記帳頁用，顯示這一單已點的商品 + 總金額）
   currentOrder: OrderItem[];
+  // 便條貼（市集頁用）
+  stickyNotes: StickyNote[];
   // Actions
   setCurrency: (c: CurrencyCode) => void;
   setCurrencyInitialized: (v: boolean) => void;
@@ -277,6 +287,10 @@ interface AppStore {
   updateOrderItemQty: (orderItemId: string, qty: number) => void;
   updateOrderItemNote: (orderItemId: string, note: string) => void;
   clearOrder: () => void;
+  // 便條貼操作
+  addStickyNote: (text: string, color: StickyNote["color"]) => void;
+  updateStickyNote: (id: string, text: string) => void;
+  deleteStickyNote: (id: string) => void;
   addProduct: (p: Omit<Product, "id">) => void;
   updateProduct: (id: string, data: Partial<Omit<Product, "id">>) => void;
   deleteProduct: (id: string) => void;
@@ -311,6 +325,7 @@ export const useAppStore = create<AppStore>()(
       // 預設首頁顯示通用支付方式
       visiblePayments: ["cash", "payme", "credit_card", "apple_pay", "google_pay", "bank_transfer", "paypal"],
       currentOrder: [],
+      stickyNotes: [],
 
       setCurrency: (c) => set({ currency: c }),
       setCurrencyInitialized: (v) => set({ currencyInitialized: v }),
@@ -403,6 +418,23 @@ export const useAppStore = create<AppStore>()(
         }),
 
       clearOrder: () => set({ currentOrder: [] }),
+
+      // 便條貼操作
+      addStickyNote: (text, color) =>
+        set((s) => ({
+          stickyNotes: [
+            { id: `note_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`, text, color, createdAt: Date.now() },
+            ...s.stickyNotes,
+          ],
+        })),
+
+      updateStickyNote: (id, text) =>
+        set((s) => ({
+          stickyNotes: s.stickyNotes.map((n) => (n.id === id ? { ...n, text } : n)),
+        })),
+
+      deleteStickyNote: (id) =>
+        set((s) => ({ stickyNotes: s.stickyNotes.filter((n) => n.id !== id) })),
 
       addProduct: (p) =>
         set((s) => ({

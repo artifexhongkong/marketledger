@@ -24,7 +24,7 @@ function parseDateKey(key: string) {
 }
 
 export function MarketsPage() {
-  const { marketEvents, addMarketEvent, deleteMarketEvent, updateMarketEvent, currency, transactions, customPaymentMethods } = useAppStore();
+  const { marketEvents, addMarketEvent, deleteMarketEvent, updateMarketEvent, currency, transactions, customPaymentMethods, stickyNotes, addStickyNote, updateStickyNote, deleteStickyNote } = useAppStore();
   const { user } = useAuthStore();
   const [showForm, setShowForm] = useState(false);
   const [editingEvent, setEditingEvent] = useState<MarketEvent | null>(null);
@@ -33,9 +33,6 @@ export function MarketsPage() {
   const [showProfit, setShowProfit] = useState(true);
   // 選中的日期（點擊日曆某天 → 顯示該天交易列表）
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  // 用戶備註（持久化到 localStorage）
-  const [userNote, setUserNote] = useState("");
-  const [noteLoaded, setNoteLoaded] = useState(false);
   // 日期記錄展開的訂單組
   const [expandedTxGroup, setExpandedTxGroup] = useState<string | null>(null);
   // 年月選擇抽屜狀態："none" | "opening" | "open" | "closing" | "returning"
@@ -48,26 +45,6 @@ export function MarketsPage() {
 
   const prevMonth = () => { if (viewMonth === 0) { setViewMonth(11); setViewYear(viewYear - 1); } else setViewMonth(viewMonth - 1); setSelectedDate(null); };
   const nextMonth = () => { if (viewMonth === 11) { setViewMonth(0); setViewYear(viewYear + 1); } else setViewMonth(viewMonth + 1); setSelectedDate(null); };
-
-  // 載入用戶備註（從 localStorage）
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem("marketledger-user-note");
-      if (saved) setUserNote(saved);
-    } catch {}
-    setNoteLoaded(true);
-  }, []);
-
-  // 儲存用戶備註（防抖，500ms 後寫入）
-  useEffect(() => {
-    if (!noteLoaded) return;
-    const timer = setTimeout(() => {
-      try {
-        localStorage.setItem("marketledger-user-note", userNote);
-      } catch {}
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [userNote, noteLoaded]);
 
   // 按日期分組交易
   const groupedByDate = useMemo(() => {
@@ -478,21 +455,13 @@ export function MarketsPage() {
         </div>
       )}
 
-      {/* 用戶備註欄 — 永遠顯示，讓用戶自由記錄文字 */}
-      <Card className="p-3">
-        <div className="flex items-center gap-1.5 mb-1.5">
-          <Pencil className="w-3 h-3 text-muted-foreground" />
-          <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">備註</p>
-        </div>
-        <textarea
-          value={userNote}
-          onChange={(e) => setUserNote(e.target.value)}
-          placeholder="記下你想記的事…（例如：下次要帶的物品、待辦事項、客戶反饋）"
-          className="w-full bg-muted/30 rounded-lg p-2.5 text-xs text-foreground placeholder:text-muted-foreground/60 resize-none min-h-[60px] outline-none focus:ring-1 focus:ring-accent/40 transition"
-          maxLength={500}
-        />
-        <p className="text-[9px] text-muted-foreground/60 mt-1 text-right">{userNote.length}/500</p>
-      </Card>
+      {/* 便條貼區 */}
+      <StickyNotesSection
+        notes={stickyNotes}
+        onAdd={addStickyNote}
+        onUpdate={updateStickyNote}
+        onDelete={deleteStickyNote}
+      />
 
       {showForm && <EventFormModal onClose={() => { setShowForm(false); setEditingEvent(null); }} onSave={handleSave} currency={currency} editingEvent={editingEvent} />}
     </div>
@@ -693,6 +662,166 @@ function EventFormModal({ onClose, onSave, currency, editingEvent }: { onClose: 
 
         <Button onClick={handleSave} className="w-full h-10">{editingEvent ? "儲存修改" : "新增市集"}</Button>
       </Card>
+    </div>
+  );
+}
+
+// ── 便條貼元件 ──
+const NOTE_COLORS = {
+  yellow: { bg: "#FEF3C7", border: "#FCD34D", label: "一般", icon: "📌" },
+  pink: { bg: "#FCE7F3", border: "#F9A8D4", label: "客戶反饋", icon: "💬" },
+  blue: { bg: "#DBEAFE", border: "#93C5FD", label: "待辦", icon: "✅" },
+  green: { bg: "#D1FAE5", border: "#6EE7B7", label: "庫存", icon: "📦" },
+};
+
+function StickyNotesSection({
+  notes, onAdd, onUpdate, onDelete,
+}: {
+  notes: { id: string; text: string; color: "yellow" | "pink" | "blue" | "green"; createdAt: number }[];
+  onAdd: (text: string, color: "yellow" | "pink" | "blue" | "green") => void;
+  onUpdate: (id: string, text: string) => void;
+  onDelete: (id: string) => void;
+}) {
+  const [showAdd, setShowAdd] = useState(false);
+  const [newText, setNewText] = useState("");
+  const [newColor, setNewColor] = useState<"yellow" | "pink" | "blue" | "green">("yellow");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editText, setEditText] = useState("");
+
+  const handleAdd = () => {
+    if (!newText.trim()) return;
+    onAdd(newText.trim(), newColor);
+    setNewText("");
+    setNewColor("yellow");
+    setShowAdd(false);
+  };
+
+  const handleEditSave = (id: string) => {
+    if (!editText.trim()) {
+      onDelete(id);
+    } else {
+      onUpdate(id, editText.trim());
+    }
+    setEditingId(null);
+  };
+
+  const formatTime = (ts: number) => {
+    const d = new Date(ts);
+    const now = new Date();
+    if (d.toDateString() === now.toDateString()) {
+      return `今日 ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+    }
+    return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  };
+
+  return (
+    <div>
+      {/* 標題 + 新增按鈕 */}
+      <div className="flex items-center justify-between px-1 mb-2">
+        <div className="flex items-center gap-1.5">
+          <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">便條貼</p>
+          {notes.length > 0 && <span className="text-[10px] text-muted-foreground">({notes.length})</span>}
+        </div>
+        <button
+          onClick={() => setShowAdd(!showAdd)}
+          className="flex items-center gap-1 text-[11px] text-accent hover:text-foreground px-2 py-1 rounded-md hover:bg-accent/10 transition"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          新增
+        </button>
+      </div>
+
+      {/* 新增便條 */}
+      {showAdd && (
+        <Card className="p-3 mb-2 animate-[fadeIn_0.2s_ease-out]">
+          {/* 顏色選擇 */}
+          <div className="flex gap-1.5 mb-2">
+            {(Object.keys(NOTE_COLORS) as Array<keyof typeof NOTE_COLORS>).map((c) => (
+              <button
+                key={c}
+                onClick={() => setNewColor(c)}
+                className={`px-2 py-1 rounded-md text-[10px] font-medium transition border-2 ${
+                  newColor === c ? "scale-105" : "opacity-60"
+                }`}
+                style={{ backgroundColor: NOTE_COLORS[c].bg, borderColor: NOTE_COLORS[c].border }}
+              >
+                {NOTE_COLORS[c].icon} {NOTE_COLORS[c].label}
+              </button>
+            ))}
+          </div>
+          <textarea
+            value={newText}
+            onChange={(e) => setNewText(e.target.value)}
+            placeholder="寫下你想記的事…"
+            className="w-full bg-background rounded-lg p-2.5 text-xs text-foreground placeholder:text-muted-foreground/60 resize-none min-h-[50px] outline-none focus:ring-1 focus:ring-accent/40 transition"
+            maxLength={200}
+            autoFocus
+          />
+          <div className="flex justify-between items-center mt-2">
+            <span className="text-[9px] text-muted-foreground/60">{newText.length}/200</span>
+            <div className="flex gap-1.5">
+              <button onClick={() => { setShowAdd(false); setNewText(""); }} className="text-[11px] text-muted-foreground hover:text-foreground px-2 py-1">取消</button>
+              <button onClick={handleAdd} className="text-[11px] text-accent font-medium hover:text-foreground px-2 py-1">貼上</button>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* 便條貼列表 */}
+      {notes.length === 0 && !showAdd ? (
+        <Card className="p-4 text-center border-dashed">
+          <p className="text-[11px] text-muted-foreground">點「新增」寫下便條貼</p>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-2 gap-2">
+          {notes.map((note, i) => {
+            const colorInfo = NOTE_COLORS[note.color];
+            const isEditing = editingId === note.id;
+            // 微旋轉讓便條貼更自然
+            const rotation = i % 2 === 0 ? "-rotate-1" : "rotate-1";
+            return (
+              <div
+                key={note.id}
+                className={`relative p-2.5 rounded-lg shadow-sm ${rotation} transition-all hover:rotate-0 hover:shadow-md`}
+                style={{ backgroundColor: colorInfo.bg, borderColor: colorInfo.border, borderWidth: 1 }}
+              >
+                {/* 顏色標籤 + 刪除按鈕 */}
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[9px] font-medium text-muted-foreground">{colorInfo.icon} {colorInfo.label}</span>
+                  <button
+                    onClick={() => onDelete(note.id)}
+                    className="w-4 h-4 rounded-full flex items-center justify-center text-muted-foreground hover:text-rose-500 hover:bg-rose-100/50 transition"
+                    aria-label="刪除"
+                  >
+                    <Trash2 className="w-2.5 h-2.5" />
+                  </button>
+                </div>
+                {/* 內容 */}
+                {isEditing ? (
+                  <textarea
+                    value={editText}
+                    onChange={(e) => setEditText(e.target.value)}
+                    onBlur={() => handleEditSave(note.id)}
+                    onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleEditSave(note.id); } }}
+                    className="w-full bg-white/50 rounded p-1 text-[11px] text-foreground resize-none outline-none min-h-[40px]"
+                    autoFocus
+                    maxLength={200}
+                  />
+                ) : (
+                  <p
+                    onClick={() => { setEditingId(note.id); setEditText(note.text); }}
+                    className="text-[11px] text-foreground leading-relaxed whitespace-pre-wrap break-words cursor-text min-h-[20px]"
+                  >
+                    {note.text}
+                  </p>
+                )}
+                {/* 時間 */}
+                <p className="text-[8px] text-muted-foreground/60 mt-1">{formatTime(note.createdAt)}</p>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
