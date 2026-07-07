@@ -120,31 +120,31 @@ export function getCategoryInfo(id: string | undefined) {
   return CATEGORIES.find((c) => c.id === mapped) || CATEGORIES.find((c) => c.id === "other_expense");
 }
 
-export const PAYMENT_METHODS: Record<PaymentMethod, { label: string; icon: string }> = {
+export const PAYMENT_METHODS: Record<PaymentMethod, { label: string; icon: string; shortLabel: string; color: string }> = {
   // 通用
-  cash: { label: "現金", icon: "💵" },
-  credit_card: { label: "信用卡", icon: "💳" },
-  apple_pay: { label: "Apple Pay", icon: "" },
-  google_pay: { label: "Google Pay", icon: "🅖" },
-  bank_transfer: { label: "銀行轉帳", icon: "🏦" },
-  paypal: { label: "PayPal", icon: "🅿️" },
+  cash: { label: "現金", icon: "💵", shortLabel: "$", color: "#10B981" },
+  credit_card: { label: "信用卡", icon: "💳", shortLabel: "CC", color: "#1F2937" },
+  apple_pay: { label: "Apple Pay", icon: "", shortLabel: "", color: "#000000" },
+  google_pay: { label: "Google Pay", icon: "🅖", shortLabel: "G", color: "#4285F4" },
+  bank_transfer: { label: "銀行轉帳", icon: "🏦", shortLabel: "BT", color: "#0891B2" },
+  paypal: { label: "PayPal", icon: "🅿️", shortLabel: "PP", color: "#003087" },
+  payme: { label: "PayMe", icon: "🅿️", shortLabel: "PM", color: "#E2231A" }, // PayMe 從香港移到通用
   // 香港
-  payme: { label: "PayMe", icon: "🅿️" },
-  alipayhk: { label: "AlipayHK", icon: "🅰️" },
-  wechat_pay: { label: "WeChat Pay", icon: "💬" },
-  fps: { label: "FPS", icon: "⚡" },
-  octopus: { label: "八達通", icon: "🐙" },
+  alipayhk: { label: "AlipayHK", icon: "🅰️", shortLabel: "AH", color: "#1677FF" },
+  wechat_pay: { label: "WeChat Pay", icon: "💬", shortLabel: "WX", color: "#09B83E" },
+  fps: { label: "FPS", icon: "⚡", shortLabel: "FPS", color: "#7C3AED" },
+  octopus: { label: "八達通", icon: "🐙", shortLabel: "八", color: "#D6001C" },
   // 台灣
-  line_pay: { label: "LINE Pay", icon: "🟢" },
-  jkopay: { label: "街口支付", icon: "🅹" },
+  line_pay: { label: "LINE Pay", icon: "🟢", shortLabel: "LP", color: "#06C755" },
+  jkopay: { label: "街口支付", icon: "🅹", shortLabel: "JK", color: "#E94B3C" },
   // 東南亞
-  truemoney: { label: "TrueMoney", icon: "🔵" },
-  tng: { label: "Touch 'n Go", icon: "🟡" },
-  grabpay: { label: "GrabPay", icon: "🟢" },
-  duitnow: { label: "DuitNow", icon: "💠" },
-  promptpay: { label: "PromptPay", icon: "🅿️" },
+  truemoney: { label: "TrueMoney", icon: "🔵", shortLabel: "TM", color: "#FF6B00" },
+  tng: { label: "Touch 'n Go", icon: "🟡", shortLabel: "TNG", color: "#0A8A0A" },
+  grabpay: { label: "GrabPay", icon: "🟢", shortLabel: "GP", color: "#00B14F" },
+  duitnow: { label: "DuitNow", icon: "💠", shortLabel: "DN", color: "#1E40AF" },
+  promptpay: { label: "PromptPay", icon: "🅿️", shortLabel: "PP", color: "#2D6E5E" },
   // 其他
-  other: { label: "其他", icon: "📋" },
+  other: { label: "其他", icon: "📋", shortLabel: "?", color: "#6B7280" },
 };
 
 // ── 支付方式分類（按地區）──
@@ -158,12 +158,12 @@ export const PAYMENT_CATEGORIES: PaymentCategory[] = [
   {
     id: "common",
     label: "通用",
-    payments: ["cash", "credit_card", "apple_pay", "google_pay", "bank_transfer", "paypal"],
+    payments: ["cash", "payme", "credit_card", "apple_pay", "google_pay", "bank_transfer", "paypal"],
   },
   {
     id: "hk",
     label: "香港",
-    payments: ["payme", "fps", "alipayhk", "wechat_pay", "octopus"],
+    payments: ["fps", "alipayhk", "wechat_pay", "octopus"],
   },
   {
     id: "tw",
@@ -183,16 +183,16 @@ export const PAYMENT_CATEGORIES: PaymentCategory[] = [
 export function getPaymentMethodInfo(
   method: PaymentMethod | string | undefined,
   customMethods: CustomPaymentMethod[] = []
-): { label: string; icon: string } {
-  if (!method) return { label: "未知", icon: "💳" };
+): { label: string; icon: string; shortLabel: string; color: string } {
+  if (!method) return { label: "未知", icon: "💳", shortLabel: "?", color: "#6B7280" };
   const m = method as string;
   if (m.startsWith("custom_")) {
     const custom = customMethods.find((c) => `custom_${c.id}` === m);
-    if (custom) return { label: custom.label, icon: custom.icon };
-    return { label: "自訂", icon: "💳" };
+    if (custom) return { label: custom.label, icon: custom.icon, shortLabel: custom.label.slice(0, 2).toUpperCase(), color: "#6B7280" };
+    return { label: "自訂", icon: "💳", shortLabel: "?", color: "#6B7280" };
   }
   const info = PAYMENT_METHODS[m as keyof typeof PAYMENT_METHODS];
-  return info || { label: m, icon: "💳" };
+  return info || { label: m, icon: "💳", shortLabel: "?", color: "#6B7280" };
 }
 
 export const DEFAULT_MARKETS: MarketData[] = [
@@ -251,6 +251,7 @@ interface AppStore {
   deleteTransaction: (id: string) => void;
   clearAll: () => void;
   addProduct: (p: Omit<Product, "id">) => void;
+  updateProduct: (id: string, data: Partial<Omit<Product, "id">>) => void;
   deleteProduct: (id: string) => void;
   addCustomPaymentMethod: (m: Omit<CustomPaymentMethod, "id">) => void;
   deleteCustomPaymentMethod: (id: string) => void;
@@ -279,7 +280,7 @@ export const useAppStore = create<AppStore>()(
       marketEvents: [],
       customPaymentMethods: [],
       // 預設首頁顯示通用支付方式
-      visiblePayments: ["cash", "credit_card", "apple_pay", "google_pay", "bank_transfer", "paypal"],
+      visiblePayments: ["cash", "payme", "credit_card", "apple_pay", "google_pay", "bank_transfer", "paypal"],
 
       setCurrency: (c) => set({ currency: c }),
       setCurrentMarket: (id) => set({ currentMarketId: id }),
@@ -305,6 +306,11 @@ export const useAppStore = create<AppStore>()(
       addProduct: (p) =>
         set((s) => ({
           products: [{ ...p, id: `prod_${Date.now()}_${Math.random().toString(36).slice(2, 8)}` }, ...s.products],
+        })),
+
+      updateProduct: (id, data) =>
+        set((s) => ({
+          products: s.products.map((p) => (p.id === id ? { ...p, ...data } : p)),
         })),
 
       deleteProduct: (id) =>

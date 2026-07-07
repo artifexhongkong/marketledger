@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useAppStore, formatCurrency, CURRENCIES, type MarketEvent, getCategoryInfo, getPaymentMethodInfo } from "@/lib/store";
 import { useAuthStore } from "@/lib/auth-store";
 import { Card } from "@/components/ui/card";
@@ -31,6 +31,9 @@ export function MarketsPage() {
   const [showProfit, setShowProfit] = useState(true);
   // 選中的日期（點擊日曆某天 → 顯示該天交易列表）
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  // 用戶備註（持久化到 localStorage）
+  const [userNote, setUserNote] = useState("");
+  const [noteLoaded, setNoteLoaded] = useState(false);
   // 年月選擇抽屜狀態："none" | "opening" | "open" | "closing" | "returning"
   const [drawerState, setDrawerState] = useState<"none" | "open" | "closing" | "returning">("none");
   // 年份切換 — 3D Barrel Roll 觸發 key（改變就重播動畫）
@@ -41,6 +44,26 @@ export function MarketsPage() {
 
   const prevMonth = () => { if (viewMonth === 0) { setViewMonth(11); setViewYear(viewYear - 1); } else setViewMonth(viewMonth - 1); setSelectedDate(null); };
   const nextMonth = () => { if (viewMonth === 11) { setViewMonth(0); setViewYear(viewYear + 1); } else setViewMonth(viewMonth + 1); setSelectedDate(null); };
+
+  // 載入用戶備註（從 localStorage）
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("marketledger-user-note");
+      if (saved) setUserNote(saved);
+    } catch {}
+    setNoteLoaded(true);
+  }, []);
+
+  // 儲存用戶備註（防抖，500ms 後寫入）
+  useEffect(() => {
+    if (!noteLoaded) return;
+    const timer = setTimeout(() => {
+      try {
+        localStorage.setItem("marketledger-user-note", userNote);
+      } catch {}
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [userNote, noteLoaded]);
 
   // 按日期分組交易
   const groupedByDate = useMemo(() => {
@@ -456,9 +479,21 @@ export function MarketsPage() {
         </div>
       )}
 
-      {marketEvents.length === 0 && (
-        <Card className="p-6 text-center border-dashed"><Calendar className="w-8 h-8 text-muted-foreground/40 mx-auto mb-1" /><p className="text-xs text-muted-foreground">點「新增」添加市集活動</p><p className="text-[11px] text-muted-foreground/60 mt-0.5">選擇日期範圍，自動記帳攤位費</p></Card>
-      )}
+      {/* 用戶備註欄 — 永遠顯示，讓用戶自由記錄文字 */}
+      <Card className="p-3">
+        <div className="flex items-center gap-1.5 mb-1.5">
+          <Pencil className="w-3 h-3 text-muted-foreground" />
+          <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">備註</p>
+        </div>
+        <textarea
+          value={userNote}
+          onChange={(e) => setUserNote(e.target.value)}
+          placeholder="記下你想記的事…（例如：下次要帶的物品、待辦事項、客戶反饋）"
+          className="w-full bg-muted/30 rounded-lg p-2.5 text-xs text-foreground placeholder:text-muted-foreground/60 resize-none min-h-[60px] outline-none focus:ring-1 focus:ring-accent/40 transition"
+          maxLength={500}
+        />
+        <p className="text-[9px] text-muted-foreground/60 mt-1 text-right">{userNote.length}/500</p>
+      </Card>
 
       {showForm && <EventFormModal onClose={() => { setShowForm(false); setEditingEvent(null); }} onSave={handleSave} currency={currency} editingEvent={editingEvent} />}
     </div>

@@ -26,14 +26,28 @@ const PATTERNS: Record<HapticType, (ms: number) => number | number[]> = {
   error: (ms) => [ms, 50, ms, 50, ms, 50, ms],
 };
 
-// 動態載入 Capacitor Haptics（避免 web 環境載入失敗）
+// 檢查是否在 Capacitor 原生平台（Android/iOS）
+// web 環境下 Capacitor Haptics 的 API 會拋 "not implemented on web" 錯誤
+function isNativePlatform(): boolean {
+  if (typeof window === "undefined") return false;
+  // Capacitor 6+ 在 window 上注入 Capacitor 物件
+  const cap = (window as any).Capacitor;
+  if (!cap) return false;
+  if (typeof cap.isNativePlatform === "function") return cap.isNativePlatform();
+  // fallback：檢查 platform
+  return cap.platform === "android" || cap.platform === "ios";
+}
+
+// 動態載入 Capacitor Haptics（只在原生平台載入）
 let capacitorHaptics: any = null;
 let capacitorLoaded = false;
 async function loadCapacitorHaptics() {
+  // web 環境直接跳過，避免 "not implemented on web" 錯誤
+  if (!isNativePlatform()) return null;
   if (capacitorLoaded) return capacitorHaptics;
   capacitorLoaded = true;
   try {
-    // @ts-ignore - 動態載入，web 環境不存在也沒關係
+    // @ts-ignore - 動態載入
     const mod = await import("@capacitor/haptics");
     capacitorHaptics = mod.Haptics || mod.default?.Haptics;
   } catch {
@@ -50,9 +64,9 @@ export async function hapticAsync(type: HapticType = "tap") {
 
   const strength = state.hapticStrength || "medium";
 
-  // 優先用 Capacitor Haptics plugin（在 Android WebView 裡最可靠）
+  // 只在原生平台用 Capacitor Haptics plugin
   const Haptics = await loadCapacitorHaptics();
-  if (Haptics) {
+  if (Haptics && isNativePlatform()) {
     try {
       if (type === "success") {
         await Haptics.notification({ type: "SUCCESS" });
@@ -74,7 +88,7 @@ export async function hapticAsync(type: HapticType = "tap") {
     }
   }
 
-  // Fallback: navigator.vibrate
+  // Fallback: navigator.vibrate（web + 部分手機）
   if (typeof navigator !== "undefined" && "vibrate" in navigator) {
     const ms = { light: 8, medium: 18, strong: 35 }[strength];
     const pattern = PATTERNS[type](ms);
@@ -86,19 +100,19 @@ export async function hapticAsync(type: HapticType = "tap") {
   }
 }
 
-// 同步版本（用於不能 await 的場合，會 fallback 到 navigator.vibrate）
+// 同步版本（用於不能 await 的場合）
 export function haptic(type: HapticType = "tap") {
-  if (typeof navigator === "undefined") return;
+  if (typeof navigator === "undefined" && typeof window === "undefined") return;
   const state = useAppStore.getState();
   if (!state.hapticEnabled) return;
 
   const strength = state.hapticStrength || "medium";
   const ms = { light: 8, medium: 18, strong: 35 }[strength];
 
-  // 觸發 async 版本（不等待）
-  hapticAsync(type);
+  // 觸發 async 版本（不等待，web 環境會自動 fallback）
+  hapticAsync(type).catch(() => {});
 
-  // 同步 fallback
+  // 同步 fallback（web 環境主要靠這個）
   if (typeof navigator !== "undefined" && "vibrate" in navigator) {
     const pattern = PATTERNS[type](ms);
     try {

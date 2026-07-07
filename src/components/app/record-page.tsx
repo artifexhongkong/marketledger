@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Store, X, ChevronDown, Undo2, Check, RotateCcw, SlidersHorizontal, LayoutGrid, List, Trash2 } from "lucide-react";
+import { Plus, Store, X, ChevronDown, Undo2, Check, RotateCcw, SlidersHorizontal, LayoutGrid, List, Trash2, Pencil } from "lucide-react";
 import type { TransactionType, CategoryId, PaymentMethod, Product } from "@/lib/store";
 
 export function RecordPage() {
@@ -214,7 +214,7 @@ function RecordView() {
             <div className="flex items-center justify-between mb-2">
               <p className="text-xs text-muted-foreground font-medium">⚡ 點商品即記錄銷售</p>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] text-muted-foreground/70">長按調數量 · →取消</span>
+                <span className="text-[10px] text-muted-foreground/70">長按調數量 · ←輸入 · →取消</span>
                 {lastTx && (
                   <button
                     onClick={handleUndo}
@@ -448,13 +448,13 @@ function PaymentSelector({
   const [sortMode, setSortMode] = useState(false);
   const sortTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const getPaymentInfo = (m: PaymentMethod): { label: string; icon: string } => {
+  const getPaymentInfo = (m: PaymentMethod): { label: string; icon: string; shortLabel: string; color: string } => {
     if (m.startsWith("custom_")) {
       const custom = customPaymentMethods.find((c) => `custom_${c.id}` === m);
-      if (custom) return { label: custom.label, icon: custom.icon };
+      if (custom) return { label: custom.label, icon: custom.icon, shortLabel: custom.label.slice(0, 2).toUpperCase(), color: "#6B7280" };
     }
     const info = PAYMENT_METHODS[m as keyof typeof PAYMENT_METHODS];
-    return { label: info?.label || m, icon: info?.icon || "💳" };
+    return { label: info?.label || m, icon: info?.icon || "💳", shortLabel: info?.shortLabel || "?", color: info?.color || "#6B7280" };
   };
 
   const shortLabel = (label: string) => {
@@ -535,7 +535,8 @@ function PaymentSelector({
               onDragEnd={() => { setDragIndex(null); setDragOverIndex(null); }}
               className={`relative transition-all duration-200 ease-out ${dragIndex === vi ? "opacity-30 scale-90" : ""} ${sortMode ? "cursor-move" : ""}`}>
               <PaymentButton2 icon={info.icon} label={shortLabel(info.label)} active={active}
-                manageMode={false} onClick={() => !sortMode && !showMore && setPayment(m as PaymentMethod)} onDelete={null} />
+                manageMode={false} onClick={() => !sortMode && !showMore && setPayment(m as PaymentMethod)} onDelete={null}
+                badge={{ shortLabel: info.shortLabel, color: info.color }} />
               {showMore && !sortMode && (
                 <button onClick={(e) => { e.stopPropagation(); togglePaymentVisibility(m); }}
                   className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-rose-500 text-white flex items-center justify-center shadow-sm z-10 animate-[fadeIn_0.15s_ease-out] text-[13px] leading-none font-bold pb-0.5">
@@ -558,7 +559,8 @@ function PaymentSelector({
               className={`relative transition-all duration-200 ease-out ${dragIndex === vi ? "opacity-30 scale-90" : ""} ${sortMode ? "cursor-move" : ""}`}>
               <PaymentButton2 icon={c.icon} label={shortLabel(c.label)} active={active}
                 manageMode={sortMode} onClick={() => !sortMode && !showMore && setPayment(m)}
-                onDelete={() => { if (confirm(`刪除支付方式「${c.label}」？`)) { deleteCustomPaymentMethod(c.id); if (payment === m) setPayment("cash"); } }} />
+                onDelete={() => { if (confirm(`刪除支付方式「${c.label}」？`)) { deleteCustomPaymentMethod(c.id); if (payment === m) setPayment("cash"); } }}
+                badge={{ shortLabel: c.label.slice(0, 2).toUpperCase(), color: "#6B7280" }} />
               {showMore && !sortMode && (
                 <button onClick={(e) => { e.stopPropagation(); togglePaymentVisibility(`custom_${c.id}`); }}
                   className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-rose-500 text-white flex items-center justify-center shadow-sm z-10 animate-[fadeIn_0.15s_ease-out] text-[13px] leading-none font-bold pb-0.5">
@@ -584,19 +586,19 @@ function PaymentSelector({
         <div className="mt-2 animate-[fadeIn_0.2s_ease-out]">
           {(() => {
             // 收集所有未顯示的支付方式
-            const hidden: { m: string; info: { label: string; icon: string } }[] = [];
+            const hidden: { m: string; info: { label: string; icon: string; shortLabel: string; color: string } }[] = [];
             PAYMENT_CATEGORIES.forEach((cat) => {
               cat.payments.forEach((m) => {
                 if (!visiblePayments.includes(m)) {
                   const info = PAYMENT_METHODS[m as keyof typeof PAYMENT_METHODS];
-                  hidden.push({ m, info: { label: info?.label || m, icon: info?.icon || "💳" } });
+                  hidden.push({ m, info: { label: info?.label || m, icon: info?.icon || "💳", shortLabel: info?.shortLabel || "?", color: info?.color || "#6B7280" } });
                 }
               });
             });
             customPaymentMethods.forEach((c) => {
               const m = `custom_${c.id}`;
               if (!visiblePayments.includes(m)) {
-                hidden.push({ m, info: { label: c.label, icon: c.icon } });
+                hidden.push({ m, info: { label: c.label, icon: c.icon, shortLabel: c.label.slice(0, 2).toUpperCase(), color: "#6B7280" } });
               }
             });
 
@@ -620,6 +622,7 @@ function PaymentSelector({
                       active={active}
                       manageMode={false}
                       noActiveStyle // 備用支付方式不顯示 active 樣式，保持原色
+                      badge={{ shortLabel: info.shortLabel, color: info.color }}
                       // 點擊圖示只添加到主頁，不自動選中（避免變色）
                       onClick={() => {
                         togglePaymentVisibility(m);
@@ -651,11 +654,12 @@ function PaymentSelector({
 
 // ── 單個支付方式按鈕 ──
 function PaymentButton2({
-  icon, label, active, manageMode, onClick, onDelete, noActiveStyle,
+  icon, label, active, manageMode, onClick, onDelete, noActiveStyle, badge,
 }: {
   icon: string; label: string; active: boolean; manageMode: boolean;
   onClick: () => void; onDelete: (() => void) | null;
   noActiveStyle?: boolean; // 不顯示 active 樣式（用於「更多」面板）
+  badge?: { shortLabel: string; color: string }; // logo 風格圓形 badge
 }) {
   return (
     <div className="relative">
@@ -665,7 +669,17 @@ function PaymentButton2({
             ? "border-accent bg-accent/15 text-accent shadow-sm scale-[1.02]"
             : "border-border bg-card text-foreground hover:border-accent/40"
         } ${manageMode && onDelete ? "opacity-70" : ""}`}>
-        <span className="text-base leading-none">{icon}</span>
+        {badge ? (
+          // logo 風格圓形 badge（品牌色背景 + 首字母）
+          <div
+            className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white leading-none"
+            style={{ backgroundColor: badge.color }}
+          >
+            {badge.shortLabel}
+          </div>
+        ) : (
+          <span className="text-base leading-none">{icon}</span>
+        )}
         <span className={`text-[10px] font-medium leading-none ${active && !noActiveStyle ? "text-accent" : "text-muted-foreground"}`}>{label}</span>
       </button>
       {manageMode && onDelete && (
@@ -750,7 +764,7 @@ function ProductButton({
 
   // ── 唯一狀態來源：ref（不用 useState 避免渲染時序問題）──
   const stateRef = useRef({
-    mode: "idle" as "idle" | "gesture" | "cancelled",
+    mode: "idle" as "idle" | "gesture" | "cancelled" | "qtyInput",
     qty: 1,
     startX: 0,
     startY: 0,
@@ -761,6 +775,8 @@ function ProductButton({
     timer: null as ReturnType<typeof setTimeout> | null,
     captured: false,
   });
+  // 數量輸入框的值（獨立 state，因為需要即時渲染）
+  const [qtyInputValue, setQtyInputValue] = useState("");
 
   // ── 只用一個 useState 觸發渲染 ──
   const [, forceUpdate] = useState(0);
@@ -865,6 +881,16 @@ function ProductButton({
       if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) {
         if (s.timer) { clearTimeout(s.timer); s.timer = null; }
       }
+
+      // 向左滑超過 60px 且水平為主 → 進入數量輸入模式
+      if (dx < -60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+        if (s.timer) { clearTimeout(s.timer); s.timer = null; }
+        s.mode = "qtyInput";
+        setQtyInputValue("");
+        haptic("tap");
+        rerender();
+        return;
+      }
     }
   };
 
@@ -922,6 +948,52 @@ function ProductButton({
           <p className="text-[10px] font-semibold text-rose-600 mt-1">已取消</p>
         </div>
       )}
+      {s.mode === "qtyInput" && (
+        <div className="absolute inset-0 bg-accent/10 flex flex-col items-center justify-center px-1 z-20">
+          <p className="text-[9px] text-accent font-semibold mb-0.5">輸入數量</p>
+          <input
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            value={qtyInputValue}
+            onChange={(e) => {
+              // 只允許數字
+              const v = e.target.value.replace(/[^0-9]/g, "");
+              setQtyInputValue(v);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                const qty = parseInt(qtyInputValue) || 0;
+                if (qty > 0) {
+                  doRecord(qty);
+                  reset();
+                }
+              } else if (e.key === "Escape") {
+                reset();
+              }
+            }}
+            onBlur={() => {
+              // 失焦時如果有值就記錄，否則取消
+              const qty = parseInt(qtyInputValue) || 0;
+              if (qty > 0) {
+                doRecord(qty);
+                reset();
+              } else {
+                reset();
+              }
+            }}
+            autoFocus
+            placeholder="1"
+            className="w-full text-center text-lg font-bold tabular-nums text-primary bg-background/80 rounded-md py-1 outline-none border border-accent/40"
+          />
+          {qtyInputValue && parseInt(qtyInputValue) > 0 && (
+            <p className="text-[9px] text-muted-foreground mt-0.5 tabular-nums">
+              = {formatCurrency(product.price * (parseInt(qtyInputValue) || 0), currency as any)}
+            </p>
+          )}
+          <p className="text-[8px] text-muted-foreground/60 mt-0.5">Enter 確認 · Esc 取消</p>
+        </div>
+      )}
       {s.mode === "gesture" && (
         <div className="absolute inset-0 bg-primary/5 flex flex-col items-center justify-center px-1">
           <div className="text-2xl font-bold tabular-nums text-primary">×{s.qty}</div>
@@ -948,8 +1020,9 @@ function ProductButton({
 }
 
 function ProductsView() {
-  const { products, currency, addProduct, deleteProduct } = useAppStore();
+  const { products, currency, addProduct, updateProduct, deleteProduct } = useAppStore();
   const [showForm, setShowForm] = useState(false);
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
   const [unit, setUnit] = useState("個");
@@ -988,7 +1061,31 @@ function ProductsView() {
     const p = parseFloat(price);
     if (!name.trim()) return alert("請輸入商品名稱");
     if (!p || p <= 0) return alert("請輸入有效單價");
-    addProduct({ name: name.trim(), price: p, unit: unit.trim() || "個", categoryId: "sales", color: color || undefined });
+    if (editingProductId) {
+      // 編輯模式
+      updateProduct(editingProductId, { name: name.trim(), price: p, unit: unit.trim() || "個", color: color || undefined });
+      setEditingProductId(null);
+    } else {
+      // 新增模式
+      addProduct({ name: name.trim(), price: p, unit: unit.trim() || "個", categoryId: "sales", color: color || undefined });
+    }
+    setName(""); setPrice(""); setUnit("個"); setColor(""); setShowColorPalette(false); setShowForm(false);
+  };
+
+  // 編輯商品 — 載入商品資料到表單
+  const handleEditProduct = (product: { id: string; name: string; price: number; unit: string; color?: string }) => {
+    setEditingProductId(product.id);
+    setName(product.name);
+    setPrice(String(product.price));
+    setUnit(product.unit);
+    setColor(product.color || "");
+    setShowColorPalette(false);
+    setShowForm(true);
+  };
+
+  // 取消編輯/新增
+  const handleCancelForm = () => {
+    setEditingProductId(null);
     setName(""); setPrice(""); setUnit("個"); setColor(""); setShowColorPalette(false); setShowForm(false);
   };
 
@@ -1120,8 +1217,8 @@ function ProductsView() {
       ) : (
         <Card className="p-4 space-y-3">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold">新增商品</h3>
-            <button onClick={() => setShowForm(false)} className="text-muted-foreground hover:text-foreground">
+            <h3 className="text-sm font-semibold">{editingProductId ? "編輯商品" : "新增商品"}</h3>
+            <button onClick={handleCancelForm} className="text-muted-foreground hover:text-foreground">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -1207,7 +1304,7 @@ function ProductsView() {
               )}
             </div>
           </div>
-          <Button onClick={handleAdd} className="w-full">儲存商品</Button>
+          <Button onClick={handleAdd} className="w-full">{editingProductId ? "儲存修改" : "儲存商品"}</Button>
         </Card>
       )}
 
@@ -1332,6 +1429,20 @@ function ProductsView() {
                         </p>
                       </div>
                     </div>
+                    {/* 編輯按鈕 — 點擊進入編輯模式 */}
+                    {!multiSelectMode && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditProduct(p);
+                        }}
+                        className="flex items-center gap-1 text-[11px] text-accent hover:text-foreground px-2 py-1.5 rounded-md hover:bg-accent/10 transition flex-shrink-0"
+                        aria-label="編輯商品"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                        更正
+                      </button>
+                    )}
                   </div>
                 );
               })}
