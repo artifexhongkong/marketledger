@@ -1,25 +1,27 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Home, PencilLine, ClipboardList, Settings as SettingsIcon, MapPin } from "lucide-react";
+import { Home, PencilLine, ClipboardList, Settings as SettingsIcon, MapPin, BarChart3, Store, User } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { useAuthStore } from "@/lib/auth-store";
 import { HomePage } from "@/components/app/home-page";
 import { RecordPage } from "@/components/app/record-page";
 import { TransactionsPage } from "@/components/app/transactions-page";
 import { MarketsPage } from "@/components/app/markets-page";
+import { StatsPage } from "@/components/app/stats-page";
 import { SettingsPage } from "@/components/app/settings-page";
 import { AuthPage } from "@/components/app/auth-section";
 import { LoginScreen } from "@/components/app/login-screen";
 import { CurrencySetup } from "@/components/app/currency-setup";
 
-type TabId = "home" | "record" | "transactions" | "markets" | "settings" | "account";
+type TabId = "home" | "record" | "transactions" | "markets" | "stats" | "settings" | "account";
 
 const TABS: { id: TabId; label: string; icon: typeof Home; featured?: boolean }[] = [
   { id: "home", label: "概況", icon: Home },
   { id: "record", label: "記帳", icon: PencilLine },
-  { id: "markets", label: "市集", icon: MapPin, featured: true },
+  { id: "markets", label: "市集", icon: MapPin },
   { id: "transactions", label: "記錄", icon: ClipboardList },
+  { id: "stats", label: "報表", icon: BarChart3 },
   { id: "settings", label: "設定", icon: SettingsIcon },
 ];
 
@@ -30,7 +32,7 @@ export default function Page() {
   const cleanupOrphanedTxs = useAppStore((s) => s.cleanupOrphanedTxs);
   const migrateCategories = useAppStore((s) => s.migrateCategories);
   const currencyInitialized = useAppStore((s) => s.currencyInitialized);
-  const { testAuthed } = useAuthStore();
+  const { testAuthed, user } = useAuthStore();
 
   useEffect(() => {
     setHydrated(true);
@@ -93,7 +95,25 @@ export default function Page() {
             <AuthPage onBack={() => setTab("home")} />
           ) : (
             <>
-              {/* Content area — 直接從頂部開始，無頂部 bar */}
+              {/* 頂部 bar — 極簡，logo + 帳號鈕 */}
+              <div className="flex-shrink-0 bg-background/95 backdrop-blur-md flex items-center justify-between px-4 h-11">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-sm">
+                  <Store className="w-4 h-4 text-accent" strokeWidth={2.4} />
+                </div>
+                <button
+                  onClick={() => setTab("account")}
+                  className="w-8 h-8 rounded-full bg-accent/10 hover:bg-accent/20 flex items-center justify-center border border-accent/15 transition"
+                  aria-label="帳號"
+                >
+                  {user?.picture ? (
+                    <img src={user.picture} alt="" className="w-7 h-7 rounded-full" />
+                  ) : (
+                    <User className="w-4 h-4 text-accent" />
+                  )}
+                </button>
+              </div>
+
+              {/* Content area */}
               <div
                 className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide"
                 style={{ WebkitOverflowScrolling: "touch", overscrollBehavior: "contain", touchAction: "pan-y" }}
@@ -106,14 +126,15 @@ export default function Page() {
                     {tab === "record" && <RecordPage />}
                     {tab === "transactions" && <TransactionsPage />}
                     {tab === "markets" && <MarketsPage />}
+                    {tab === "stats" && <StatsPage />}
                     {tab === "settings" && <SettingsPage />}
                   </>
                 )}
               </div>
 
               {/* Tab bar */}
-              <div className="bg-card flex items-stretch justify-between px-1 pt-2 pb-5 flex-shrink-0">
-                {TABS.map(({ id, label, icon: Icon, featured }) => {
+              <div className="bg-card flex items-stretch justify-between px-0.5 pt-2 pb-5 flex-shrink-0">
+                {TABS.map(({ id, label, icon: Icon }) => {
                   const active = tab === id;
                   return (
                     <button key={id} onClick={() => {
@@ -124,27 +145,13 @@ export default function Page() {
                       setTab(id);
                     }}
                       className="flex-1 flex flex-col items-center justify-center gap-1 py-1 transition min-w-0">
-                      {featured ? (
-                        // 市集：放大版金色圓形容器，圖示上文字下，白色
-                        <div
-                          className={`flex flex-col items-center justify-center gap-1 w-14 h-14 rounded-full bg-accent shadow-lg shadow-accent/40 transition-all duration-200 ${
-                            active ? "scale-105 ring-2 ring-accent/30 ring-offset-1 ring-offset-card" : "hover:scale-105"
-                          }`}
-                        >
-                          <Icon className="w-6 h-6 text-white" strokeWidth={2.5} />
-                          <span className="text-[10px] font-bold text-white leading-none whitespace-nowrap">{label}</span>
-                        </div>
-                      ) : (
-                        <>
-                          <Icon
-                            className={`w-5 h-5 transition-all ${active ? "text-accent scale-110" : "text-muted-foreground"}`}
-                            strokeWidth={active ? 2.5 : 2}
-                          />
-                          <span className={`text-[10px] transition truncate ${active ? "text-accent font-semibold" : "text-muted-foreground"}`}>
-                            {label}
-                          </span>
-                        </>
-                      )}
+                      <Icon
+                        className={`w-5 h-5 transition-all ${active ? "text-accent scale-110" : "text-muted-foreground"}`}
+                        strokeWidth={active ? 2.5 : 2}
+                      />
+                      <span className={`text-[9px] transition truncate ${active ? "text-accent font-semibold" : "text-muted-foreground"}`}>
+                        {label}
+                      </span>
                     </button>
                   );
                 })}

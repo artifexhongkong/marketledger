@@ -1,55 +1,164 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useAppStore, getDailySummary, formatCurrency, formatDateTime, getCategoryInfo, getPaymentMethodInfo } from "@/lib/store";
+import { useAppStore, getDailySummary, formatCurrency, formatDateTime, getCategoryInfo, getPaymentMethodInfo, CATEGORIES } from "@/lib/store";
 import { groupTransactions, getOrderSummary, type TxGroup } from "@/lib/tx-group";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowUpRight, ArrowDownRight, Inbox, ChevronRight, Receipt, ShoppingBag } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { ArrowUpRight, ArrowDownRight, Inbox, ChevronRight, ShoppingBag, Search, X } from "lucide-react";
+
+type TimeFilter = "today" | "week" | "month" | "all";
 
 export function TransactionsPage() {
   const { transactions, currency, currentMarketId, markets } = useAppStore();
   const summary = getDailySummary(transactions);
   const currentMarket = markets.find((m) => m.id === currentMarketId);
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>("today");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
 
-  // 今日全部交易，按時間倒序
-  const todayTx = summary.todayTransactions.slice().sort((a, b) => b.createdAt - a.createdAt);
-  const groups = useMemo(() => groupTransactions(todayTx), [todayTx]);
+  // 根據時間篩選
+  const filteredTx = useMemo(() => {
+    let txs = transactions.slice().sort((a, b) => b.createdAt - a.createdAt);
+    const now = new Date();
+
+    if (timeFilter === "today") {
+      txs = txs.filter((t) => {
+        const d = new Date(t.createdAt);
+        return d.toDateString() === now.toDateString();
+      });
+    } else if (timeFilter === "week") {
+      const weekAgo = new Date(now);
+      weekAgo.setDate(now.getDate() - 7);
+      txs = txs.filter((t) => new Date(t.createdAt) >= weekAgo);
+    } else if (timeFilter === "month") {
+      txs = txs.filter((t) => {
+        const d = new Date(t.createdAt);
+        return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+      });
+    }
+
+    // 分類篩選
+    if (categoryFilter !== "all") {
+      txs = txs.filter((t) => t.category === categoryFilter);
+    }
+
+    // 搜索（商品名/備註）
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      txs = txs.filter((t) =>
+        t.note?.toLowerCase().includes(q) ||
+        getCategoryInfo(t.category)?.label.toLowerCase().includes(q)
+      );
+    }
+
+    return txs;
+  }, [transactions, timeFilter, categoryFilter, searchQuery]);
+
+  const groups = useMemo(() => groupTransactions(filteredTx), [filteredTx]);
+
+  // 計算篩選後的摘要
+  const filteredSummary = useMemo(() => {
+    const income = filteredTx.filter((t) => t.type === "income").reduce((a, b) => a + b.amount, 0);
+    const expense = filteredTx.filter((t) => t.type === "expense").reduce((a, b) => a + b.amount, 0);
+    return { income, expense, profit: income - expense, count: filteredTx.length };
+  }, [filteredTx]);
+
+  const timeLabels: Record<TimeFilter, string> = { today: "今日", week: "本週", month: "本月", all: "全部" };
 
   return (
-    <div className="px-4 pb-4 space-y-4">
+    <div className="px-4 pb-4 space-y-3">
       {/* 標題區 */}
       <div className="pt-2">
-        <p className="text-[11px] text-muted-foreground tracking-wide">
-          {new Date().toLocaleDateString("zh-TW", { year: "numeric", month: "long", day: "numeric", weekday: "short" })}
-        </p>
-        <h1 className="text-xl font-bold tracking-tight mt-0.5 text-foreground">今日記錄</h1>
+        <h1 className="text-xl font-bold tracking-tight text-foreground">交易記錄</h1>
         {currentMarket && (
-          <div className="mt-1.5 inline-flex items-center gap-1 text-[11px] bg-primary/8 text-primary px-2 py-0.5 rounded-full">
+          <div className="mt-1 inline-flex items-center gap-1 text-[11px] bg-primary/8 text-primary px-2 py-0.5 rounded-full">
             📍 {currentMarket.name}
           </div>
         )}
       </div>
 
+      {/* 時間篩選 chips */}
+      <div className="flex gap-1.5 overflow-x-auto scrollbar-hide">
+        {(["today", "week", "month", "all"] as TimeFilter[]).map((tf) => (
+          <button
+            key={tf}
+            onClick={() => setTimeFilter(tf)}
+            className={`px-3 py-1.5 rounded-full text-xs font-medium transition flex-shrink-0 ${
+              timeFilter === tf
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground hover:bg-muted/70"
+            }`}
+          >
+            {timeLabels[tf]}
+          </button>
+        ))}
+      </div>
+
+      {/* 搜索欄 */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Input
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="搜索商品名稱或備註..."
+          className="bg-background pl-9 pr-9 h-10 text-sm"
+        />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery("")}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+
+      {/* 分類篩選 chips */}
+      <div className="flex gap-1.5 overflow-x-auto scrollbar-hide">
+        <button
+          onClick={() => setCategoryFilter("all")}
+          className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition flex-shrink-0 ${
+            categoryFilter === "all" ? "bg-accent text-accent-foreground" : "bg-muted text-muted-foreground"
+          }`}
+        >
+          全部
+        </button>
+        {CATEGORIES.map((c) => (
+          <button
+            key={c.id}
+            onClick={() => setCategoryFilter(c.id)}
+            className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition flex-shrink-0 ${
+              categoryFilter === c.id ? "bg-accent text-accent-foreground" : "bg-muted text-muted-foreground"
+            }`}
+          >
+            {c.icon} {c.label}
+          </button>
+        ))}
+      </div>
+
       {/* 摘要 Hero 卡 */}
       <div className="bg-gradient-to-br from-primary to-primary/85 rounded-2xl p-4 text-primary-foreground shadow-lg">
-        <p className="text-[11px] text-primary-foreground/60 uppercase tracking-wider">今日淨利</p>
+        <p className="text-[11px] text-primary-foreground/60 uppercase tracking-wider">
+          {timeLabels[timeFilter]}淨利
+        </p>
         <p className="text-3xl font-bold tabular-nums mt-0.5">
-          {summary.profit >= 0 ? "+" : "−"}{formatCurrency(Math.abs(summary.profit), currency)}
+          {filteredSummary.profit >= 0 ? "+" : "−"}{formatCurrency(Math.abs(filteredSummary.profit), currency)}
         </p>
         <div className="flex items-center gap-4 mt-3 text-xs">
           <div className="flex items-center gap-1">
             <ArrowUpRight className="w-3 h-3 text-emerald-300" />
             <span className="text-primary-foreground/60">收</span>
-            <span className="font-semibold tabular-nums">{formatCurrency(summary.income, currency)}</span>
+            <span className="font-semibold tabular-nums">{formatCurrency(filteredSummary.income, currency)}</span>
           </div>
           <div className="flex items-center gap-1">
             <ArrowDownRight className="w-3 h-3 text-rose-300" />
             <span className="text-primary-foreground/60">支</span>
-            <span className="font-semibold tabular-nums">{formatCurrency(summary.expense, currency)}</span>
+            <span className="font-semibold tabular-nums">{formatCurrency(filteredSummary.expense, currency)}</span>
           </div>
-          <span className="text-primary-foreground/60">{summary.count} 筆</span>
+          <span className="text-primary-foreground/60">{filteredSummary.count} 筆</span>
         </div>
       </div>
 
@@ -62,8 +171,12 @@ export function TransactionsPage() {
         {groups.length === 0 ? (
           <Card className="p-8 text-center border-dashed">
             <Inbox className="w-10 h-10 text-muted-foreground/40 mx-auto mb-2" />
-            <p className="text-sm font-medium text-foreground">今日還沒有交易記錄</p>
-            <p className="text-xs text-muted-foreground mt-1">前往「記帳」頁面開始記錄</p>
+            <p className="text-sm font-medium text-foreground">
+              {searchQuery || categoryFilter !== "all" ? "沒有符合條件的記錄" : "還沒有交易記錄"}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {searchQuery || categoryFilter !== "all" ? "試試其他搜索條件" : "前往「記帳」頁面開始記錄"}
+            </p>
           </Card>
         ) : (
           <div className="space-y-2">
@@ -91,7 +204,7 @@ export function TxGroupCard({
   currency: any;
   isExpanded: boolean;
   onToggle: () => void;
-  compact?: boolean; // 緊湊模式（首頁用）
+  compact?: boolean;
 }) {
   const customPaymentMethods = useAppStore((s) => s.customPaymentMethods);
   const firstTx = group.txs[0];
@@ -101,7 +214,6 @@ export function TxGroupCard({
   const summary = getOrderSummary(group);
 
   if (group.type === "single") {
-    // 單筆交易（含支出）— 直接顯示
     return (
       <Card className={`${compact ? "p-2.5" : "p-3"} animate-[fadeIn_0.2s_ease-out]`}>
         <div className="flex items-center gap-2.5">
@@ -134,10 +246,8 @@ export function TxGroupCard({
     );
   }
 
-  // 訂單組（多筆）— 可展開
   return (
     <Card className="overflow-hidden animate-[fadeIn_0.2s_ease-out]">
-      {/* 訂單標題（點擊展開/收起） */}
       <button
         onClick={onToggle}
         className={`w-full ${compact ? "p-2.5" : "p-3"} flex items-center gap-2.5 hover:bg-muted/30 transition text-left`}
@@ -153,7 +263,6 @@ export function TxGroupCard({
               <span className="text-[9px] text-muted-foreground bg-muted px-1 rounded">{pay.label}</span>
             )}
           </div>
-          {/* 商品摘要 — 小字直接顯示賣了什麼 */}
           <p className="text-[10px] text-muted-foreground truncate mt-0.5">
             {summary}
           </p>
@@ -169,7 +278,6 @@ export function TxGroupCard({
         </div>
       </button>
 
-      {/* 展開後的明細 */}
       {isExpanded && (
         <div className="border-t border-border divide-y divide-border bg-muted/20">
           {group.txs.map((tx) => {
@@ -198,7 +306,6 @@ export function TxGroupCard({
               </div>
             );
           })}
-          {/* 訂單總計 */}
           <div className="px-3 py-2 bg-primary/5 flex items-center justify-between">
             <span className="text-[10px] font-semibold text-foreground">合計</span>
             <span className="text-xs font-bold tabular-nums" style={{ color: "#059669" }}>

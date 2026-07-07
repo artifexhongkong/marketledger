@@ -1496,6 +1496,19 @@ function ProductsView() {
                         <Check className="w-3 h-3 text-white" strokeWidth={3} />
                       </div>
                     )}
+                    {/* 編輯按鈕 — 非多選模式時顯示 */}
+                    {!multiSelectMode && !isSelected && !isLongPressing && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditProduct(p);
+                        }}
+                        className="absolute top-1 right-1 w-5 h-5 rounded-full bg-accent/15 flex items-center justify-center z-10 hover:bg-accent/30 transition"
+                        aria-label="編輯商品"
+                      >
+                        <Pencil className="w-2.5 h-2.5 text-accent" />
+                      </button>
+                    )}
                     <p className={`text-xs font-medium leading-tight line-clamp-2 min-h-[28px] ${
                       isSelected || isLongPressing ? "text-rose-700" : "text-foreground"
                     }`}>
