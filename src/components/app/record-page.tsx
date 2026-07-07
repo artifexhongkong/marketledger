@@ -50,6 +50,26 @@ const PRODUCT_COLORS = [
   "#E5E7EB", // 灰
 ];
 
+// 擴充顏色 — 給「更多顏色」色板用，直觀的飽和色
+const EXTENDED_COLORS = [
+  // 紅色系
+  "#FCA5A5", "#EF4444", "#B91C1C", "#7F1D1D",
+  // 橘色系
+  "#FDBA74", "#F97316", "#C2410C", "#7C2D12",
+  // 黃色系
+  "#FCD34D", "#F59E0B", "#B45309", "#78350F",
+  // 綠色系
+  "#86EFAC", "#22C55E", "#15803D", "#14532D",
+  // 藍色系
+  "#93C5FD", "#3B82F6", "#1D4ED8", "#1E3A8A",
+  // 紫色系
+  "#C4B5FD", "#8B5CF6", "#6D28D9", "#4C1D95",
+  // 粉色系
+  "#F9A8D4", "#EC4899", "#BE185D", "#831843",
+  // 中性色
+  "#9CA3AF", "#6B7280", "#374151", "#111827",
+];
+
 // ── Toast 通知型別 ──
 interface ToastState {
   id: string;
@@ -550,15 +570,18 @@ function PaymentSelector({
             </div>
           );
         })}
-        {/* 更多按鈕 */}
-        <button onClick={() => setShowMore(!showMore)}
-          className={`flex flex-col items-center justify-center gap-0.5 py-2.5 rounded-xl border-2 transition ${showMore ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card text-foreground hover:border-primary/40"}`}>
-          <span className="text-base leading-none">🌐</span>
-          <span className="text-[10px] font-medium">更多</span>
-        </button>
+        {/* 更多按鈕 — 跟通用按鈕同大小同樣式 */}
+        <PaymentButton2
+          icon="🌐"
+          label="更多"
+          active={showMore}
+          manageMode={false}
+          onClick={() => setShowMore(!showMore)}
+          onDelete={null}
+        />
       </div>
 
-      {/* 更多展開 — 只顯示還沒在主頁的支付方式，帶 + 按鈕 */}
+      {/* 更多展開 — 只顯示還沒在主頁的支付方式，點擊即添加 */}
       {showMore && (
         <div className="mt-2 animate-[fadeIn_0.2s_ease-out]">
           {(() => {
@@ -592,23 +615,19 @@ function PaymentSelector({
                 {hidden.map(({ m, info }) => {
                   const active = payment === (m as PaymentMethod);
                   return (
-                    <button
+                    <PaymentButton2
                       key={m}
+                      icon={info.icon}
+                      label={shortLabel(info.label)}
+                      active={active}
+                      manageMode={false}
+                      // 點擊圖示即選用 + 添加到主頁，保持更多開啟
                       onClick={() => {
-                        // 點擊圖示即選用 + 添加到主頁
                         setPayment(m as PaymentMethod);
                         togglePaymentVisibility(m);
-                        setShowMore(false);
                       }}
-                      className={`flex flex-col items-center justify-center gap-0.5 py-2.5 rounded-xl border-2 transition-all select-none ${
-                        active
-                          ? "border-accent bg-accent/15 text-accent shadow-sm scale-[1.02]"
-                          : "border-border bg-card text-foreground hover:border-accent/40 hover:bg-accent/5"
-                      }`}
-                    >
-                      <span className="text-base leading-none">{info.icon}</span>
-                      <span className={`text-[10px] font-medium leading-none ${active ? "text-accent" : "text-muted-foreground"}`}>{shortLabel(info.label)}</span>
-                    </button>
+                      onDelete={null}
+                    />
                   );
                 })}
                 {/* 新增自訂支付 */}
@@ -756,6 +775,8 @@ function ProductButton({
       note: qty > 1 ? `${product.name} x${qty}` : product.name,
       marketId: currentMarketId || undefined,
     });
+    // 每次記錄都震動（單筆用 success，多筆用 tap）
+    haptic(qty > 1 ? "tap" : "success");
     onConfirm(product.id);
     onRecord(txId, qty > 1 ? `${product.name} x${qty}` : product.name, totalAmount);
   };
@@ -931,6 +952,8 @@ function ProductsView() {
   const [unit, setUnit] = useState("個");
   // 按鈕顏色（可選，用於視覺分組）
   const [color, setColor] = useState<string>("");
+  // 是否展開擴充色板
+  const [showColorPalette, setShowColorPalette] = useState(false);
   // 顯示模式：grid（格子）或 list（列表）
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   // 多選刪除模式
@@ -963,7 +986,7 @@ function ProductsView() {
     if (!name.trim()) return alert("請輸入商品名稱");
     if (!p || p <= 0) return alert("請輸入有效單價");
     addProduct({ name: name.trim(), price: p, unit: unit.trim() || "個", categoryId: "sales", color: color || undefined });
-    setName(""); setPrice(""); setUnit("個"); setColor(""); setShowForm(false);
+    setName(""); setPrice(""); setUnit("個"); setColor(""); setShowColorPalette(false); setShowForm(false);
   };
 
   // 長按商品 → 進入多選模式 + 選中該商品
@@ -1124,28 +1147,41 @@ function ProductsView() {
                     aria-label={`顏色 ${c}`}
                   />
                 ))}
-                {/* 自訂顏色調色盤 */}
-                <div className="relative w-7 h-7">
-                  <input
-                    type="color"
-                    value={color && !PRODUCT_COLORS.includes(color) ? color : "#6B7280"}
-                    onChange={(e) => setColor(e.target.value)}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                    aria-label="自訂顏色"
-                  />
-                  <div
-                    className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition ${
-                      color && !PRODUCT_COLORS.includes(color)
-                        ? "border-foreground ring-2 ring-offset-1 ring-foreground/30"
-                        : "border-border"
-                    }`}
-                    style={{ background: color && !PRODUCT_COLORS.includes(color) ? color : "conic-gradient(from 0deg, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000)" }}
-                  >
-                    <Plus className="w-3 h-3 text-white drop-shadow" strokeWidth={3} />
-                  </div>
-                </div>
+                {/* 更多顏色 — 點擊展開色板 */}
+                <button
+                  onClick={() => setShowColorPalette(!showColorPalette)}
+                  className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition ${
+                    showColorPalette || (color && !PRODUCT_COLORS.includes(color))
+                      ? "border-foreground ring-2 ring-offset-1 ring-foreground/30"
+                      : "border-border"
+                  }`}
+                  style={{ background: "conic-gradient(from 0deg, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000)" }}
+                  aria-label="更多顏色"
+                >
+                  <Plus className="w-3 h-3 text-white drop-shadow" strokeWidth={3} />
+                </button>
               </div>
-              {color && !PRODUCT_COLORS.includes(color) && (
+              {/* 展開的色板 — 直觀選色，不用 HSV slider */}
+              {showColorPalette && (
+                <div className="mt-2 p-2 bg-muted/40 rounded-lg animate-[fadeIn_0.15s_ease-out]">
+                  <p className="text-[10px] text-muted-foreground mb-1.5">選擇顏色</p>
+                  <div className="grid grid-cols-8 gap-1">
+                    {EXTENDED_COLORS.map((c) => (
+                      <button
+                        key={c}
+                        onClick={() => { setColor(c); setShowColorPalette(false); }}
+                        className={`aspect-square rounded-md border-2 transition hover:scale-110 ${color === c ? "border-foreground scale-110" : "border-white/50"}`}
+                        style={{ background: c }}
+                        aria-label={`顏色 ${c}`}
+                      />
+                    ))}
+                  </div>
+                  {color && !PRODUCT_COLORS.includes(color) && (
+                    <p className="text-[10px] text-muted-foreground mt-1.5">已選：{color}</p>
+                  )}
+                </div>
+              )}
+              {color && !PRODUCT_COLORS.includes(color) && !showColorPalette && (
                 <p className="text-[10px] text-muted-foreground mt-1">自訂顏色：{color}</p>
               )}
             </div>

@@ -207,28 +207,50 @@ export function MarketsPage() {
               <select
                 value={viewYear}
                 onChange={(e) => { setViewYear(Number(e.target.value)); setSelectedDate(null); }}
-                className="appearance-none bg-transparent text-sm font-bold text-foreground pr-4 py-0.5 cursor-pointer hover:bg-muted rounded transition outline-none"
-                style={{ direction: "rtl" }}
+                onWheel={(e) => {
+                  e.preventDefault();
+                  const delta = e.deltaY > 0 ? 1 : -1;
+                  const newYear = viewYear + delta;
+                  const now = new Date().getFullYear();
+                  if (newYear >= now - 5 && newYear <= now + 5) {
+                    setViewYear(newYear);
+                    setSelectedDate(null);
+                  }
+                }}
+                className="appearance-none bg-transparent text-[11px] font-semibold text-foreground pr-3 py-0.5 cursor-pointer hover:bg-muted rounded transition outline-none"
               >
-                {Array.from({ length: 11 }, (_, i) => viewYear - 5 + i).map((y) => (
+                {Array.from({ length: 11 }, (_, i) => new Date().getFullYear() - 5 + i).map((y) => (
                   <option key={y} value={y}>{y}年</option>
                 ))}
               </select>
-              <ChevronRight className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground pointer-events-none rotate-90" />
+              <ChevronRight className="absolute right-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 text-muted-foreground pointer-events-none rotate-90" />
             </div>
             {/* 月份滾輪 */}
             <div className="relative">
               <select
                 value={viewMonth}
                 onChange={(e) => { setViewMonth(Number(e.target.value)); setSelectedDate(null); }}
-                className="appearance-none bg-transparent text-sm font-bold text-foreground pr-4 py-0.5 cursor-pointer hover:bg-muted rounded transition outline-none"
-                style={{ direction: "rtl" }}
+                onWheel={(e) => {
+                  e.preventDefault();
+                  const delta = e.deltaY > 0 ? 1 : -1;
+                  let newMonth = viewMonth + delta;
+                  let newYear = viewYear;
+                  if (newMonth > 11) { newMonth = 0; newYear++; }
+                  if (newMonth < 0) { newMonth = 11; newYear--; }
+                  const now = new Date().getFullYear();
+                  if (newYear >= now - 5 && newYear <= now + 5) {
+                    setViewMonth(newMonth);
+                    if (newYear !== viewYear) setViewYear(newYear);
+                    setSelectedDate(null);
+                  }
+                }}
+                className="appearance-none bg-transparent text-[11px] font-semibold text-foreground pr-3 py-0.5 cursor-pointer hover:bg-muted rounded transition outline-none"
               >
                 {MONTHS.map((m, i) => (
                   <option key={m} value={i}>{m}</option>
                 ))}
               </select>
-              <ChevronRight className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground pointer-events-none rotate-90" />
+              <ChevronRight className="absolute right-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 text-muted-foreground pointer-events-none rotate-90" />
             </div>
           </div>
           <button onClick={nextMonth} className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-muted"><ChevronRight className="w-4 h-4 text-foreground" /></button>
