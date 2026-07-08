@@ -132,9 +132,7 @@ export function LoginScreen() {
         </Card>
 
         <p className="text-[10px] text-muted-foreground/60 text-center mt-6 px-4 leading-relaxed">
-          本應用程式為測試版本，僅供受邀測試者使用。
-          <br />
-         未經授權請勿散布。
+          {t.login_warning}
         </p>
       </div>
     </div>

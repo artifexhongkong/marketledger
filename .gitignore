@@ -53,10 +53,18 @@ server.log
 # Skills directory
 /skills/
 
+# React Native alternative project (not part of Next.js app)
+/MarketLedger/
+
+# Backup files
+node_modules.bak/
+*.bak
+
 # Capacitor / Android
 /android/
 /.next.capacitor/
 next.config.mjs.bak
+next.config.capacitor.js
 
 # Tool intermediate outputs
 /tool-results/
@@ -74,3 +82,6 @@ next.config.mjs.bak
 *.docx
 Caddyfile
 android/app/debug.keystore
+
+# Public app export
+/public/marketledger-app/

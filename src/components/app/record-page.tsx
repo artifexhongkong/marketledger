@@ -604,7 +604,8 @@ function PaymentSelector({
   };
 
   const shortLabel = (label: string) => {
-    return label.replace("Touch 'n ", "TnG").replace("WeChat Pay", "WeChat").replace("Credit Card", "信用卡").replace("Bank Transfer", "轉帳");
+    // 短顯示：截斷為 2-4 字元
+    return label.length > 4 ? label.slice(0, 4) : label;
   };
 
   const allBuiltinPayments = PAYMENT_CATEGORIES.flatMap((c) => c.payments);
@@ -717,7 +718,7 @@ function PaymentSelector({
         {/* 更多按鈕 — 跟通用按鈕同大小同樣式 */}
         <PaymentButton2
           icon="🌐"
-          label="更多"
+          label={t.common_more}
           active={showMore}
           manageMode={false}
           onClick={() => setShowMore(!showMore)}

@@ -139,6 +139,17 @@ export interface Translations {
   stats_category_stats: string;
   stats_no_data: string;
   stats_orders: string;
+  stats_orders_and_count: string;
+  stats_count_unit: string;
+
+  // 通用
+  common_more: string;
+  common_edit: string;
+  common_delete: string;
+  common_income: string;
+  common_expense: string;
+  common_transactions_count: string;
+  common_count_unit: string;
 
   // 設定頁
   settings_title: string;
@@ -456,6 +467,16 @@ const zhTW: Translations = {
   stats_category_stats: "分類統計",
   stats_no_data: "尚無數據",
   stats_orders: "單",
+  stats_orders_and_count: "{orders} 單 · {count} 筆",
+  stats_count_unit: "筆",
+
+  common_more: "更多",
+  common_edit: "編輯",
+  common_delete: "刪除",
+  common_income: "收入",
+  common_expense: "支出",
+  common_transactions_count: "{n} 筆交易",
+  common_count_unit: "筆",
 
   settings_title: "設定",
   settings_test_account: "測試帳號",
@@ -735,6 +756,17 @@ const zhCN: Translations = {
   stats_category_stats: "分类统计",
   stats_no_data: "尚无数据",
   stats_orders: "单",
+  stats_orders_and_count: "{orders} 单 · {count} 笔",
+  stats_count_unit: "笔",
+
+  common_more: "更多",
+  common_edit: "编辑",
+  common_delete: "删除",
+  common_income: "收入",
+  common_expense: "支出",
+  common_transactions_count: "{n} 笔交易",
+  common_count_unit: "笔",
+
   settings_title: "设定",
   settings_test_account: "测试帐号",
   settings_logged_in: "已登入测试帐号",
@@ -1032,6 +1064,16 @@ const en: Translations = {
   stats_category_stats: "Category Stats",
   stats_no_data: "No data",
   stats_orders: "orders",
+  stats_orders_and_count: "{orders} orders · {count} records",
+  stats_count_unit: "records",
+
+  common_more: "More",
+  common_edit: "Edit",
+  common_delete: "Delete",
+  common_income: "Income",
+  common_expense: "Expense",
+  common_transactions_count: "{n} transactions",
+  common_count_unit: "records",
 
   settings_title: "Settings",
   settings_test_account: "Test Account",
@@ -1332,6 +1374,16 @@ const ja: Translations = {
   stats_category_stats: "カテゴリー別統計",
   stats_no_data: "データなし",
   stats_orders: "件",
+  stats_orders_and_count: "{orders} 件 · {count} 件",
+  stats_count_unit: "件",
+
+  common_more: "もっと見る",
+  common_edit: "編集",
+  common_delete: "削除",
+  common_income: "収入",
+  common_expense: "支出",
+  common_transactions_count: "{n} 件の取引",
+  common_count_unit: "件",
 
   settings_title: "設定",
   settings_test_account: "テストアカウント",
@@ -1631,6 +1683,16 @@ const ko: Translations = {
   stats_category_stats: "카테고리 통계",
   stats_no_data: "데이터 없음",
   stats_orders: "건",
+  stats_orders_and_count: "{orders}건 · {count}건",
+  stats_count_unit: "건",
+
+  common_more: "더보기",
+  common_edit: "편집",
+  common_delete: "삭제",
+  common_income: "수입",
+  common_expense: "지출",
+  common_transactions_count: "{n}건 거래",
+  common_count_unit: "건",
 
   settings_title: "설정",
   settings_test_account: "테스트 계정",

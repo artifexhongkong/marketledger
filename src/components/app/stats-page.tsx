@@ -41,7 +41,7 @@ export function StatsPage() {
     });
     const avgOrder = orderCount > 0 ? Math.round(income / orderCount) : 0;
 
-    // 按t.stats_category_stats
+    // 按分類統計
     const byCategory: Record<string, { income: number; expense: number; count: number }> = {};
     periodTx.forEach((t) => {
       if (!byCategory[t.category]) byCategory[t.category] = { income: 0, expense: 0, count: 0 };
@@ -139,13 +139,13 @@ export function StatsPage() {
           <p className="text-lg font-bold tabular-nums text-foreground">
             {stats.orderCount > 0 ? formatCurrency(stats.avgOrder, currency) : "—"}
           </p>
-          <p className="text-[9px] text-muted-foreground">{stats.orderCount} 單 · {stats.txCount} 筆</p>
+          <p className="text-[9px] text-muted-foreground">{t.stats_orders_and_count.replace("{orders}", String(stats.orderCount)).replace("{count}", String(stats.txCount))}</p>
         </Card>
       </div>
 
       {/* 每日趨勢圖（簡易條形圖） */}
       <Card className="p-3">
-        <p className="text-xs font-semibold text-foreground mb-2">每日t.stats_net_profit趨勢</p>
+        <p className="text-xs font-semibold text-foreground mb-2">{t.stats_daily_trend}</p>
         <div className="flex items-end gap-0.5 h-24">
           {stats.dailyData.map((d, i) => {
             const heightPct = Math.abs(d.profit) / maxProfit * 100;

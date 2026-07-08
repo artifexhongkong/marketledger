@@ -194,15 +194,15 @@ export function MarketsPage() {
           <div className="text-right space-y-1">
             <div className="flex items-center gap-1 justify-end">
               <ArrowUpRight className="w-3 h-3 text-emerald-300" />
-              <span className="text-[11px] text-primary-foreground/60">收入</span>
+              <span className="text-[11px] text-primary-foreground/60">{t.common_income}</span>
               <span className="text-xs font-semibold tabular-nums">{formatCurrency(monthSummary.income, currency)}</span>
             </div>
             <div className="flex items-center gap-1 justify-end">
               <ArrowDownRight className="w-3 h-3 text-rose-300" />
-              <span className="text-[11px] text-primary-foreground/60">支出</span>
+              <span className="text-[11px] text-primary-foreground/60">{t.common_expense}</span>
               <span className="text-xs font-semibold tabular-nums">{formatCurrency(monthSummary.expense, currency)}</span>
             </div>
-            <p className="text-[11px] text-primary-foreground/60">{monthSummary.count} 筆交易</p>
+            <p className="text-[11px] text-primary-foreground/60">{t.common_transactions_count.replace("{n}", String(monthSummary.count))}</p>
           </div>
         </div>
       </div>
@@ -302,7 +302,7 @@ export function MarketsPage() {
                   className="text-sm font-bold text-foreground animate-barrel-roll"
                   style={{ transformStyle: "preserve-3d", transformOrigin: "center" }}
                 >
-                  {pickerYear}年
+                  {pickerYear}{t.date_year}
                 </span>
                 <button
                   onClick={() => {
@@ -396,7 +396,7 @@ export function MarketsPage() {
             <div className="flex items-center gap-1.5">
               <Calendar className="w-3 h-3 text-muted-foreground" />
               <span className="text-sm font-bold text-foreground">{selectedDateLabel}</span>
-              <span className="text-[10px] text-muted-foreground">{selectedSummary?.count || 0} 筆</span>
+              <span className="text-[10px] text-muted-foreground">{selectedSummary?.count || 0} {t.common_count_unit}</span>
             </div>
             {selectedSummary && selectedSummary.count > 0 && (
               <span className={`text-xs font-bold tabular-nums ${selectedSummary.profit >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
@@ -474,7 +474,7 @@ function EventCard({ event, currency, onEdit, onDelete }: { event: MarketEvent; 
               <span className="text-[10px] text-muted-foreground flex items-center gap-0.5"><Calendar className="w-2.5 h-2.5" />{event.startDate === event.endDate ? event.startDate : `${event.startDate.slice(5)} ~ ${event.endDate.slice(5)}`}</span>
               {event.location && <span className="text-[10px] text-muted-foreground flex items-center gap-0.5"><MapPin className="w-2.5 h-2.5" />{event.location}</span>}
             </div>
-            {event.boothFee > 0 && <p className="text-[10px] text-muted-foreground mt-0.5">攤位費 {formatCurrency(dailyFee, currency as any)}{event.feeType === "daily" ? "/天" : ""}<span className="text-muted-foreground/60"> · 共 {formatCurrency(totalFee, currency as any)}</span></p>}
+            {event.boothFee > 0 && <p className="text-[10px] text-muted-foreground mt-0.5">{t.cat_rent} {formatCurrency(dailyFee, currency as any)}{event.feeType === "daily" ? "/" + t.markets_per_day : ""}<span className="text-muted-foreground/60"> · {t.markets_total_mode} {formatCurrency(totalFee, currency as any)}</span></p>}
           </div>
           <ChevronRight className={`w-4 h-4 text-muted-foreground transition-transform ${expanded ? "rotate-90" : ""}`} />
         </div>
@@ -484,10 +484,10 @@ function EventCard({ event, currency, onEdit, onDelete }: { event: MarketEvent; 
           {event.boothNumber && <InfoRow icon={<Store className="w-3 h-3" />} label={t.markets_booth_number} value={event.boothNumber} />}
           {event.businessHours && <InfoRow icon={<Clock className="w-3 h-3" />} label={t.markets_business_hours} value={event.businessHours} />}
           {event.notes && <InfoRow icon={<Calendar className="w-3 h-3" />} label={t.markets_notes} value={event.notes} />}
-          {event.autoAddFee && <p className="text-[10px] text-emerald-600">✓ 已t.markets_auto_fee</p>}
+          {event.autoAddFee && <p className="text-[10px] text-emerald-600">✓ {t.markets_auto_fee}</p>}
           <div className="flex gap-2 mt-2">
-            <button onClick={onEdit} className="flex items-center gap-1 text-[11px] text-accent hover:text-foreground px-2 py-1 rounded-md hover:bg-accent/10"><Pencil className="w-3 h-3" />編輯</button>
-            <button onClick={onDelete} className="flex items-center gap-1 text-[11px] text-rose-500 hover:text-rose-600 px-2 py-1 rounded-md hover:bg-rose-50"><Trash2 className="w-3 h-3" />刪除</button>
+            <button onClick={onEdit} className="flex items-center gap-1 text-[11px] text-accent hover:text-foreground px-2 py-1 rounded-md hover:bg-accent/10"><Pencil className="w-3 h-3" />{t.common_edit}</button>
+            <button onClick={onDelete} className="flex items-center gap-1 text-[11px] text-rose-500 hover:text-rose-600 px-2 py-1 rounded-md hover:bg-rose-50"><Trash2 className="w-3 h-3" />{t.common_delete}</button>
           </div>
         </div>
       )}
@@ -724,7 +724,7 @@ function StickyNotesSection({
           className="flex items-center gap-1 text-[11px] text-accent hover:text-foreground px-2 py-1 rounded-md hover:bg-accent/10 transition"
         >
           <Plus className="w-3.5 h-3.5" />
-          新增
+          {t.markets_sticky_add}
         </button>
       </div>
 
