@@ -150,6 +150,30 @@ export interface Translations {
   common_expense: string;
   common_transactions_count: string;
   common_count_unit: string;
+  common_back: string;
+
+  // 帳號/Google Drive 頁
+  auth_title: string;
+  auth_desc: string;
+  auth_google_login: string;
+  auth_loading: string;
+  auth_login_failed: string;
+  auth_google_not_loaded: string;
+  auth_no_client_id: string;
+  auth_logged_in: string;
+  auth_google_user: string;
+  auth_storage: string;
+  auth_local: string;
+  auth_cloud: string;
+  auth_local_desc: string;
+  auth_cloud_desc: string;
+  auth_backup: string;
+  auth_restore: string;
+  auth_uploading: string;
+  auth_restoring: string;
+  auth_backup_done: string;
+  auth_restore_done: string;
+  auth_restore_confirm: string;
 
   // 設定頁
   settings_title: string;
@@ -477,6 +501,29 @@ const zhTW: Translations = {
   common_expense: "支出",
   common_transactions_count: "{n} 筆交易",
   common_count_unit: "筆",
+  common_back: "返回",
+
+  auth_title: "帳號登入",
+  auth_desc: "登入 Google 帳號後，可將資料備份到 Google Drive，跨裝置同步。",
+  auth_google_login: "使用 Google 登入",
+  auth_loading: "登入中...",
+  auth_login_failed: "登入失敗",
+  auth_google_not_loaded: "Google 服務尚未載入",
+  auth_no_client_id: "未設定 Google Client ID",
+  auth_logged_in: "(已登入)",
+  auth_google_user: "Google 用戶",
+  auth_storage: "資料儲存",
+  auth_local: "本機",
+  auth_cloud: "雲端",
+  auth_local_desc: "資料只存在這台裝置",
+  auth_cloud_desc: "資料同步到 Google Drive，可跨裝置存取",
+  auth_backup: "備份",
+  auth_restore: "還原",
+  auth_uploading: "正在上傳...",
+  auth_restoring: "正在從雲端還原...",
+  auth_backup_done: "✓ 已備份到 Google Drive",
+  auth_restore_done: "✓ 已從 Google Drive 還原",
+  auth_restore_confirm: "還原會覆蓋目前所有資料，確定嗎？",
 
   settings_title: "設定",
   settings_test_account: "測試帳號",
@@ -766,6 +813,29 @@ const zhCN: Translations = {
   common_expense: "支出",
   common_transactions_count: "{n} 笔交易",
   common_count_unit: "笔",
+  common_back: "返回",
+
+  auth_title: "账号登录",
+  auth_desc: "登录 Google 帐号后，可将数据备份到 Google Drive，跨装置同步。",
+  auth_google_login: "使用 Google 登录",
+  auth_loading: "登录中...",
+  auth_login_failed: "登录失败",
+  auth_google_not_loaded: "Google 服务尚未载入",
+  auth_no_client_id: "未设定 Google Client ID",
+  auth_logged_in: "(已登录)",
+  auth_google_user: "Google 用户",
+  auth_storage: "数据储存",
+  auth_local: "本机",
+  auth_cloud: "云端",
+  auth_local_desc: "数据只存在这台装置",
+  auth_cloud_desc: "数据同步到 Google Drive，可跨装置存取",
+  auth_backup: "备份",
+  auth_restore: "还原",
+  auth_uploading: "正在上传...",
+  auth_restoring: "正在从云端还原...",
+  auth_backup_done: "✓ 已备份到 Google Drive",
+  auth_restore_done: "✓ 已从 Google Drive 还原",
+  auth_restore_confirm: "还原会覆盖目前所有数据，确定吗？",
 
   settings_title: "设定",
   settings_test_account: "测试帐号",
@@ -1074,6 +1144,29 @@ const en: Translations = {
   common_expense: "Expense",
   common_transactions_count: "{n} transactions",
   common_count_unit: "records",
+  common_back: "Back",
+
+  auth_title: "Account Login",
+  auth_desc: "Sign in with Google to backup data to Google Drive and sync across devices.",
+  auth_google_login: "Sign in with Google",
+  auth_loading: "Signing in...",
+  auth_login_failed: "Login failed",
+  auth_google_not_loaded: "Google service not loaded yet",
+  auth_no_client_id: "Google Client ID not configured",
+  auth_logged_in: "(Logged in)",
+  auth_google_user: "Google User",
+  auth_storage: "Data Storage",
+  auth_local: "Local",
+  auth_cloud: "Cloud",
+  auth_local_desc: "Data stored only on this device",
+  auth_cloud_desc: "Data synced to Google Drive, accessible across devices",
+  auth_backup: "Backup",
+  auth_restore: "Restore",
+  auth_uploading: "Uploading...",
+  auth_restoring: "Restoring from cloud...",
+  auth_backup_done: "✓ Backed up to Google Drive",
+  auth_restore_done: "✓ Restored from Google Drive",
+  auth_restore_confirm: "Restore will overwrite all current data. Are you sure?",
 
   settings_title: "Settings",
   settings_test_account: "Test Account",
@@ -1384,6 +1477,29 @@ const ja: Translations = {
   common_expense: "支出",
   common_transactions_count: "{n} 件の取引",
   common_count_unit: "件",
+  common_back: "戻る",
+
+  auth_title: "アカウントログイン",
+  auth_desc: "Google アカウントでログインすると、Google Drive にデータをバックアップし、デバイス間で同期できます。",
+  auth_google_login: "Google でログイン",
+  auth_loading: "ログイン中...",
+  auth_login_failed: "ログイン失敗",
+  auth_google_not_loaded: "Google サービスが読み込まれていません",
+  auth_no_client_id: "Google Client ID が設定されていません",
+  auth_logged_in: "(ログイン済み)",
+  auth_google_user: "Google ユーザー",
+  auth_storage: "データ保存",
+  auth_local: "ローカル",
+  auth_cloud: "クラウド",
+  auth_local_desc: "データはこのデバイスにのみ保存",
+  auth_cloud_desc: "データは Google Drive に同期、デバイス間でアクセス可能",
+  auth_backup: "バックアップ",
+  auth_restore: "復元",
+  auth_uploading: "アップロード中...",
+  auth_restoring: "クラウドから復元中...",
+  auth_backup_done: "✓ Google Drive にバックアップしました",
+  auth_restore_done: "✓ Google Drive から復元しました",
+  auth_restore_confirm: "復元すると現在のすべてのデータが上書きされます。よろしいですか？",
 
   settings_title: "設定",
   settings_test_account: "テストアカウント",
@@ -1693,6 +1809,29 @@ const ko: Translations = {
   common_expense: "지출",
   common_transactions_count: "{n}건 거래",
   common_count_unit: "건",
+  common_back: "뒤로",
+
+  auth_title: "계정 로그인",
+  auth_desc: "Google 계정으로 로그인하면 Google Drive에 데이터를 백업하고 기기 간 동기화할 수 있습니다.",
+  auth_google_login: "Google로 로그인",
+  auth_loading: "로그인 중...",
+  auth_login_failed: "로그인 실패",
+  auth_google_not_loaded: "Google 서비스가 아직 로드되지 않았습니다",
+  auth_no_client_id: "Google Client ID가 설정되지 않았습니다",
+  auth_logged_in: "(로그인됨)",
+  auth_google_user: "Google 사용자",
+  auth_storage: "데이터 저장",
+  auth_local: "로컬",
+  auth_cloud: "클라우드",
+  auth_local_desc: "데이터는 이 기기에만 저장됩니다",
+  auth_cloud_desc: "데이터는 Google Drive에 동기화되어 기기 간 접근 가능",
+  auth_backup: "백업",
+  auth_restore: "복원",
+  auth_uploading: "업로드 중...",
+  auth_restoring: "클라우드에서 복원 중...",
+  auth_backup_done: "✓ Google Drive에 백업됨",
+  auth_restore_done: "✓ Google Drive에서 복원됨",
+  auth_restore_confirm: "복원하면 현재 모든 데이터가 덮어씌워집니다. 계속하시겠습니까?",
 
   settings_title: "설정",
   settings_test_account: "테스트 계정",

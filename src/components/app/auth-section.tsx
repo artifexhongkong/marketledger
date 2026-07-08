@@ -6,11 +6,13 @@ import { useAppStore } from "@/lib/store";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Cloud, CloudOff, LogOut, Database, Upload, Download, AlertCircle, ChevronLeft } from "lucide-react";
+import { useT } from "@/lib/i18n";
 
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "";
 const SCOPES = "https://www.googleapis.com/auth/drive.appdata openid email profile";
 
 export function AuthPage({ onBack }: { onBack: () => void }) {
+  const t = useT();
   const { user, accessToken, storageMode, setUser, setAccessToken, setStorageMode, signOut } = useAuthStore();
   const [googleLoaded, setGoogleLoaded] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -28,14 +30,14 @@ export function AuthPage({ onBack }: { onBack: () => void }) {
   }, []);
 
   const handleLogin = async () => {
-    if (!googleLoaded) { setError("Google 服務尚未載入"); return; }
-    if (!GOOGLE_CLIENT_ID) { setError("未設定 Google Client ID"); return; }
+    if (!googleLoaded) { setError(t.auth_google_not_loaded); return; }
+    if (!GOOGLE_CLIENT_ID) { setError(t.auth_no_client_id); return; }
     setLoading(true); setError(null);
     try {
       const tokenClient = (window as any).google.accounts.oauth2.initTokenClient({
         client_id: GOOGLE_CLIENT_ID, scope: SCOPES,
         callback: async (response: any) => {
-          if (response.error) { setError(response.error_description || "登入失敗"); setLoading(false); return; }
+          if (response.error) { setError(response.error_description || t.auth_login_failed); setLoading(false); return; }
           const token = response.access_token;
           setAccessToken(token);
           try {
@@ -43,13 +45,13 @@ export function AuthPage({ onBack }: { onBack: () => void }) {
             const info = await res.json();
             setUser({ email: info.email, name: info.name, picture: info.picture, sub: info.sub });
           } catch {
-            setUser({ email: "(已登入)", name: "Google 用戶", picture: "", sub: "" });
+            setUser({ email: t.auth_logged_in, name: t.auth_google_user, picture: "", sub: "" });
           }
           setLoading(false);
         },
       });
       tokenClient.requestAccessToken();
-    } catch (e) { setError(e instanceof Error ? e.message : "登入失敗"); setLoading(false); }
+    } catch (e) { setError(e instanceof Error ? e.message : t.auth_login_failed); setLoading(false); }
   };
 
   const handleSignOut = () => {
@@ -68,7 +70,7 @@ export function AuthPage({ onBack }: { onBack: () => void }) {
           <div className="relative flex items-center px-4 h-14">
             <button onClick={onBack} className="flex items-center gap-1 text-primary-foreground/80 hover:text-primary-foreground">
               <ChevronLeft className="w-5 h-5" />
-              <span className="text-sm">返回</span>
+              <span className="text-sm">{t.common_back}</span>
             </button>
           </div>
         </div>
@@ -79,15 +81,15 @@ export function AuthPage({ onBack }: { onBack: () => void }) {
             <div className="w-16 h-16 rounded-2xl bg-accent/15 flex items-center justify-center mx-auto">
               <CloudOff className="w-8 h-8 text-accent" />
             </div>
-            <h1 className="text-xl font-bold text-foreground">賬號登入</h1>
+            <h1 className="text-xl font-bold text-foreground">{t.auth_title}</h1>
             <p className="text-xs text-muted-foreground leading-relaxed max-w-xs">
-              登入 Google 帳號後，可將資料備份到 Google Drive，跨裝置同步。
+              {t.auth_desc}
             </p>
           </div>
 
           <Button onClick={handleLogin} disabled={loading || !googleLoaded}
             className="w-full max-w-xs h-11 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 font-medium">
-            {loading ? "登入中..." : (
+            {loading ? t.auth_loading : (
               <span className="flex items-center gap-2">
                 <svg className="w-4 h-4" viewBox="0 0 24 24">
                   <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -95,7 +97,7 @@ export function AuthPage({ onBack }: { onBack: () => void }) {
                   <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                 </svg>
-                使用 Google 登入
+                {t.auth_google_login}
               </span>
             )}
           </Button>
@@ -116,7 +118,7 @@ export function AuthPage({ onBack }: { onBack: () => void }) {
         <div className="absolute top-0 right-0 w-32 h-32 bg-accent/8 rounded-full blur-2xl" />
         <div className="relative flex items-center justify-between px-4 h-14">
           <button onClick={onBack} className="flex items-center gap-1 text-primary-foreground/80 hover:text-primary-foreground">
-            <ChevronLeft className="w-5 h-5" /><span className="text-sm">返回</span>
+            <ChevronLeft className="w-5 h-5" /><span className="text-sm">{t.common_back}</span>
           </button>
           <button onClick={handleSignOut} className="p-1.5 text-primary-foreground/60 hover:text-primary-foreground">
             <LogOut className="w-4 h-4" />
@@ -145,22 +147,22 @@ export function AuthPage({ onBack }: { onBack: () => void }) {
         <Card className="p-4 space-y-3">
           <div className="flex items-center gap-2">
             <Database className="w-4 h-4 text-muted-foreground" />
-            <p className="text-sm font-semibold text-foreground">資料儲存</p>
+            <p className="text-sm font-semibold text-foreground">{t.auth_storage}</p>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <button onClick={() => setStorageMode("local")}
               className={`flex flex-col items-center gap-1.5 py-3 rounded-xl border-2 transition ${storageMode === "local" ? "border-accent bg-accent/5" : "border-border bg-card hover:border-accent/30"}`}>
               <CloudOff className={`w-5 h-5 ${storageMode === "local" ? "text-accent" : "text-muted-foreground"}`} />
-              <span className={`text-xs font-medium ${storageMode === "local" ? "text-accent" : "text-foreground"}`}>本機</span>
+              <span className={`text-xs font-medium ${storageMode === "local" ? "text-accent" : "text-foreground"}`}>{t.auth_local}</span>
             </button>
             <button onClick={() => setStorageMode("drive")}
               className={`flex flex-col items-center gap-1.5 py-3 rounded-xl border-2 transition ${storageMode === "drive" ? "border-accent bg-accent/5" : "border-border bg-card hover:border-accent/30"}`}>
               <Cloud className={`w-5 h-5 ${storageMode === "drive" ? "text-accent" : "text-muted-foreground"}`} />
-              <span className={`text-xs font-medium ${storageMode === "drive" ? "text-accent" : "text-foreground"}`}>雲端</span>
+              <span className={`text-xs font-medium ${storageMode === "drive" ? "text-accent" : "text-foreground"}`}>{t.auth_cloud}</span>
             </button>
           </div>
           <p className="text-[11px] text-muted-foreground">
-            {storageMode === "local" ? "資料只存在這台裝置" : "資料同步到 Google Drive，可跨裝置存取"}
+            {storageMode === "local" ? t.auth_local_desc : t.auth_cloud_desc}
           </p>
         </Card>
 
@@ -175,26 +177,27 @@ export function AuthPage({ onBack }: { onBack: () => void }) {
 }
 
 function CloudBackupButtons({ accessToken, onStatus }: { accessToken: string; onStatus: (s: string) => void }) {
+  const t = useT();
   const { transactions, products, markets, currentMarketId, currency, clearAll, addTransaction } = useAppStore();
   const [loading, setLoading] = useState(false);
 
   const handleBackup = async () => {
-    setLoading(true); onStatus("正在上傳...");
+    setLoading(true); onStatus(t.auth_uploading);
     const { backupToDrive } = await import("@/lib/drive-service");
     const result = await backupToDrive(accessToken, { transactions, products, markets, currentMarketId, currency });
     setLoading(false);
-    onStatus(result.success ? "✓ 已備份到 Google Drive" : `✗ ${result.error}`);
+    onStatus(result.success ? t.auth_backup_done : `✗ ${result.error}`);
   };
 
   const handleRestore = async () => {
-    if (!confirm("還原會覆蓋目前所有資料，確定嗎？")) return;
-    setLoading(true); onStatus("正在從雲端還原...");
+    if (!confirm(t.auth_restore_confirm)) return;
+    setLoading(true); onStatus(t.auth_restoring);
     const { restoreFromDrive } = await import("@/lib/drive-service");
     const result = await restoreFromDrive(accessToken);
     if (result.success && result.data) {
       const data = result.data as any;
-      if (data.transactions) { clearAll(); data.transactions.forEach((t: any) => addTransaction(t)); }
-      onStatus("✓ 已從 Google Drive 還原");
+      if (data.transactions) { clearAll(); data.transactions.forEach((tx: any) => addTransaction(tx)); }
+      onStatus(t.auth_restore_done);
     } else { onStatus(`✗ ${result.error}`); }
     setLoading(false);
   };
@@ -202,10 +205,10 @@ function CloudBackupButtons({ accessToken, onStatus }: { accessToken: string; on
   return (
     <div className="grid grid-cols-2 gap-2">
       <Button onClick={handleBackup} disabled={loading} variant="outline" className="h-10 text-xs">
-        <Upload className="w-3.5 h-3.5 mr-1.5" />備份
+        <Upload className="w-3.5 h-3.5 mr-1.5" />{t.auth_backup}
       </Button>
       <Button onClick={handleRestore} disabled={loading} variant="outline" className="h-10 text-xs">
-        <Download className="w-3.5 h-3.5 mr-1.5" />還原
+        <Download className="w-3.5 h-3.5 mr-1.5" />{t.auth_restore}
       </Button>
     </div>
   );

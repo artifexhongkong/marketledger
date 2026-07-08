@@ -177,7 +177,7 @@ export function MarketsPage() {
           </button>
           <button onClick={handleAdd}
             className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-accent/15 text-accent text-xs font-medium hover:bg-accent/20 transition">
-            <Plus className="w-3.5 h-3.5" />新增
+            <Plus className="w-3.5 h-3.5" />{t.markets_add}
           </button>
         </div>
       </div>
