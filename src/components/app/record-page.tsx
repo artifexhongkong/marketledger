@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useAppStore, CATEGORIES, PAYMENT_METHODS, PAYMENT_CATEGORIES, CURRENCIES, formatCurrency, getPaymentMethodInfo } from "@/lib/store";
 import { haptic } from "@/lib/haptic";
+import { useT } from "@/lib/i18n";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -14,13 +15,13 @@ export function RecordPage() {
   const [mode, setMode] = useState<"record" | "products">("record");
   return (
     <div className="pb-4 flex flex-col h-full">
-      <h1 className="text-xl font-bold pt-4 px-4 text-foreground">記帳</h1>
+      <h1 className="text-xl font-bold pt-4 px-4 text-foreground">t.record_title</h1>
 
       {/* Mode toggle — segmented control */}
       <div className="mx-4 mt-2 flex bg-muted rounded-lg p-0.5">
         <button onClick={() => setMode("record")}
           className={`flex-1 py-1.5 text-xs font-medium rounded-md transition ${mode === "record" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}>
-          記帳
+          t.record_title
         </button>
         <button onClick={() => setMode("products")}
           className={`flex-1 py-1.5 text-xs font-medium rounded-md transition ${mode === "products" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}>
@@ -35,7 +36,7 @@ export function RecordPage() {
   );
 }
 
-// ── 主要支付方式（前 5 個，置頂大按鈕，不滑動）──
+// ── 主要t.record_payment_method（前 5 個，置頂大按鈕，不滑動）──
 const TOP_PAYMENTS: PaymentMethod[] = ["cash", "payme", "fps", "alipayhk", "wechat_pay"];
 
 // 商品按鈕顏色選項（用於視覺分組）
@@ -79,15 +80,16 @@ interface ToastState {
 }
 
 function RecordView() {
+  const t = useT();
   const { currency, products, currentMarketId, markets, addTransaction, setCurrentMarket, deleteTransaction, customPaymentMethods, currentOrder, addOrderItem, removeOrderItem, updateOrderItemQty, updateOrderItemNote, clearOrder } = useAppStore();
   const [payment, setPayment] = useState<PaymentMethod>("cash");
 
-  // 取得支付方式標籤（支援自訂）
+  // 取得t.record_payment_method標籤（支援自訂）
   const getPaymentMethodLabel = (m: PaymentMethod): string => {
     return getPaymentMethodInfo(m, customPaymentMethods).label;
   };
   const [showAdvanced, setShowAdvanced] = useState(false);
-  // 手動記帳欄位
+  // 手動t.record_title欄位
   const [txType, setTxType] = useState<TransactionType>("expense");
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState<CategoryId>("misc");
@@ -212,23 +214,23 @@ function RecordView() {
       )}
 
       <div className="px-4 flex-1 overflow-y-auto">
-        {/* ── 1. 支付方式 ── */}
+        {/* ── 1. t.record_payment_method ── */}
         <PaymentSelector payment={payment} setPayment={setPayment} />
 
         {/* ── 2. 商品快捷按鈕 ── */}
         {products.length > 0 ? (
           <div className="mt-4">
             <div className="flex items-center justify-between mb-2">
-              <p className="text-xs text-muted-foreground font-medium">⚡ 點商品即記錄銷售</p>
+              <p className="text-xs text-muted-foreground font-medium">t.record_tap_to_record</p>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] text-muted-foreground/70">長按調數量 · ←輸入 · →取消</span>
+                <span className="text-[10px] text-muted-foreground/70">t.record_long_press_hint</span>
                 {lastTx && (
                   <button
                     onClick={handleUndo}
                     className="text-[10px] text-primary hover:text-primary/80 font-medium flex items-center gap-1"
                   >
                     <RotateCcw className="w-3 h-3" />
-                    撤銷上筆
+                    t.record_undo_last
                   </button>
                 )}
               </div>
@@ -262,13 +264,13 @@ function RecordView() {
                 />
               ))}
             </div>
-            {/* 訂單清單 — 顯示這一單已點的商品 + 總計 */}
+            {/* 訂單清單 — 顯示這一單已點的商品 + t.total */}
             {currentOrder.length > 0 && (
               <div className="mt-2 bg-card border border-border rounded-xl overflow-hidden">
-                {/* 清單標題 + 新一單按鈕 */}
+                {/* 清單標題 + t.record_new_order按鈕 */}
                 <div className="flex items-center justify-between px-3 py-2 bg-muted/40 border-b border-border">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[11px] font-semibold text-foreground">本單明細</span>
+                    <span className="text-[11px] font-semibold text-foreground">t.record_order_details</span>
                     <span className="text-[10px] text-muted-foreground">({currentOrder.length} 項)</span>
                   </div>
                   <button
@@ -279,7 +281,7 @@ function RecordView() {
                     className="flex items-center gap-1 text-[10px] text-accent hover:text-foreground px-2 py-1 rounded-md hover:bg-accent/10 transition"
                   >
                     <RotateCcw className="w-3 h-3" />
-                    新一單
+                    t.record_new_order
                   </button>
                 </div>
                 {/* 訂單項目列表 */}
@@ -300,7 +302,7 @@ function RecordView() {
                           <p className="text-[10px] text-accent truncate mt-0.5">📝 {item.note}</p>
                         )}
                       </div>
-                      {/* 小計 */}
+                      {/* t.subtotal */}
                       <span className="text-xs font-bold tabular-nums text-primary flex-shrink-0">
                         {formatCurrency(item.price * item.qty, currency as any)}
                       </span>
@@ -330,9 +332,9 @@ function RecordView() {
                     </div>
                   ))}
                 </div>
-                {/* 總計 */}
+                {/* t.total */}
                 <div className="px-3 py-2 bg-primary/5 border-t border-border flex items-center justify-between">
-                  <span className="text-[11px] font-semibold text-foreground">總計</span>
+                  <span className="text-[11px] font-semibold text-foreground">t.total</span>
                   <span className="text-base font-bold tabular-nums text-primary">
                     {formatCurrency(currentOrder.reduce((sum, item) => sum + item.price * item.qty, 0), currency)}
                   </span>
@@ -345,7 +347,7 @@ function RecordView() {
               <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setEditingOrderItem(null)}>
                 <div className="bg-card rounded-xl p-4 w-full max-w-[280px] space-y-3" onClick={(e) => e.stopPropagation()}>
                   <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-semibold text-foreground">修改項目</h4>
+                    <h4 className="text-sm font-semibold text-foreground">t.record_modify_item</h4>
                     <button onClick={() => setEditingOrderItem(null)} className="text-muted-foreground hover:text-foreground">
                       <X className="w-4 h-4" />
                     </button>
@@ -372,7 +374,7 @@ function RecordView() {
                         </div>
                         {/* 備註 */}
                         <div>
-                          <label className="text-[11px] text-muted-foreground mb-1 block">備註（選填）</label>
+                          <label className="text-[11px] text-muted-foreground mb-1 block">t.record_note_optional</label>
                           <Textarea
                             value={editNoteValue}
                             onChange={(e) => setEditNoteValue(e.target.value)}
@@ -382,7 +384,7 @@ function RecordView() {
                           />
                         </div>
                         <p className="text-[11px] text-muted-foreground text-center">
-                          小計：{formatCurrency(item.price * qty, currency as any)}
+                          t.subtotal：{formatCurrency(item.price * qty, currency as any)}
                         </p>
                         <Button
                           onClick={() => {
@@ -407,12 +409,12 @@ function RecordView() {
         ) : (
           <div className="mt-5 bg-muted/50 rounded-xl p-6 text-center border border-dashed border-border">
             <p className="text-2xl mb-1">📦</p>
-            <p className="text-sm font-medium text-foreground">尚無商品</p>
-            <p className="text-xs text-muted-foreground mt-1">切換到「商品管理」建立商品目錄</p>
+            <p className="text-sm font-medium text-foreground">t.record_no_products</p>
+            <p className="text-xs text-muted-foreground mt-1">t.record_create_products</p>
           </div>
         )}
 
-        {/* ── 3. 手動記帳：可收合的進階區塊 ── */}
+        {/* ── 3. 手動t.record_title：可收合的進階區塊 ── */}
         <div className="mt-5">
           <button
             onClick={() => setShowAdvanced(!showAdvanced)}
@@ -420,7 +422,7 @@ function RecordView() {
           >
             <span className="flex items-center gap-2">
               <SlidersHorizontal className="w-4 h-4 text-muted-foreground" />
-              手動記帳（自訂金額 / 支出 / 分類）
+              手動t.record_title（自訂金額 / 支出 / 分類）
             </span>
             <ChevronDown className={`w-4 h-4 text-muted-foreground transition ${showAdvanced ? "rotate-180" : ""}`} />
           </button>
@@ -435,7 +437,7 @@ function RecordView() {
                     txType === "expense" ? "bg-rose-600 text-white" : "bg-muted text-muted-foreground"
                   }`}
                 >
-                  💸 支出
+                  t.record_expense
                 </button>
                 <button
                   onClick={() => { setTxType("income"); setCategory("sales"); }}
@@ -443,7 +445,7 @@ function RecordView() {
                     txType === "income" ? "bg-emerald-600 text-white" : "bg-muted text-muted-foreground"
                   }`}
                 >
-                  💰 收入
+                  t.record_income
                 </button>
               </div>
 
@@ -493,7 +495,7 @@ function RecordView() {
                 >
                   <span className="flex items-center gap-2 text-foreground">
                     <Store className="w-4 h-4 text-muted-foreground" />
-                    {currentMarket ? currentMarket.name : "🌐 不指定市集"}
+                    {currentMarket ? currentMarket.name : "t.record_no_market"}
                   </span>
                   <ChevronDown className="w-4 h-4 text-muted-foreground" />
                 </button>
@@ -503,7 +505,7 @@ function RecordView() {
                       onClick={() => { setCurrentMarket(null); setShowMarketPicker(false); }}
                       className="w-full text-left p-2 hover:bg-muted rounded-lg text-sm"
                     >
-                      🌐 不指定市集
+                      t.record_no_market
                     </button>
                     {markets.map((m) => (
                       <button
@@ -522,7 +524,7 @@ function RecordView() {
 
               {/* 備註 */}
               <div>
-                <p className="text-xs text-muted-foreground mb-1.5 font-medium">備註（選填）</p>
+                <p className="text-xs text-muted-foreground mb-1.5 font-medium">t.record_note_optional</p>
                 <Textarea
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
@@ -533,7 +535,7 @@ function RecordView() {
               </div>
 
               <Button onClick={handleSubmit} className="w-full h-11 font-semibold">
-                ✓ 完成記帳
+                ✓ 完成t.record_title
               </Button>
             </div>
           )}
@@ -561,7 +563,7 @@ function RecordView() {
   );
 }
 
-// ── 支付方式選擇器 ──
+// ── t.record_payment_method選擇器 ──
 
 const PAYMENT_ICONS = ["💵", "💳", "⚡", "💬", "🅰️", "🟢", "🔵", "🟡", "📱", "🏦", "💸", "💰", "🎁", "✅", "📌", "🎯"];
 const PAYMENT_COLORS = ["#1A1D24", "#059669", "#E11D48", "#F59E0B", "#7C3AED", "#0891B2", "#DB2777", "#65A30D", "#6B7280"];
@@ -621,7 +623,7 @@ function PaymentSelector({
   // 點擊空白處退出排序
   const handleSortAreaClick = (e: React.MouseEvent) => {
     if (sortMode) {
-      // 如果點到的不是支付方式按鈕本身，退出排序
+      // 如果點到的不是t.record_payment_method按鈕本身，退出排序
       const target = e.target as HTMLElement;
       if (!target.closest('[data-pay-index]')) {
         setSortMode(false);
@@ -647,12 +649,12 @@ function PaymentSelector({
   return (
     <div className="mt-3" onClick={handleSortAreaClick}>
       <div className="flex items-center justify-between mb-2">
-        <p className="text-xs text-muted-foreground font-medium">支付方式</p>
+        <p className="text-xs text-muted-foreground font-medium">t.record_payment_method</p>
         {!sortMode && <p className="text-[10px] text-muted-foreground/50">長按排序</p>}
         {sortMode && <p className="text-[10px] text-accent/70">拖拽排序中</p>}
       </div>
 
-      {/* 主頁支付方式 */}
+      {/* 主頁t.record_payment_method */}
       <div className="grid grid-cols-5 gap-1.5"
         onPointerDown={handleSortLongPress}
         onPointerUp={handleSortPressEnd}
@@ -692,7 +694,7 @@ function PaymentSelector({
               className={`relative transition-all duration-200 ease-out ${dragIndex === vi ? "opacity-30 scale-90" : ""} ${sortMode ? "cursor-move" : ""}`}>
               <PaymentButton2 icon={c.icon} label={shortLabel(c.label)} active={active}
                 manageMode={sortMode} onClick={() => !sortMode && !showMore && setPayment(m)}
-                onDelete={() => { if (confirm(`刪除支付方式「${c.label}」？`)) { deleteCustomPaymentMethod(c.id); if (payment === m) setPayment("cash"); } }} />
+                onDelete={() => { if (confirm(`刪除t.record_payment_method「${c.label}」？`)) { deleteCustomPaymentMethod(c.id); if (payment === m) setPayment("cash"); } }} />
               {showMore && !sortMode && (
                 <button onClick={(e) => { e.stopPropagation(); togglePaymentVisibility(`custom_${c.id}`); }}
                   className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-rose-500 text-white flex items-center justify-center shadow-sm z-10 animate-[fadeIn_0.15s_ease-out] text-[13px] leading-none font-bold pb-0.5">
@@ -713,11 +715,11 @@ function PaymentSelector({
         />
       </div>
 
-      {/* 更多展開 — 只顯示還沒在主頁的支付方式，點擊即添加 */}
+      {/* 更多展開 — 只顯示還沒在主頁的t.record_payment_method，點擊即添加 */}
       {showMore && (
         <div className="mt-2 animate-[fadeIn_0.2s_ease-out]">
           {(() => {
-            // 收集所有未顯示的支付方式
+            // 收集所有未顯示的t.record_payment_method
             const hidden: { m: string; info: { label: string; icon: string; shortLabel: string; color: string } }[] = [];
             PAYMENT_CATEGORIES.forEach((cat) => {
               cat.payments.forEach((m) => {
@@ -737,7 +739,7 @@ function PaymentSelector({
             if (hidden.length === 0) {
               return (
                 <div className="text-center py-3 text-[11px] text-muted-foreground">
-                  所有支付方式已顯示
+                  所有t.record_payment_method已顯示
                 </div>
               );
             }
@@ -753,7 +755,7 @@ function PaymentSelector({
                       label={shortLabel(info.label)}
                       active={active}
                       manageMode={false}
-                      noActiveStyle // 備用支付方式不顯示 active 樣式，保持原色
+                      noActiveStyle // 備用t.record_payment_method不顯示 active 樣式，保持原色
                       // 點擊圖示只添加到主頁，不自動選中（避免變色）
                       onClick={() => {
                         togglePaymentVisibility(m);
@@ -774,7 +776,7 @@ function PaymentSelector({
         </div>
       )}
 
-      {/* 新增支付方式 Modal */}
+      {/* 新增t.record_payment_method Modal */}
       {showAddModal && (
         <AddPaymentModal onClose={() => setShowAddModal(false)}
           onAdd={(label, icon, color) => { addCustomPaymentMethod({ label, icon, color }); setShowAddModal(false); }} />
@@ -783,7 +785,7 @@ function PaymentSelector({
   );
 }
 
-// ── 單個支付方式按鈕 ──
+// ── 單個t.record_payment_method按鈕 ──
 function PaymentButton2({
   icon, label, active, manageMode, onClick, onDelete, noActiveStyle,
 }: {
@@ -812,7 +814,7 @@ function PaymentButton2({
   );
 }
 
-// ── 新增支付方式 Modal ──
+// ── 新增t.record_payment_method Modal ──
 function AddPaymentModal({ onClose, onAdd }: { onClose: () => void; onAdd: (label: string, icon: string, color: string) => void; }) {
   const [label, setLabel] = useState("");
   const [icon, setIcon] = useState(PAYMENT_ICONS[0]);
@@ -821,7 +823,7 @@ function AddPaymentModal({ onClose, onAdd }: { onClose: () => void; onAdd: (labe
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-[fadeIn_0.15s_ease-out]" onClick={onClose}>
       <Card className="w-full max-w-xs p-5 space-y-4 animate-[scaleIn_0.2s_ease-out]" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
-          <h3 className="text-base font-semibold text-foreground">新增支付方式</h3>
+          <h3 className="text-base font-semibold text-foreground">新增t.record_payment_method</h3>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
         </div>
         <div className="flex justify-center">
@@ -879,6 +881,7 @@ function ProductButton({
   product, currency, payment, currentMarketId,
   confirming, onConfirm, onRecord,
 }: ProductButtonProps) {
+  const t = useT();
   const addTransaction = useAppStore((s) => s.addTransaction);
   const elRef = useRef<HTMLButtonElement | null>(null);
 
@@ -1072,7 +1075,7 @@ function ProductButton({
       )}
       {s.mode === "qtyInput" && (
         <div className="absolute inset-0 bg-accent/10 flex flex-col items-center justify-center px-1 z-20">
-          <p className="text-[9px] text-accent font-semibold mb-0.5">輸入數量</p>
+          <p className="text-[9px] text-accent font-semibold mb-0.5">t.record_qty</p>
           <input
             type="text"
             inputMode="numeric"
@@ -1142,6 +1145,7 @@ function ProductButton({
 }
 
 function ProductsView() {
+  const t = useT();
   const { products, currency, addProduct, updateProduct, deleteProduct } = useAppStore();
   const [showForm, setShowForm] = useState(false);
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
@@ -1181,7 +1185,7 @@ function ProductsView() {
 
   const handleAdd = () => {
     const p = parseFloat(price);
-    if (!name.trim()) return alert("請輸入商品名稱");
+    if (!name.trim()) return alert("請輸入t.products_name");
     if (!p || p <= 0) return alert("請輸入有效單價");
     if (editingProductId) {
       // 編輯模式
@@ -1194,7 +1198,7 @@ function ProductsView() {
     setName(""); setPrice(""); setUnit("個"); setColor(""); setShowColorPalette(false); setShowForm(false);
   };
 
-  // 編輯商品 — 載入商品資料到表單
+  // t.products_edit_product — 載入商品資料到表單
   const handleEditProduct = (product: { id: string; name: string; price: number; unit: string; color?: string }) => {
     setEditingProductId(product.id);
     setName(product.name);
@@ -1334,25 +1338,25 @@ function ProductsView() {
           variant="outline"
           className="w-full h-12 border-dashed border-primary text-primary hover:bg-primary/5"
         >
-          <Plus className="w-4 h-4 mr-1.5" /> 新增商品
+          <Plus className="w-4 h-4 mr-1.5" /> t.products_add_product
         </Button>
       ) : (
         <Card className="p-4 space-y-3">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold">{editingProductId ? "編輯商品" : "新增商品"}</h3>
+            <h3 className="text-sm font-semibold">{editingProductId ? "t.products_edit_product" : "t.products_add_product"}</h3>
             <button onClick={handleCancelForm} className="text-muted-foreground hover:text-foreground">
               <X className="w-4 h-4" />
             </button>
           </div>
           <div className="space-y-2">
-            <Input placeholder="商品名稱" value={name} onChange={(e) => setName(e.target.value)} className="bg-background" />
+            <Input placeholder="t.products_name" value={name} onChange={(e) => setName(e.target.value)} className="bg-background" />
             <div className="flex gap-2">
               <Input placeholder="單價" value={price} onChange={(e) => setPrice(e.target.value)} inputMode="decimal" className="bg-background flex-1" />
               <Input placeholder="單位" value={unit} onChange={(e) => setUnit(e.target.value)} className="bg-background w-24" />
             </div>
             {/* 按鈕顏色（可選，用於視覺分組） */}
             <div>
-              <p className="text-[11px] text-muted-foreground mb-1.5">按鈕顏色（選填，用於快速識別商品組）</p>
+              <p className="text-[11px] text-muted-foreground mb-1.5">t.products_color</p>
               <div className="flex gap-1.5 flex-wrap items-center">
                 <button
                   onClick={() => setColor("")}
@@ -1426,14 +1430,14 @@ function ProductsView() {
               )}
             </div>
           </div>
-          <Button onClick={handleAdd} className="w-full">{editingProductId ? "儲存修改" : "儲存商品"}</Button>
+          <Button onClick={handleAdd} className="w-full">{editingProductId ? "t.products_save_edit" : "t.products_save"}</Button>
         </Card>
       )}
 
       {products.length === 0 ? (
         <Card className="p-8 text-center border-dashed">
           <p className="text-3xl mb-2">📦</p>
-          <p className="text-sm font-medium text-foreground">尚無商品</p>
+          <p className="text-sm font-medium text-foreground">t.record_no_products</p>
           <p className="text-xs text-muted-foreground mt-1">建立商品後即可一鍵記錄銷售</p>
         </Card>
       ) : (
@@ -1504,7 +1508,7 @@ function ProductsView() {
                           handleEditProduct(p);
                         }}
                         className="absolute top-1 right-1 w-5 h-5 rounded-full bg-accent/15 flex items-center justify-center z-10 hover:bg-accent/30 transition"
-                        aria-label="編輯商品"
+                        aria-label="t.products_edit_product"
                       >
                         <Pencil className="w-2.5 h-2.5 text-accent" />
                       </button>
@@ -1572,10 +1576,10 @@ function ProductsView() {
                           handleEditProduct(p);
                         }}
                         className="flex items-center gap-1 text-[11px] text-accent hover:text-foreground px-2 py-1.5 rounded-md hover:bg-accent/10 transition flex-shrink-0"
-                        aria-label="編輯商品"
+                        aria-label="t.products_edit_product"
                       >
                         <Pencil className="w-3.5 h-3.5" />
-                        更正
+                        t.products_edit
                       </button>
                     )}
                   </div>
