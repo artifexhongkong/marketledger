@@ -83,19 +83,68 @@ export function SettingsPage() {
     checkUpdate();
   }, [checkUpdate]);
 
+  // 下載進度
+  const [downloadProgress, setDownloadProgress] = useState<number | null>(null);
+  const [downloadError, setDownloadError] = useState("");
+
   const handleUpdate = async () => {
     if (!latestRelease) return;
-    // 找出 APK 下載連結
     const apkAsset = latestRelease.assets.find((a) => a.name.endsWith(".apk"));
     const url = apkAsset?.browser_download_url || latestRelease.html_url;
-    // 在原生瀏覽器打開下載連結（自動下載 + 提示安裝）
+
+    setDownloadProgress(0);
+    setDownloadError("");
+
     try {
-      // 動態載入 Capacitor Browser（web 環境 fallback 到 window.open）
-      const { Browser } = await import("@capacitor/browser");
-      await Browser.open({ url });
-    } catch {
-      // web 環境 fallback
-      window.open(url, "_blank");
+      // 用 fetch 下載，追蹤進度
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+      const contentLength = parseInt(response.headers.get("content-length") || "0");
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error("No reader");
+
+      const chunks: Uint8Array[] = [];
+      let receivedLength = 0;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (value) {
+          chunks.push(value);
+          receivedLength += value.length;
+          if (contentLength > 0) {
+            const pct = Math.round((receivedLength / contentLength) * 100);
+            setDownloadProgress(pct);
+          }
+        }
+      }
+
+      // 合併 chunks
+      const blob = new Blob(chunks as BlobPart[], { type: "application/vnd.android.package-archive" });
+
+      // 在 web 環境直接觸發下載
+      const downloadUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = downloadUrl;
+      a.download = apkAsset?.name || "marketledger-update.apk";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(downloadUrl);
+
+      setDownloadProgress(100);
+      setTimeout(() => setDownloadProgress(null), 2000);
+    } catch (e: any) {
+      setDownloadError(e?.message || "下載失敗");
+      setDownloadProgress(null);
+      // fallback 到瀏覽器打開
+      try {
+        const { Browser } = await import("@capacitor/browser");
+        await Browser.open({ url });
+      } catch {
+        window.open(url, "_blank");
+      }
     }
   };
 
@@ -383,13 +432,38 @@ export function SettingsPage() {
                   發布於 {new Date(latestRelease.published_at).toLocaleDateString("zh-TW")}
                 </p>
               </div>
-              <Button
-                onClick={handleUpdate}
-                className="w-full h-9 text-xs font-medium"
-              >
-                <DownloadCloud className="w-3.5 h-3.5 mr-1" />
-                下載更新
-              </Button>
+              {downloadProgress !== null ? (
+                /* 下載進度條 */
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="text-muted-foreground">
+                      {downloadProgress < 100 ? "下載中..." : "下載完成！點擊通知安裝"}
+                    </span>
+                    <span className="font-bold tabular-nums text-accent">{downloadProgress}%</span>
+                  </div>
+                  <div className="h-2.5 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-accent rounded-full transition-all duration-300 ease-out"
+                      style={{ width: `${downloadProgress}%` }}
+                    />
+                  </div>
+                  {downloadProgress < 100 && (
+                    <p className="text-[9px] text-muted-foreground/60 text-center">請保持 App 開啟，不要離開</p>
+                  )}
+                </div>
+              ) : downloadError ? (
+                <div className="text-[11px] text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">
+                  下載失敗：{downloadError}，已開啟瀏覽器下載
+                </div>
+              ) : (
+                <Button
+                  onClick={handleUpdate}
+                  className="w-full h-9 text-xs font-medium"
+                >
+                  <DownloadCloud className="w-3.5 h-3.5 mr-1" />
+                  下載更新
+                </Button>
+              )}
             </div>
           )}
           {versionStatus === "error" && (
