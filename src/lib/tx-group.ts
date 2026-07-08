@@ -13,6 +13,8 @@ export interface TxGroup {
 }
 
 // 把交易清單分組
+// 優先用 orderId 分組（同一單的交易共用 orderId）
+// 沒有 orderId 的舊交易用 60 秒時間差 fallback
 export function groupTransactions(transactions: Transaction[]): TxGroup[] {
   // 先按時間倒序（最新在前）
   const sorted = [...transactions].sort((a, b) => b.createdAt - a.createdAt);
@@ -32,16 +34,16 @@ export function groupTransactions(transactions: Transaction[]): TxGroup[] {
         itemCount: 1,
       });
     } else {
-      // 收入 — 檢查是否跟「最新一筆」屬於同一組
-      // currentGroup.startTime 是這組最新交易的時間（不更新）
-      // tx.createdAt 是當前交易的時間（比 startTime 舊）
-      // 差值 = startTime - tx.createdAt（正數）
-      if (currentGroup && (currentGroup.startTime - tx.createdAt) < 60000) {
-        // 同一組（時間差 < 60 秒）
+      // 收入 — 優先用 orderId 判斷
+      const sameOrder = currentGroup && tx.orderId && currentGroup.txs[0]?.orderId === tx.orderId;
+      // fallback：沒有 orderId 的用 60 秒時間差
+      const timeMatch = currentGroup && !tx.orderId && (currentGroup.startTime - tx.createdAt) < 60000;
+
+      if ((sameOrder || timeMatch) && currentGroup) {
+        // 同一組
         currentGroup.txs.push(tx);
         currentGroup.totalAmount += tx.amount;
-        // 注意：不更新 startTime，保持為最新交易的時間
-        // 從 note 解析數量（格式：「商品名 x數量」或「商品名」）
+        // 不更新 startTime（保持為最新交易的時間）
         const qtyMatch = tx.note?.match(/x(\d+)$/);
         currentGroup.itemCount += qtyMatch ? parseInt(qtyMatch[1]) : 1;
       } else {
@@ -49,11 +51,11 @@ export function groupTransactions(transactions: Transaction[]): TxGroup[] {
         if (currentGroup) groups.push(currentGroup);
         const qtyMatch = tx.note?.match(/x(\d+)$/);
         currentGroup = {
-          id: `group_${tx.createdAt}`,
+          id: tx.orderId ? `group_${tx.orderId}` : `group_${tx.createdAt}`,
           type: "single",
           txs: [tx],
           totalAmount: tx.amount,
-          startTime: tx.createdAt, // 這組最新交易的時間
+          startTime: tx.createdAt,
           itemCount: qtyMatch ? parseInt(qtyMatch[1]) : 1,
         };
       }

@@ -82,7 +82,7 @@ interface ToastState {
 
 function RecordView() {
   const t = useT();
-  const { currency, products, currentMarketId, markets, addTransaction, setCurrentMarket, deleteTransaction, customPaymentMethods, currentOrder, addOrderItem, removeOrderItem, updateOrderItemQty, updateOrderItemNote, clearOrder } = useAppStore();
+  const { currency, products, currentMarketId, markets, addTransaction, setCurrentMarket, deleteTransaction, customPaymentMethods, currentOrder, addOrderItem, removeOrderItem, updateOrderItemQty, updateOrderItemNote, clearOrder, generateOrderId } = useAppStore();
   const [payment, setPayment] = useState<PaymentMethod>("cash");
 
   // 取得t.record_payment_method標籤（支援自訂）
@@ -116,6 +116,7 @@ function RecordView() {
   }, []);
 
   const handleQuickProduct = (p: { id: string; name: string; price: number }) => {
+    const orderId = generateOrderId();
     const txId = addTransaction({
       type: "income",
       amount: p.price,
@@ -125,6 +126,7 @@ function RecordView() {
       productId: p.id,
       note: p.name,
       marketId: currentMarketId || undefined,
+      orderId,
     });
 
     // 單筆記錄也震動（success 回饋）
@@ -262,6 +264,7 @@ function RecordView() {
                     toastTimerRef.current = setTimeout(() => setToast(null), 5000);
                   }}
                   onUndo={handleUndo}
+                  generateOrderId={generateOrderId}
                 />
               ))}
             </div>
@@ -877,11 +880,12 @@ interface ProductButtonProps {
   onConfirm: (id: string) => void;
   onRecord: (txId: string, productName: string, amount: number, qty: number) => void;
   onUndo: () => void;
+  generateOrderId: () => string;
 }
 
 function ProductButton({
   product, currency, payment, currentMarketId,
-  confirming, onConfirm, onRecord,
+  confirming, onConfirm, onRecord, generateOrderId,
 }: ProductButtonProps) {
   const t = useT();
   const addTransaction = useAppStore((s) => s.addTransaction);
@@ -913,11 +917,13 @@ function ProductButton({
 
   const doRecord = (qty: number) => {
     const totalAmount = product.price * qty;
+    const orderId = generateOrderId();
     const txId = addTransaction({
       type: "income", amount: totalAmount, currency: currency as any,
       category: "sales", paymentMethod: payment, productId: product.id,
       note: qty > 1 ? `${product.name} x${qty}` : product.name,
       marketId: currentMarketId || undefined,
+      orderId,
     });
     // 每次記錄都震動（單筆用 success，多筆用 tap）
     haptic(qty > 1 ? "tap" : "success");

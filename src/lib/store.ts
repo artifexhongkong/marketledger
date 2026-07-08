@@ -37,6 +37,7 @@ export interface Transaction {
   productId?: string;
   note?: string;
   marketId?: string;
+  orderId?: string; // 同一單的交易共用同一個 orderId（用於分組顯示）
   createdAt: number;
 }
 
@@ -271,6 +272,8 @@ interface AppStore {
   visiblePayments: string[];
   // 當前訂單（記帳頁用，顯示這一單已點的商品 + 總金額）
   currentOrder: OrderItem[];
+  // 當前訂單的 orderId（同一單的所有交易共用）
+  currentOrderId: string | null;
   // 便條貼（市集頁用）
   stickyNotes: StickyNote[];
   // Actions
@@ -286,6 +289,7 @@ interface AppStore {
   deleteTransaction: (id: string) => void;
   clearAll: () => void;
   // 當前訂單操作
+  generateOrderId: () => string;
   addOrderItem: (txId: string, product: { id: string; name: string; price: number; color?: string }, qty: number) => void;
   removeOrderItem: (orderItemId: string) => void;
   updateOrderItemQty: (orderItemId: string, qty: number) => void;
@@ -331,6 +335,7 @@ export const useAppStore = create<AppStore>()(
       // 預設首頁顯示通用支付方式
       visiblePayments: ["cash", "payme", "credit_card", "apple_pay", "google_pay", "bank_transfer", "paypal"],
       currentOrder: [],
+      currentOrderId: null,
       stickyNotes: [],
 
       setCurrency: (c) => set({ currency: c }),
@@ -425,7 +430,16 @@ export const useAppStore = create<AppStore>()(
           };
         }),
 
-      clearOrder: () => set({ currentOrder: [] }),
+      clearOrder: () => set({ currentOrder: [], currentOrderId: null }),
+
+      // 產生新的 orderId（如果還沒有的話）
+      generateOrderId: () => {
+        const { currentOrderId } = get();
+        if (currentOrderId) return currentOrderId;
+        const newId = `order_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+        set({ currentOrderId: newId });
+        return newId;
+      },
 
       // 便條貼操作
       addStickyNote: (text, color) =>
