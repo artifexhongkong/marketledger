@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Home, PencilLine, ClipboardList, Settings as SettingsIcon, MapPin, BarChart3, Store, User } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { useAuthStore } from "@/lib/auth-store";
+import { useT } from "@/lib/i18n";
 import { HomePage } from "@/components/app/home-page";
 import { RecordPage } from "@/components/app/record-page";
 import { TransactionsPage } from "@/components/app/transactions-page";
@@ -17,14 +18,7 @@ import { LanguageSetup } from "@/components/app/language-setup";
 
 type TabId = "home" | "record" | "transactions" | "markets" | "stats" | "settings" | "account";
 
-const TABS: { id: TabId; label: string; icon: typeof Home; featured?: boolean }[] = [
-  { id: "home", label: "概況", icon: Home },
-  { id: "record", label: "記帳", icon: PencilLine },
-  { id: "markets", label: "市集", icon: MapPin },
-  { id: "transactions", label: "記錄", icon: ClipboardList },
-  { id: "stats", label: "報表", icon: BarChart3 },
-  { id: "settings", label: "設定", icon: SettingsIcon },
-];
+const TAB_IDS: TabId[] = ["home", "record", "markets", "transactions", "stats", "settings"];
 
 export default function Page() {
   const [tab, setTab] = useState<TabId>("home");
@@ -36,6 +30,16 @@ export default function Page() {
   const languageInitialized = useAppStore((s) => s.languageInitialized);
   const darkMode = useAppStore((s) => s.darkMode);
   const { testAuthed, user } = useAuthStore();
+  const t = useT();
+
+  const TABS: { id: TabId; label: string; icon: typeof Home }[] = [
+    { id: "home", label: t.tab_home, icon: Home },
+    { id: "record", label: t.tab_record, icon: PencilLine },
+    { id: "markets", label: t.tab_markets, icon: MapPin },
+    { id: "transactions", label: t.tab_transactions, icon: ClipboardList },
+    { id: "stats", label: t.tab_stats, icon: BarChart3 },
+    { id: "settings", label: t.tab_settings, icon: SettingsIcon },
+  ];
 
   useEffect(() => {
     setHydrated(true);
@@ -139,7 +143,7 @@ export default function Page() {
                 style={{ WebkitOverflowScrolling: "touch", overscrollBehavior: "contain", touchAction: "pan-y" }}
               >
                 {!hydrated ? (
-                  <div className="flex items-center justify-center h-full text-sm text-muted-foreground">載入中...</div>
+                  <div className="flex items-center justify-center h-full text-sm text-muted-foreground">{t.loading}</div>
                 ) : (
                   <>
                     {tab === "home" && <HomePage />}
