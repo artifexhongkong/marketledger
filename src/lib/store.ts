@@ -242,13 +242,19 @@ export function formatCurrency(amount: number, currency: CurrencyCode = "HKD"): 
   return `${symbol}${amount.toLocaleString(locale, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
 }
 
-export function formatDateTime(ts: number): string {
+/**
+ * 格式化日期時間
+ * @param ts 時間戳
+ * @param todayLabel 今日標籤（多語系），例如 "今日" / "Today" / "今日" / "오늘"。不傳則用數字格式
+ */
+export function formatDateTime(ts: number, todayLabel?: string): string {
   const d = new Date(ts);
   const today = new Date();
   const isToday = d.toDateString() === today.toDateString();
   const hh = String(d.getHours()).padStart(2, "0");
   const mm = String(d.getMinutes()).padStart(2, "0");
-  return isToday ? `今日 ${hh}:${mm}` : `${d.getMonth() + 1}/${d.getDate()} ${hh}:${mm}`;
+  if (isToday && todayLabel) return `${todayLabel} ${hh}:${mm}`;
+  return `${d.getMonth() + 1}/${d.getDate()} ${hh}:${mm}`;
 }
 
 function isToday(ts: number): boolean {
@@ -598,7 +604,7 @@ export const useAppStore = create<AppStore>()(
           { type: "income", amount: 2500, currency, category: "sales", paymentMethod: "cash", note: "賣手作餅乾", marketId: "pmq" },
           { type: "income", amount: 1800, currency, category: "sales", paymentMethod: "payme", note: "賣手工飾品", marketId: "pmq" },
           { type: "income", amount: 950, currency, category: "sales", paymentMethod: "fps", note: "賣果醬", marketId: "pmq" },
-          { type: "expense", amount: 800, currency, category: "ingredients", paymentMethod: "cash", note: "進貨麵粉、奶油", marketId: "pmq" },
+          { type: "expense", amount: 800, currency, category: "stock", paymentMethod: "cash", note: "進貨麵粉、奶油", marketId: "pmq" },
           { type: "expense", amount: 350, currency, category: "packaging", paymentMethod: "fps", note: "包裝盒", marketId: "pmq" },
           { type: "expense", amount: 200, currency, category: "rent", paymentMethod: "cash", note: "PMQ 攤位費", marketId: "pmq" },
         ];

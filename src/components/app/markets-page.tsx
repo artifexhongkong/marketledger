@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { useAppStore, formatCurrency, CURRENCIES, type MarketEvent, getCategoryInfo, getPaymentMethodInfo } from "@/lib/store";
+import { useAppStore, formatCurrency, CURRENCIES, type MarketEvent, type CurrencyCode, getCategoryInfo, getPaymentMethodInfo } from "@/lib/store";
 import { useAuthStore } from "@/lib/auth-store";
 import { groupTransactions } from "@/lib/tx-group";
 import { TxGroupCard } from "@/components/app/transactions-page";
@@ -457,7 +457,7 @@ export function MarketsPage() {
   );
 }
 
-function EventCard({ event, currency, onEdit, onDelete }: { event: MarketEvent; currency: string; onEdit: () => void; onDelete: () => void }) {
+function EventCard({ event, currency, onEdit, onDelete }: { event: MarketEvent; currency: CurrencyCode; onEdit: () => void; onDelete: () => void }) {
   const t = useT();
   const [expanded, setExpanded] = useState(false);
   const days = Math.ceil((parseDateKey(event.endDate).getTime() - parseDateKey(event.startDate).getTime()) / 86400000) + 1;
@@ -474,7 +474,7 @@ function EventCard({ event, currency, onEdit, onDelete }: { event: MarketEvent; 
               <span className="text-[10px] text-muted-foreground flex items-center gap-0.5"><Calendar className="w-2.5 h-2.5" />{event.startDate === event.endDate ? event.startDate : `${event.startDate.slice(5)} ~ ${event.endDate.slice(5)}`}</span>
               {event.location && <span className="text-[10px] text-muted-foreground flex items-center gap-0.5"><MapPin className="w-2.5 h-2.5" />{event.location}</span>}
             </div>
-            {event.boothFee > 0 && <p className="text-[10px] text-muted-foreground mt-0.5">{t.cat_rent} {formatCurrency(dailyFee, currency as any)}{event.feeType === "daily" ? "/" + t.markets_per_day : ""}<span className="text-muted-foreground/60"> · {t.markets_total_mode} {formatCurrency(totalFee, currency as any)}</span></p>}
+            {event.boothFee > 0 && <p className="text-[10px] text-muted-foreground mt-0.5">{t.cat_rent} {formatCurrency(dailyFee, currency)}{event.feeType === "daily" ? "/" + t.markets_per_day : ""}<span className="text-muted-foreground/60"> · {t.markets_total_mode} {formatCurrency(totalFee, currency)}</span></p>}
           </div>
           <ChevronRight className={`w-4 h-4 text-muted-foreground transition-transform ${expanded ? "rotate-90" : ""}`} />
         </div>
@@ -591,7 +591,7 @@ function AgodaDatePicker({ startDate, endDate, onSelect }: { startDate: string; 
   );
 }
 
-function EventFormModal({ onClose, onSave, currency, editingEvent }: { onClose: () => void; onSave: (e: Omit<MarketEvent, "id" | "createdAt">) => void; currency: string; editingEvent: MarketEvent | null }) {
+function EventFormModal({ onClose, onSave, currency, editingEvent }: { onClose: () => void; onSave: (e: Omit<MarketEvent, "id" | "createdAt">) => void; currency: CurrencyCode; editingEvent: MarketEvent | null }) {
   const t = useT();
   const [name, setName] = useState(editingEvent?.name || "");
   const [startDate, setStartDate] = useState(editingEvent?.startDate || toDateKey(new Date()));

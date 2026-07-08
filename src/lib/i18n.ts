@@ -326,6 +326,12 @@ export interface Translations {
   record_tap_hint: string;
   record_confirm: string;
   record_close_notification: string;
+  record_unit_price: string;
+  record_cancelled: string;
+  record_sort_hint: string;
+  record_sorting: string;
+  record_grayscale: string;
+  record_selected: string;
 
   // 市集頁
   markets_weekday_sun: string;
@@ -666,6 +672,12 @@ const zhTW: Translations = {
   record_tap_hint: "點商品即記錄銷售",
   record_confirm: "確認",
   record_close_notification: "關閉通知",
+  record_unit_price: "單價",
+  record_cancelled: "已取消",
+  record_sort_hint: "長按排序",
+  record_sorting: "拖拽排序中",
+  record_grayscale: "灰階",
+  record_selected: "已選",
 
   markets_weekday_sun: "日",
   markets_weekday_mon: "一",
@@ -957,6 +969,12 @@ const zhCN: Translations = {
   record_tap_hint: "点商品即记录销售",
   record_confirm: "确认",
   record_close_notification: "关闭通知",
+  record_unit_price: "单价",
+  record_cancelled: "已取消",
+  record_sort_hint: "长按排序",
+  record_sorting: "拖拽排序中",
+  record_grayscale: "灰阶",
+  record_selected: "已选",
 
   markets_weekday_sun: "日",
   markets_weekday_mon: "一",
@@ -1304,6 +1322,12 @@ const en: Translations = {
   record_tap_hint: "Tap product to record sale",
   record_confirm: "Confirm",
   record_close_notification: "Close notification",
+  record_unit_price: "Unit Price",
+  record_cancelled: "Cancelled",
+  record_sort_hint: "Long press to sort",
+  record_sorting: "Drag to sort",
+  record_grayscale: "Grayscale",
+  record_selected: "Selected",
 
   markets_weekday_sun: "Sun",
   markets_weekday_mon: "Mon",
@@ -1637,6 +1661,12 @@ const ja: Translations = {
   record_tap_hint: "商品をタップして販売を記録",
   record_confirm: "確認",
   record_close_notification: "通知を閉じる",
+  record_unit_price: "単価",
+  record_cancelled: "キャンセル",
+  record_sort_hint: "長押しで並べ替え",
+  record_sorting: "ドラッグ中",
+  record_grayscale: "グレースケール",
+  record_selected: "選択済み",
 
   markets_weekday_sun: "日",
   markets_weekday_mon: "月",
@@ -1969,6 +1999,12 @@ const ko: Translations = {
   record_tap_hint: "상품을 탭하여 판매 기록",
   record_confirm: "확인",
   record_close_notification: "알림 닫기",
+  record_unit_price: "단가",
+  record_cancelled: "취소됨",
+  record_sort_hint: "길게 눌러 정렬",
+  record_sorting: "드래그 정렬 중",
+  record_grayscale: "그레이스케일",
+  record_selected: "선택됨",
 
   markets_weekday_sun: "일",
   markets_weekday_mon: "월",

@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Store, X, ChevronDown, Undo2, Check, RotateCcw, SlidersHorizontal, LayoutGrid, List, Trash2, Pencil } from "lucide-react";
-import type { TransactionType, CategoryId, PaymentMethod, Product } from "@/lib/store";
+import type { TransactionType, CategoryId, PaymentMethod, Product, CurrencyCode } from "@/lib/store";
 
 export function RecordPage() {
   const t = useT();
@@ -76,7 +76,7 @@ interface ToastState {
   txId: string;
   productName: string;
   amount: number;
-  currency: string;
+  currency: CurrencyCode;
   timestamp: number;
 }
 
@@ -196,9 +196,9 @@ function RecordView() {
               <Check className="w-3.5 h-3.5 text-emerald-600" strokeWidth={3} />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-[10px] text-muted-foreground leading-tight">已記錄銷售 · {getPaymentMethodLabel(payment)}</p>
+              <p className="text-[10px] text-muted-foreground leading-tight">{t.record_tap_to_record} · {getPaymentMethodLabel(payment)}</p>
               <p className="text-xs font-semibold text-foreground truncate leading-tight mt-0.5">
-                {toast.productName} · {formatCurrency(toast.amount, currency as any)}
+                {toast.productName} · {formatCurrency(toast.amount, currency)}
               </p>
             </div>
             <button
@@ -303,7 +303,7 @@ function RecordView() {
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-medium text-foreground truncate">{item.name}</p>
                         <p className="text-[10px] text-muted-foreground">
-                          {formatCurrency(item.price, currency as any)} × {item.qty}
+                          {formatCurrency(item.price, currency)} × {item.qty}
                         </p>
                         {item.note && (
                           <p className="text-[10px] text-accent truncate mt-0.5">📝 {item.note}</p>
@@ -311,7 +311,7 @@ function RecordView() {
                       </div>
                       {/* 小計 */}
                       <span className="text-xs font-bold tabular-nums text-primary flex-shrink-0">
-                        {formatCurrency(item.price * item.qty, currency as any)}
+                        {formatCurrency(item.price * item.qty, currency)}
                       </span>
                       {/* 撤銷按鈕 */}
                       <button
@@ -366,10 +366,10 @@ function RecordView() {
                     return (
                       <>
                         <p className="text-xs font-medium text-foreground">{item.name}</p>
-                        <p className="text-[10px] text-muted-foreground">單價 {formatCurrency(item.price, currency as any)}</p>
+                        <p className="text-[10px] text-muted-foreground">{t.record_unit_price} {formatCurrency(item.price, currency)}</p>
                         {/* 數量 */}
                         <div>
-                          <label className="text-[11px] text-muted-foreground mb-1 block">數量</label>
+                          <label className="text-[11px] text-muted-foreground mb-1 block">{t.record_qty}</label>
                           <Input
                             type="text"
                             inputMode="numeric"
@@ -391,7 +391,7 @@ function RecordView() {
                           />
                         </div>
                         <p className="text-[11px] text-muted-foreground text-center">
-                          {t.subtotal}：{formatCurrency(item.price * qty, currency as any)}
+                          {t.subtotal}：{formatCurrency(item.price * qty, currency)}
                         </p>
                         <Button
                           onClick={() => {
@@ -458,7 +458,7 @@ function RecordView() {
 
               {/* 金額 */}
               <div>
-                <p className="text-xs text-muted-foreground mb-1.5 font-medium">金額</p>
+                <p className="text-xs text-muted-foreground mb-1.5 font-medium">{t.record_amount}</p>
                 <div className="bg-background border border-border rounded-lg flex items-center px-3 h-12">
                   <span className="text-base text-muted-foreground mr-2">{CURRENCIES[currency as keyof typeof CURRENCIES]?.symbol || "$"}</span>
                   <Input
@@ -474,7 +474,7 @@ function RecordView() {
 
               {/* 分類 */}
               <div>
-                <p className="text-xs text-muted-foreground mb-1.5 font-medium">分類</p>
+                <p className="text-xs text-muted-foreground mb-1.5 font-medium">{t.record_category}</p>
                 <div className="flex gap-1.5 flex-wrap">
                   {CATEGORIES.filter((c) => c.type === txType).map((c) => (
                     <button
@@ -495,7 +495,7 @@ function RecordView() {
 
               {/* 市集 */}
               <div>
-                <p className="text-xs text-muted-foreground mb-1.5 font-medium">市集</p>
+                <p className="text-xs text-muted-foreground mb-1.5 font-medium">{t.record_market}</p>
                 <button
                   onClick={() => setShowMarketPicker(!showMarketPicker)}
                   className="w-full bg-background border border-border rounded-lg px-3 py-2.5 flex items-center justify-between text-sm"
@@ -661,8 +661,8 @@ function PaymentSelector({
     <div className="mt-3" onClick={handleSortAreaClick}>
       <div className="flex items-center justify-between mb-2">
         <p className="text-xs text-muted-foreground font-medium">{t.record_payment_method}</p>
-        {!sortMode && <p className="text-[10px] text-muted-foreground/50">長按排序</p>}
-        {sortMode && <p className="text-[10px] text-accent/70">拖拽排序中</p>}
+        {!sortMode && <p className="text-[10px] text-muted-foreground/50">{t.record_sort_hint}</p>}
+        {sortMode && <p className="text-[10px] text-accent/70">{t.record_sorting}</p>}
       </div>
 
       {/* 主頁t.record_payment_method */}
@@ -780,7 +780,7 @@ function PaymentSelector({
                 <button onClick={() => setShowAddModal(true)}
                   className="flex flex-col items-center justify-center gap-0.5 py-2.5 rounded-xl border-2 border-dashed border-accent/40 bg-accent/5 text-accent hover:bg-accent/10 transition select-none">
                   <Plus className="w-4 h-4" />
-                  <span className="text-[10px] font-medium">新增</span>
+                  <span className="text-[10px] font-medium">{t.markets_add}</span>
                 </button>
               </div>
             );
@@ -881,7 +881,7 @@ function AddPaymentModal({ onClose, onAdd }: { onClose: () => void; onAdd: (labe
 // ─────────────────────────────────────────────────────────────
 interface ProductButtonProps {
   product: Product;
-  currency: string;
+  currency: CurrencyCode;
   payment: PaymentMethod;
   currentMarketId: string | null;
   confirming: boolean;
@@ -927,7 +927,7 @@ function ProductButton({
     const totalAmount = product.price * qty;
     const orderId = generateOrderId();
     const txId = addTransaction({
-      type: "income", amount: totalAmount, currency: currency as any,
+      type: "income", amount: totalAmount, currency: currency,
       category: "sales", paymentMethod: payment, productId: product.id,
       note: qty > 1 ? `${product.name} x${qty}` : product.name,
       marketId: currentMarketId || undefined,
@@ -1086,7 +1086,7 @@ function ProductButton({
       {s.mode === "cancelled" && (
         <div className="absolute inset-0 bg-rose-50/95 flex flex-col items-center justify-center">
           <X className="w-6 h-6 text-rose-500" strokeWidth={3} />
-          <p className="text-[10px] font-semibold text-rose-600 mt-1">已取消</p>
+          <p className="text-[10px] font-semibold text-rose-600 mt-1">{t.record_cancelled}</p>
         </div>
       )}
       {s.mode === "qtyInput" && (
@@ -1129,7 +1129,7 @@ function ProductButton({
           />
           {qtyInputValue && parseInt(qtyInputValue) > 0 && (
             <p className="text-[9px] text-muted-foreground mt-0.5 tabular-nums">
-              = {formatCurrency(product.price * (parseInt(qtyInputValue) || 0), currency as any)}
+              = {formatCurrency(product.price * (parseInt(qtyInputValue) || 0), currency)}
             </p>
           )}
           <p className="text-[8px] text-muted-foreground/60 mt-0.5">Enter 確認 · Esc 取消</p>
@@ -1139,7 +1139,7 @@ function ProductButton({
         <div className="absolute inset-0 bg-primary/5 flex flex-col items-center justify-center px-1">
           <div className="text-2xl font-bold tabular-nums text-primary">×{s.qty}</div>
           <div className="text-[10px] text-muted-foreground tabular-nums mt-0.5">
-            {formatCurrency(product.price * s.qty, currency as any)}
+            {formatCurrency(product.price * s.qty, currency)}
           </div>
           <div className="absolute inset-0 flex flex-col items-center justify-between py-1 pointer-events-none">
             <div className="text-[10px] font-medium text-muted-foreground/60">↑ +1</div>
@@ -1152,7 +1152,7 @@ function ProductButton({
         <>
           <p className="text-xs font-medium text-foreground leading-tight line-clamp-2">{product.name}</p>
           <p className="text-sm font-bold text-primary tabular-nums mt-1 leading-none">
-            {formatCurrency(product.price, currency as any)}
+            {formatCurrency(product.price, currency)}
           </p>
         </>
       )}
@@ -1419,7 +1419,7 @@ function ProductsView() {
                       />
                     ))}
                   </div>
-                  <p className="text-[10px] text-muted-foreground mb-1.5">灰階</p>
+                  <p className="text-[10px] text-muted-foreground mb-1.5">{t.record_grayscale}</p>
                   <div className="grid grid-cols-6 gap-1">
                     {GRAYSCALE.map((c) => (
                       <button
@@ -1433,10 +1433,10 @@ function ProductsView() {
                   </div>
                   {/* 已選顏色預覽 */}
                   <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/40">
-                    <span className="text-[10px] text-muted-foreground">已選</span>
+                    <span className="text-[10px] text-muted-foreground">{t.record_selected}</span>
                     <div className="flex items-center gap-1.5">
                       <div className="w-5 h-5 rounded border border-border" style={{ background: color || "#FFFFFF" }} />
-                      <span className="text-[10px] font-mono text-foreground">{color || "未選"}</span>
+                      <span className="text-[10px] font-mono text-foreground">{color || "-"}</span>
                     </div>
                   </div>
                 </div>
@@ -1537,7 +1537,7 @@ function ProductsView() {
                     <p className={`text-sm font-bold tabular-nums mt-1 ${
                       isSelected || isLongPressing ? "text-rose-600" : "text-primary"
                     }`}>
-                      {formatCurrency(p.price, currency as any)}
+                      {formatCurrency(p.price, currency)}
                     </p>
                     <p className="text-[10px] text-muted-foreground mt-0.5">/ {p.unit}</p>
                   </div>
@@ -1580,7 +1580,7 @@ function ProductsView() {
                           {p.name}
                         </p>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          {formatCurrency(p.price, currency as any)} / {p.unit}
+                          {formatCurrency(p.price, currency)} / {p.unit}
                         </p>
                       </div>
                     </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useAppStore, getDailySummary, formatCurrency, formatDateTime, getCategoryInfo, getPaymentMethodInfo, CATEGORIES } from "@/lib/store";
+import { useAppStore, getDailySummary, formatCurrency, formatDateTime, getCategoryInfo, getPaymentMethodInfo, CATEGORIES, type CurrencyCode } from "@/lib/store";
 import { groupTransactions, getOrderSummary, type TxGroup } from "@/lib/tx-group";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -203,7 +203,7 @@ export function TxGroupCard({
   group, currency, isExpanded, onToggle, compact = false,
 }: {
   group: TxGroup;
-  currency: any;
+  currency: CurrencyCode;
   isExpanded: boolean;
   onToggle: () => void;
   compact?: boolean;
@@ -234,8 +234,8 @@ export function TxGroupCard({
               )}
             </div>
             <p className="text-[10px] text-muted-foreground truncate mt-0.5">
-              {summary}{firstTx.note && firstTx.note !== summary && ` · ${formatDateTime(firstTx.createdAt)}`}
-              {!firstTx.note && formatDateTime(firstTx.createdAt)}
+              {summary}{firstTx.note && firstTx.note !== summary && ` · ${formatDateTime(firstTx.createdAt, t.date_today)}`}
+              {!firstTx.note && formatDateTime(firstTx.createdAt, t.date_today)}
             </p>
           </div>
           <span
@@ -270,7 +270,7 @@ export function TxGroupCard({
             {summary}
           </p>
           <p className="text-[9px] text-muted-foreground/70 mt-0.5">
-            {formatDateTime(firstTx.createdAt)}
+            {formatDateTime(firstTx.createdAt, t.date_today)}
           </p>
         </div>
         <div className="flex items-center gap-1.5 flex-shrink-0">
