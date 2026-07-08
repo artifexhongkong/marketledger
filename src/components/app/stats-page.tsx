@@ -3,11 +3,13 @@
 import { useState, useMemo } from "react";
 import { useAppStore, formatCurrency, getCategoryInfo, CATEGORIES } from "@/lib/store";
 import { Card } from "@/components/ui/card";
+import { useT } from "@/lib/i18n";
 import { TrendingUp, TrendingDown, ShoppingBag, Wallet } from "lucide-react";
 
 type Period = "week" | "month";
 
 export function StatsPage() {
+  const t = useT();
   const { transactions, currency } = useAppStore();
   const [period, setPeriod] = useState<Period>("week");
 
@@ -39,7 +41,7 @@ export function StatsPage() {
     });
     const avgOrder = orderCount > 0 ? Math.round(income / orderCount) : 0;
 
-    // 按分類統計
+    // 按t.stats_category_stats
     const byCategory: Record<string, { income: number; expense: number; count: number }> = {};
     periodTx.forEach((t) => {
       if (!byCategory[t.category]) byCategory[t.category] = { income: 0, expense: 0, count: 0 };
@@ -85,7 +87,7 @@ export function StatsPage() {
     <div className="px-4 pb-4 space-y-3">
       {/* 標題 */}
       <div className="pt-2">
-        <h1 className="text-xl font-bold tracking-tight text-foreground">統計報表</h1>
+        <h1 className="text-xl font-bold tracking-tight text-foreground">t.stats_title</h1>
       </div>
 
       {/* 期間切換 */}
@@ -94,13 +96,13 @@ export function StatsPage() {
           onClick={() => setPeriod("week")}
           className={`flex-1 py-1.5 text-xs font-medium rounded-md transition ${period === "week" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}
         >
-          本週
+          t.stats_this_week
         </button>
         <button
           onClick={() => setPeriod("month")}
           className={`flex-1 py-1.5 text-xs font-medium rounded-md transition ${period === "month" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}
         >
-          本月
+          t.stats_this_month
         </button>
       </div>
 
@@ -109,21 +111,21 @@ export function StatsPage() {
         <Card className="p-3">
           <div className="flex items-center gap-1.5 mb-1">
             <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
-            <p className="text-[10px] text-muted-foreground">收入</p>
+            <p className="text-[10px] text-muted-foreground">t.stats_income</p>
           </div>
           <p className="text-lg font-bold tabular-nums text-emerald-600">{formatCurrency(stats.income, currency)}</p>
         </Card>
         <Card className="p-3">
           <div className="flex items-center gap-1.5 mb-1">
             <TrendingDown className="w-3.5 h-3.5 text-rose-500" />
-            <p className="text-[10px] text-muted-foreground">支出</p>
+            <p className="text-[10px] text-muted-foreground">t.stats_expense</p>
           </div>
           <p className="text-lg font-bold tabular-nums text-rose-600">{formatCurrency(stats.expense, currency)}</p>
         </Card>
         <Card className="p-3">
           <div className="flex items-center gap-1.5 mb-1">
             <Wallet className="w-3.5 h-3.5 text-primary" />
-            <p className="text-[10px] text-muted-foreground">淨利</p>
+            <p className="text-[10px] text-muted-foreground">t.stats_net_profit</p>
           </div>
           <p className={`text-lg font-bold tabular-nums ${stats.profit >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
             {stats.profit >= 0 ? "+" : "−"}{formatCurrency(Math.abs(stats.profit), currency)}
@@ -132,7 +134,7 @@ export function StatsPage() {
         <Card className="p-3">
           <div className="flex items-center gap-1.5 mb-1">
             <ShoppingBag className="w-3.5 h-3.5 text-accent" />
-            <p className="text-[10px] text-muted-foreground">平均客單</p>
+            <p className="text-[10px] text-muted-foreground">t.stats_avg_order</p>
           </div>
           <p className="text-lg font-bold tabular-nums text-foreground">
             {stats.orderCount > 0 ? formatCurrency(stats.avgOrder, currency) : "—"}
@@ -143,7 +145,7 @@ export function StatsPage() {
 
       {/* 每日趨勢圖（簡易條形圖） */}
       <Card className="p-3">
-        <p className="text-xs font-semibold text-foreground mb-2">每日淨利趨勢</p>
+        <p className="text-xs font-semibold text-foreground mb-2">每日t.stats_net_profit趨勢</p>
         <div className="flex items-end gap-0.5 h-24">
           {stats.dailyData.map((d, i) => {
             const heightPct = Math.abs(d.profit) / maxProfit * 100;
@@ -175,9 +177,9 @@ export function StatsPage() {
 
       {/* 分類佔比 */}
       <Card className="p-3">
-        <p className="text-xs font-semibold text-foreground mb-2">分類統計</p>
+        <p className="text-xs font-semibold text-foreground mb-2">t.stats_category_stats</p>
         {categoryList.length === 0 ? (
-          <p className="text-xs text-muted-foreground text-center py-3">尚無數據</p>
+          <p className="text-xs text-muted-foreground text-center py-3">t.stats_no_data</p>
         ) : (
           <div className="space-y-2">
             {categoryList.map(({ cat, income, expense, count, total }) => (

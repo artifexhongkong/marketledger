@@ -6,8 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { User, Lock, Eye, EyeOff, Store } from "lucide-react";
+import { useT } from "@/lib/i18n";
 
 export function LoginScreen() {
+  const t = useT();
   const { testLogin } = useAuthStore();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -23,7 +25,7 @@ export function LoginScreen() {
     setError("");
 
     if (!username.trim() || !password.trim()) {
-      setError("請輸入帳號和密碼");
+      setError("請輸入t.login_username和t.login_password");
       return;
     }
 
@@ -33,13 +35,13 @@ export function LoginScreen() {
     try {
       const ok = await testLogin(username, password);
       if (!ok) {
-        setError("帳號或密碼錯誤");
+        setError("t.login_username或t.login_password錯誤");
         setPassword("");
         setLoading(false);
       }
       // 成功的話 testAuthed=true，page.tsx 會自動切換到主畫面
     } catch {
-      setError("登入失敗，請重試");
+      setError("t.login_button失敗，請重試");
       setLoading(false);
     }
   };
@@ -55,9 +57,9 @@ export function LoginScreen() {
         <div className="absolute top-0 left-0 right-0 h-48 bg-gradient-to-br from-primary/8 via-accent/5 to-transparent pointer-events-none" />
         <div className="relative flex flex-col items-center">
           {/* Logo icon */}
-          <img src="/logo.png" alt="市集記賬本" className="w-16 h-16 shadow-lg mb-4 object-contain" />
-          <h1 className="text-2xl font-bold text-foreground tracking-tight">市集記賬本</h1>
-          <p className="text-xs text-muted-foreground mt-1 tracking-wide">MarketLedger · 測試版</p>
+          <img src="/logo.png" alt="t.login_title" className="w-16 h-16 shadow-lg mb-4 object-contain" />
+          <h1 className="text-2xl font-bold text-foreground tracking-tight">t.login_title</h1>
+          <p className="text-xs text-muted-foreground mt-1 tracking-wide">t.login_subtitle</p>
         </div>
       </div>
 
@@ -65,21 +67,21 @@ export function LoginScreen() {
       <div className="flex-1 px-6 flex flex-col justify-center">
         <Card className="p-5 space-y-4 shadow-sm">
           <div>
-            <h2 className="text-base font-semibold text-foreground">登入測試帳號</h2>
-            <p className="text-[11px] text-muted-foreground mt-0.5">僅限持有測試帳號的使用者使用</p>
+            <h2 className="text-base font-semibold text-foreground">t.login_test_account</h2>
+            <p className="text-[11px] text-muted-foreground mt-0.5">t.login_test_desc</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-3">
             {/* Username */}
             <div>
-              <label className="text-[11px] font-medium text-muted-foreground mb-1 block">帳號</label>
+              <label className="text-[11px] font-medium text-muted-foreground mb-1 block">t.login_username</label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="輸入帳號"
+                  placeholder="輸入t.login_username"
                   autoCapitalize="none"
                   autoCorrect="off"
                   className="bg-background pl-9 h-11 text-sm"
@@ -91,14 +93,14 @@ export function LoginScreen() {
 
             {/* Password */}
             <div>
-              <label className="text-[11px] font-medium text-muted-foreground mb-1 block">密碼</label>
+              <label className="text-[11px] font-medium text-muted-foreground mb-1 block">t.login_password</label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="輸入密碼"
+                  placeholder="輸入t.login_password"
                   className="bg-background pl-9 pr-9 h-11 text-sm"
                   disabled={loading}
                 />
@@ -124,7 +126,7 @@ export function LoginScreen() {
               disabled={loading}
               className="w-full h-11 font-semibold"
             >
-              {loading ? "驗證中..." : "登入"}
+              {loading ? "t.login_verifying" : "t.login_button"}
             </Button>
           </form>
         </Card>

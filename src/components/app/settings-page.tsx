@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { haptic } from "@/lib/haptic";
+import { useT } from "@/lib/i18n";
 
 interface LatestReleaseInfo {
   tag_name: string;
@@ -27,6 +28,7 @@ interface LatestReleaseInfo {
 type VersionStatus = "idle" | "checking" | "latest" | "outdated" | "error";
 
 export function SettingsPage() {
+  const t = useT();
   const {
     currency, setCurrency,
     transactions, clearAll,
@@ -78,7 +80,7 @@ export function SettingsPage() {
     }
   }, []);
 
-  // 進入設定頁時自動檢查一次
+  // 進入t.settings_title頁時自動檢查一次
   useEffect(() => {
     checkUpdate();
   }, [checkUpdate]);
@@ -180,42 +182,42 @@ export function SettingsPage() {
   };
 
   const handleLogout = () => {
-    if (confirm("確定要登出測試帳號嗎？")) {
+    if (confirm("確定要t.settings_logoutt.settings_test_account嗎？")) {
       testLogout();
     }
   };
 
   return (
     <div className="px-5 pb-4 space-y-4">
-      <h1 className="text-xl font-bold pt-4 text-foreground">設定</h1>
+      <h1 className="text-xl font-bold pt-4 text-foreground">t.settings_title</h1>
 
-      {/* 測試帳號資訊 */}
-      <SettingsGroup title="測試帳號">
+      {/* t.settings_test_account資訊 */}
+      <SettingsGroup title="t.settings_test_account">
         <div className="px-4 py-3 flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-accent/15 flex items-center justify-center flex-shrink-0">
             <CheckCircle2 className="w-4 h-4 text-accent" />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-foreground">{testUsername}</p>
-            <p className="text-[10px] text-muted-foreground">已登入測試帳號</p>
+            <p className="text-[10px] text-muted-foreground">已登入t.settings_test_account</p>
           </div>
           <button
             onClick={handleLogout}
             className="flex items-center gap-1 text-[11px] text-rose-600 hover:text-rose-700 px-2.5 py-1.5 rounded-md hover:bg-rose-50 transition"
           >
             <LogOut className="w-3.5 h-3.5" />
-            登出
+            t.settings_logout
           </button>
         </div>
       </SettingsGroup>
 
-      {/* 偏好設定群組 */}
-      <SettingsGroup title="偏好設定">
+      {/* 偏好t.settings_title群組 */}
+      <SettingsGroup title="偏好t.settings_title">
         <SettingsRow
           icon={Coins}
           iconBg="bg-amber-100"
           iconColor="text-amber-600"
-          label="幣別"
+          label="t.settings_currency"
           value={`${CURRENCIES[currency].symbol} ${currency}`}
           onClick={() => setShowCurrencyPicker(!showCurrencyPicker)}
           expanded={showCurrencyPicker}
@@ -238,12 +240,12 @@ export function SettingsPage() {
           </div>
         </SettingsRow>
 
-        {/* 語言設定 */}
+        {/* t.settings_languaget.settings_title */}
         <SettingsRow
           icon={Globe}
           iconBg="bg-blue-100"
           iconColor="text-blue-600"
-          label="語言"
+          label="t.settings_language"
           value={LANGUAGES.find((l) => l.code === language)?.native || language}
           onClick={() => { setShowLanguagePicker(!showLanguagePicker); setShowCurrencyPicker(false); }}
           expanded={showLanguagePicker}
@@ -267,15 +269,15 @@ export function SettingsPage() {
           </div>
         </SettingsRow>
 
-        {/* 震動回饋 */}
+        {/* t.settings_haptic */}
         <div className="px-4 py-3">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
               <Vibrate className="w-4 h-4 text-purple-600" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground">震動回饋</p>
-              <p className="text-[10px] text-muted-foreground">點擊按鈕、滑動商品時震動</p>
+              <p className="text-sm font-medium text-foreground">t.settings_haptic</p>
+              <p className="text-[10px] text-muted-foreground">t.settings_haptic_desc</p>
             </div>
             <button
               onClick={() => {
@@ -292,7 +294,7 @@ export function SettingsPage() {
           {/* 強弱選擇（只在開啟時顯示） */}
           {hapticEnabled && (
             <div className="mt-3 pl-11">
-              <p className="text-[10px] text-muted-foreground mb-1.5">震動強度</p>
+              <p className="text-[10px] text-muted-foreground mb-1.5">t.settings_haptic_strength</p>
               <div className="flex gap-1.5">
                 {(["light", "medium", "strong"] as const).map((s) => (
                   <button
@@ -315,7 +317,7 @@ export function SettingsPage() {
                 onClick={() => haptic("success")}
                 className="mt-2 text-[10px] text-purple-600 hover:text-purple-700 font-medium"
               >
-                測試震動
+                t.settings_haptic_test
               </button>
             </div>
           )}
@@ -327,8 +329,8 @@ export function SettingsPage() {
             <Moon className="w-4 h-4 text-slate-300" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-foreground">深色模式</p>
-            <p className="text-[10px] text-muted-foreground">護眼模式，夜間使用更舒適</p>
+            <p className="text-sm font-medium text-foreground">t.settings_dark_mode</p>
+            <p className="text-[10px] text-muted-foreground">t.settings_dark_mode_desc</p>
           </div>
           <button
             onClick={() => {
@@ -345,13 +347,13 @@ export function SettingsPage() {
         </div>
       </SettingsGroup>
 
-      {/* 資料管理群組 */}
-      <SettingsGroup title="資料管理">
+      {/* t.settings_data_management群組 */}
+      <SettingsGroup title="t.settings_data_management">
         <SettingsRow
           icon={Download}
           iconBg="bg-emerald-100"
           iconColor="text-emerald-600"
-          label="匯出資料"
+          label="t.settings_export"
           value={`${transactions.length} 筆交易`}
           onClick={() => setShowExportMenu(!showExportMenu)}
           expanded={showExportMenu}
@@ -380,15 +382,15 @@ export function SettingsPage() {
           icon={Trash2}
           iconBg="bg-rose-100"
           iconColor="text-rose-600"
-          label="清除資料"
-          value="刪除所有交易記錄"
+          label="t.settings_clear_data"
+          value="t.settings_clear_desc"
           onClick={() => setShowClearConfirm(true)}
           isLast
         />
       </SettingsGroup>
 
-      {/* 應用更新群組 */}
-      <SettingsGroup title="應用更新">
+      {/* t.settings_app_update群組 */}
+      <SettingsGroup title="t.settings_app_update">
         <div className="px-4 py-3.5 space-y-3">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
@@ -405,7 +407,7 @@ export function SettingsPage() {
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground">目前版本</p>
+              <p className="text-sm font-medium text-foreground">t.settings_current_version</p>
               <p className="text-[11px] text-muted-foreground">{APP_VERSION_DISPLAY}</p>
             </div>
             <button
@@ -414,14 +416,14 @@ export function SettingsPage() {
               className="flex items-center gap-1 text-[11px] text-blue-600 hover:text-blue-700 px-2.5 py-1.5 rounded-md hover:bg-blue-50 transition disabled:opacity-50"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${versionStatus === "checking" ? "animate-spin" : ""}`} />
-              重新檢查
+              t.settings_recheck
             </button>
           </div>
 
           {/* 狀態訊息 */}
           {versionStatus === "latest" && (
             <div className="text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
-              ✓ 已是最新版本
+              ✓ t.settings_latest
             </div>
           )}
           {versionStatus === "outdated" && latestRelease && (
@@ -461,7 +463,7 @@ export function SettingsPage() {
                   className="w-full h-9 text-xs font-medium"
                 >
                   <DownloadCloud className="w-3.5 h-3.5 mr-1" />
-                  下載更新
+                  t.settings_download_update
                 </Button>
               )}
             </div>
@@ -486,7 +488,7 @@ export function SettingsPage() {
                   className="flex-1 h-9 text-xs font-medium"
                 >
                   <DownloadCloud className="w-3.5 h-3.5 mr-1" />
-                  手動查看
+                  t.settings_manual_check
                 </Button>
               </div>
             </div>
@@ -499,8 +501,8 @@ export function SettingsPage() {
         </div>
       </SettingsGroup>
 
-      {/* 關於群組 */}
-      <SettingsGroup title="關於">
+      {/* t.settings_about群組 */}
+      <SettingsGroup title="t.settings_about">
         <SettingsRow
           icon={Info}
           iconBg="bg-slate-100"
@@ -532,7 +534,7 @@ export function SettingsPage() {
         </SettingsRow>
       </SettingsGroup>
 
-      {/* 清除資料確認對話框 */}
+      {/* t.settings_clear_data確認對話框 */}
       {showClearConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowClearConfirm(false)}>
           <Card className="w-full max-w-xs p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
@@ -567,7 +569,7 @@ export function SettingsPage() {
   );
 }
 
-// ── 設定群組容器 ──
+// ── t.settings_title群組容器 ──
 function SettingsGroup({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
@@ -581,7 +583,7 @@ function SettingsGroup({ title, children }: { title: string; children: React.Rea
   );
 }
 
-// ── 設定行項目（可展開）──
+// ── t.settings_title行項目（可展開）──
 interface SettingsRowProps {
   icon: LucideIcon;
   iconBg: string;

@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, X, MapPin, Calendar, Clock, Store, Trash2, ChevronLeft, ChevronRight, Eye, EyeOff, Pencil, Inbox, ArrowUpRight, ArrowDownRight, User } from "lucide-react";
+import { useT } from "@/lib/i18n";
 
 const EVENT_COLORS = ["#1A1D24", "#059669", "#E11D48", "#F59E0B", "#7C3AED", "#0891B2"];
 const WEEKDAYS = ["日", "一", "二", "三", "四", "五", "六"];
@@ -24,6 +25,7 @@ function parseDateKey(key: string) {
 }
 
 export function MarketsPage() {
+  const t = useT();
   const { marketEvents, addMarketEvent, deleteMarketEvent, updateMarketEvent, currency, transactions, customPaymentMethods, stickyNotes, addStickyNote, updateStickyNote, deleteStickyNote } = useAppStore();
   const [showForm, setShowForm] = useState(false);
   const [editingEvent, setEditingEvent] = useState<MarketEvent | null>(null);
@@ -165,8 +167,8 @@ export function MarketsPage() {
       {/* Header */}
       <div className="pt-4 flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-foreground">市集日曆</h1>
-          <p className="text-[11px] text-muted-foreground mt-0.5">點日期看記錄 · 看市集活動</p>
+          <h1 className="text-xl font-bold text-foreground">t.markets_title</h1>
+          <p className="text-[11px] text-muted-foreground mt-0.5">t.markets_subtitle</p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => setShowProfit(!showProfit)}
@@ -424,10 +426,10 @@ export function MarketsPage() {
         </div>
       )}
 
-      {/* 即將到來市集 */}
+      {/* t.markets_upcoming市集 */}
       {upcomingEvents.length > 0 && (
         <div className="space-y-2">
-          <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-1">即將到來</p>
+          <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-1">t.markets_upcoming</p>
           {upcomingEvents.slice(0, 3).map((e) => (
             <EventCard key={e.id} event={e} currency={currency} onEdit={() => handleEdit(e)} onDelete={() => handleDelete(e.id)} />
           ))}
@@ -442,7 +444,7 @@ export function MarketsPage() {
         </div>
       )}
 
-      {/* 便條貼區 */}
+      {/* t.markets_sticky_notes區 */}
       <StickyNotesSection
         notes={stickyNotes}
         onAdd={addStickyNote}
@@ -478,10 +480,10 @@ function EventCard({ event, currency, onEdit, onDelete }: { event: MarketEvent; 
       </div>
       {expanded && (
         <div className="px-3 pb-3 pt-1 border-t border-border space-y-1.5 animate-[fadeIn_0.15s_ease-out]">
-          {event.boothNumber && <InfoRow icon={<Store className="w-3 h-3" />} label="攤位編號" value={event.boothNumber} />}
-          {event.businessHours && <InfoRow icon={<Clock className="w-3 h-3" />} label="營業時段" value={event.businessHours} />}
-          {event.notes && <InfoRow icon={<Calendar className="w-3 h-3" />} label="備註" value={event.notes} />}
-          {event.autoAddFee && <p className="text-[10px] text-emerald-600">✓ 已自動記帳攤位費</p>}
+          {event.boothNumber && <InfoRow icon={<Store className="w-3 h-3" />} label="t.markets_booth_number" value={event.boothNumber} />}
+          {event.businessHours && <InfoRow icon={<Clock className="w-3 h-3" />} label="t.markets_business_hours" value={event.businessHours} />}
+          {event.notes && <InfoRow icon={<Calendar className="w-3 h-3" />} label="t.markets_notes" value={event.notes} />}
+          {event.autoAddFee && <p className="text-[10px] text-emerald-600">✓ 已t.markets_auto_fee</p>}
           <div className="flex gap-2 mt-2">
             <button onClick={onEdit} className="flex items-center gap-1 text-[11px] text-accent hover:text-foreground px-2 py-1 rounded-md hover:bg-accent/10"><Pencil className="w-3 h-3" />編輯</button>
             <button onClick={onDelete} className="flex items-center gap-1 text-[11px] text-rose-500 hover:text-rose-600 px-2 py-1 rounded-md hover:bg-rose-50"><Trash2 className="w-3 h-3" />刪除</button>
@@ -601,7 +603,7 @@ function EventFormModal({ onClose, onSave, currency, editingEvent }: { onClose: 
   const [color, setColor] = useState(editingEvent?.color || EVENT_COLORS[0]);
 
   const handleSave = () => {
-    if (!name.trim()) { alert("請輸入市集名稱"); return; }
+    if (!name.trim()) { alert("請輸入t.markets_market_name"); return; }
     if (endDate < startDate) { alert("結束日期不能早於開始日期"); return; }
     onSave({ name: name.trim(), startDate, endDate, location: location.trim(), boothFee: parseFloat(boothFee) || 0, feeType, autoAddFee, boothNumber: boothNumber.trim(), businessHours: businessHours.trim(), notes: notes.trim(), color });
   };
@@ -616,18 +618,18 @@ function EventFormModal({ onClose, onSave, currency, editingEvent }: { onClose: 
 
         {/* Agoda 風格日期選擇 — 移到最上面 */}
         <div>
-          <p className="text-xs font-medium text-muted-foreground mb-1">日期範圍</p>
+          <p className="text-xs font-medium text-muted-foreground mb-1">t.markets_date_range</p>
           <div className="bg-muted/30 rounded-lg p-3">
             <AgodaDatePicker startDate={startDate} endDate={endDate} onSelect={(s, e) => { setStartDate(s); setEndDate(e); }} />
           </div>
         </div>
 
-        <div><p className="text-xs font-medium text-muted-foreground mb-1">市集名稱 *</p><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="例如：PMQ 週末市集" className="bg-background h-9 text-sm" /></div>
+        <div><p className="text-xs font-medium text-muted-foreground mb-1">t.markets_market_name *</p><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="例如：PMQ 週末市集" className="bg-background h-9 text-sm" /></div>
 
-        <div><p className="text-xs font-medium text-muted-foreground mb-1">地點</p><Input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="例如：中環 PMQ" className="bg-background h-9 text-sm" /></div>
+        <div><p className="text-xs font-medium text-muted-foreground mb-1">t.markets_location</p><Input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="例如：中環 PMQ" className="bg-background h-9 text-sm" /></div>
 
         <div>
-          <p className="text-xs font-medium text-muted-foreground mb-1">攤位費用（{CURRENCIES[currency as keyof typeof CURRENCIES]?.symbol}）</p>
+          <p className="text-xs font-medium text-muted-foreground mb-1">t.markets_booth_fee（{CURRENCIES[currency as keyof typeof CURRENCIES]?.symbol}）</p>
           <div className="flex gap-2">
             <Input type="number" value={boothFee} onChange={(e) => setBoothFee(e.target.value)} placeholder="0" className="bg-background h-9 text-sm flex-1" />
             <div className="flex bg-muted rounded-lg p-0.5">
@@ -638,14 +640,14 @@ function EventFormModal({ onClose, onSave, currency, editingEvent }: { onClose: 
         </div>
 
         <button type="button" onClick={() => setAutoAddFee(!autoAddFee)} className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg border transition ${autoAddFee ? "border-emerald-400 bg-emerald-50" : "border-border bg-background"}`}>
-          <div><p className="text-xs font-medium text-foreground">自動記帳攤位費</p><p className="text-[10px] text-muted-foreground">每天自動加上攤位費支出</p></div>
+          <div><p className="text-xs font-medium text-foreground">t.markets_auto_fee</p><p className="text-[10px] text-muted-foreground">t.markets_auto_fee_desc</p></div>
           <div className={`w-9 h-5 rounded-full transition flex items-center ${autoAddFee ? "bg-emerald-500 justify-end" : "bg-muted-foreground/30 justify-start"}`}><div className="w-4 h-4 rounded-full bg-white shadow-sm mx-0.5" /></div>
         </button>
 
-        <div><p className="text-xs font-medium text-muted-foreground mb-1">攤位編號</p><Input value={boothNumber} onChange={(e) => setBoothNumber(e.target.value)} placeholder="例如：A12" className="bg-background h-9 text-sm" /></div>
-        <div><p className="text-xs font-medium text-muted-foreground mb-1">營業時段</p><Input value={businessHours} onChange={(e) => setBusinessHours(e.target.value)} placeholder="例如：10:00-18:00" className="bg-background h-9 text-sm" /></div>
-        <div><p className="text-xs font-medium text-muted-foreground mb-1">標記顏色</p><div className="flex gap-2">{EVENT_COLORS.map((c) => <button key={c} type="button" onClick={() => setColor(c)} className={`w-6 h-6 rounded-full transition ${color === c ? "ring-2 ring-offset-1 ring-foreground" : ""}`} style={{ backgroundColor: c }} />)}</div></div>
-        <div><p className="text-xs font-medium text-muted-foreground mb-1">備註</p><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="其他資訊..." className="bg-background text-sm min-h-[50px]" maxLength={200} /></div>
+        <div><p className="text-xs font-medium text-muted-foreground mb-1">t.markets_booth_number</p><Input value={boothNumber} onChange={(e) => setBoothNumber(e.target.value)} placeholder="例如：A12" className="bg-background h-9 text-sm" /></div>
+        <div><p className="text-xs font-medium text-muted-foreground mb-1">t.markets_business_hours</p><Input value={businessHours} onChange={(e) => setBusinessHours(e.target.value)} placeholder="例如：10:00-18:00" className="bg-background h-9 text-sm" /></div>
+        <div><p className="text-xs font-medium text-muted-foreground mb-1">t.markets_color</p><div className="flex gap-2">{EVENT_COLORS.map((c) => <button key={c} type="button" onClick={() => setColor(c)} className={`w-6 h-6 rounded-full transition ${color === c ? "ring-2 ring-offset-1 ring-foreground" : ""}`} style={{ backgroundColor: c }} />)}</div></div>
+        <div><p className="text-xs font-medium text-muted-foreground mb-1">t.markets_notes</p><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="其他資訊..." className="bg-background text-sm min-h-[50px]" maxLength={200} /></div>
 
         <Button onClick={handleSave} className="w-full h-10">{editingEvent ? "儲存修改" : "新增市集"}</Button>
       </Card>
@@ -653,7 +655,7 @@ function EventFormModal({ onClose, onSave, currency, editingEvent }: { onClose: 
   );
 }
 
-// ── 便條貼元件 ──
+// ── t.markets_sticky_notes元件 ──
 const NOTE_COLORS = [
   "#FEF3C7", // 淺黃
   "#FCE7F3", // 淺粉
@@ -710,7 +712,7 @@ function StickyNotesSection({
       {/* 標題 + 新增按鈕 */}
       <div className="flex items-center justify-between px-1 mb-2">
         <div className="flex items-center gap-1.5">
-          <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">便條貼</p>
+          <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">t.markets_sticky_notes</p>
           {notes.length > 0 && <span className="text-[10px] text-muted-foreground">({notes.length})</span>}
         </div>
         <button
@@ -755,10 +757,10 @@ function StickyNotesSection({
         </Card>
       )}
 
-      {/* 便條貼列表 */}
+      {/* t.markets_sticky_notes列表 */}
       {notes.length === 0 && !showAdd ? (
         <Card className="p-4 text-center border-dashed">
-          <p className="text-[11px] text-muted-foreground">點「新增」寫下便條貼</p>
+          <p className="text-[11px] text-muted-foreground">點「新增」寫下t.markets_sticky_notes</p>
         </Card>
       ) : (
         <div className="grid grid-cols-2 gap-2">
