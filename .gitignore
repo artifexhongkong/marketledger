@@ -76,7 +76,6 @@ next.config.capacitor.js
 /db/
 /prisma/
 /examples/
-/scripts/
 *.apk
 *.db
 *.docx
