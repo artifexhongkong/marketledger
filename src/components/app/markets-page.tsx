@@ -426,7 +426,7 @@ export function MarketsPage() {
         </div>
       )}
 
-      {/* t.markets_upcoming市集 */}
+      {/* 即將到來的市集 */}
       {upcomingEvents.length > 0 && (
         <div className="space-y-2">
           <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-1">{t.markets_upcoming}</p>
@@ -444,7 +444,7 @@ export function MarketsPage() {
         </div>
       )}
 
-      {/* t.markets_sticky_notes區 */}
+      {/* 便條貼區 */}
       <StickyNotesSection
         notes={stickyNotes}
         onAdd={addStickyNote}
@@ -657,7 +657,7 @@ function EventFormModal({ onClose, onSave, currency, editingEvent }: { onClose: 
   );
 }
 
-// ── t.markets_sticky_notes元件 ──
+// ── 便條貼元件 ──
 const NOTE_COLORS = [
   "#FEF3C7", // 淺黃
   "#FCE7F3", // 淺粉
@@ -760,10 +760,10 @@ function StickyNotesSection({
         </Card>
       )}
 
-      {/* t.markets_sticky_notes列表 */}
+      {/* 便條貼列表 */}
       {notes.length === 0 && !showAdd ? (
         <Card className="p-4 text-center border-dashed">
-          <p className="text-[11px] text-muted-foreground">點「新增」寫下t.markets_sticky_notes</p>
+          <p className="text-[11px] text-muted-foreground">{t.markets_sticky_empty}</p>
         </Card>
       ) : (
         <div className="grid grid-cols-2 gap-2">

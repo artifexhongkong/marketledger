@@ -80,78 +80,27 @@ export function SettingsPage() {
     }
   }, []);
 
-  // 進入t.settings_title頁時自動檢查一次
+  // 進入設定頁時自動檢查一次
   useEffect(() => {
     checkUpdate();
   }, [checkUpdate]);
 
-  // 下載進度
-  const [downloadProgress, setDownloadProgress] = useState<number | null>(null);
-  const [downloadError, setDownloadError] = useState("");
-
+  // 點擊「下載更新」直接開啟瀏覽器到 GitHub Release 頁面，避免 app 內下載 APK 失敗
   const handleUpdate = async () => {
     if (!latestRelease) return;
     const apkAsset = latestRelease.assets.find((a) => a.name.endsWith(".apk"));
+    // 優先導向 APK 直接下載連結，否則退到 Release 頁面
     const url = apkAsset?.browser_download_url || latestRelease.html_url;
-
-    setDownloadProgress(0);
-    setDownloadError("");
-
     try {
-      // 用 fetch 下載，追蹤進度
-      const response = await fetch(url);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-      const contentLength = parseInt(response.headers.get("content-length") || "0");
-      const reader = response.body?.getReader();
-      if (!reader) throw new Error("No reader");
-
-      const chunks: Uint8Array[] = [];
-      let receivedLength = 0;
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        if (value) {
-          chunks.push(value);
-          receivedLength += value.length;
-          if (contentLength > 0) {
-            const pct = Math.round((receivedLength / contentLength) * 100);
-            setDownloadProgress(pct);
-          }
-        }
-      }
-
-      // 合併 chunks
-      const blob = new Blob(chunks as BlobPart[], { type: "application/vnd.android.package-archive" });
-
-      // 在 web 環境直接觸發下載
-      const downloadUrl = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = downloadUrl;
-      a.download = apkAsset?.name || "marketledger-update.apk";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(downloadUrl);
-
-      setDownloadProgress(100);
-      setTimeout(() => setDownloadProgress(null), 2000);
-    } catch (e: any) {
-      setDownloadError(e?.message || "下載失敗");
-      setDownloadProgress(null);
-      // fallback 到瀏覽器打開
-      try {
-        const { Browser } = await import("@capacitor/browser");
-        await Browser.open({ url });
-      } catch {
-        window.open(url, "_blank");
-      }
+      const { Browser } = await import("@capacitor/browser");
+      await Browser.open({ url });
+    } catch {
+      window.open(url, "_blank");
     }
   };
 
   const exportData = (format: "csv" | "json") => {
-    if (transactions.length === 0) return alert("目前沒有交易記錄可以匯出");
+    if (transactions.length === 0) return alert(t.settings_no_export);
     let content: string;
     let filename: string;
     if (format === "csv") {
@@ -178,11 +127,11 @@ export function SettingsPage() {
   const handleClear = () => {
     clearAll();
     setShowClearConfirm(false);
-    alert("已清除所有交易記錄");
+    alert(t.settings_cleared);
   };
 
   const handleLogout = () => {
-    if (confirm("確定要t.settings_logoutt.settings_test_account嗎？")) {
+    if (confirm(t.settings_logout_confirm)) {
       testLogout();
     }
   };
@@ -191,7 +140,7 @@ export function SettingsPage() {
     <div className="px-5 pb-4 space-y-4">
       <h1 className="text-xl font-bold pt-4 text-foreground">{t.settings_title}</h1>
 
-      {/* t.settings_test_account資訊 */}
+      {/* 測試帳號資訊 */}
       <SettingsGroup title={t.settings_test_account}>
         <div className="px-4 py-3 flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-accent/15 flex items-center justify-center flex-shrink-0">
@@ -199,19 +148,19 @@ export function SettingsPage() {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-foreground">{testUsername}</p>
-            <p className="text-[10px] text-muted-foreground">已登入t.settings_test_account</p>
+            <p className="text-[10px] text-muted-foreground">{t.settings_logged_in}</p>
           </div>
           <button
             onClick={handleLogout}
             className="flex items-center gap-1 text-[11px] text-rose-600 hover:text-rose-700 px-2.5 py-1.5 rounded-md hover:bg-rose-50 transition"
           >
             <LogOut className="w-3.5 h-3.5" />
-            t.settings_logout
+            {t.settings_logout}
           </button>
         </div>
       </SettingsGroup>
 
-      {/* 偏好t.settings_title群組 */}
+      {/* 偏好設定群組 */}
       <SettingsGroup title={t.settings_preferences}>
         <SettingsRow
           icon={Coins}
@@ -240,7 +189,7 @@ export function SettingsPage() {
           </div>
         </SettingsRow>
 
-        {/* t.settings_languaget.settings_title */}
+        {/* 語言選擇 */}
         <SettingsRow
           icon={Globe}
           iconBg="bg-blue-100"
@@ -269,7 +218,7 @@ export function SettingsPage() {
           </div>
         </SettingsRow>
 
-        {/* t.settings_haptic */}
+        {/* 震動回饋 */}
         <div className="px-4 py-3">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
@@ -309,7 +258,7 @@ export function SettingsPage() {
                         : "border-border bg-card text-foreground hover:border-primary/30"
                     }`}
                   >
-                    {s === "light" ? "輕" : s === "medium" ? "中" : "強"}
+                    {s === "light" ? t.settings_haptic_light : s === "medium" ? t.settings_haptic_medium : t.settings_haptic_strong}
                   </button>
                 ))}
               </div>
@@ -317,7 +266,7 @@ export function SettingsPage() {
                 onClick={() => haptic("success")}
                 className="mt-2 text-[10px] text-purple-600 hover:text-purple-700 font-medium"
               >
-                t.settings_haptic_test
+                {t.settings_haptic_test}
               </button>
             </div>
           )}
@@ -347,14 +296,14 @@ export function SettingsPage() {
         </div>
       </SettingsGroup>
 
-      {/* t.settings_data_management群組 */}
+      {/* 資料管理群組 */}
       <SettingsGroup title={t.settings_data_management}>
         <SettingsRow
           icon={Download}
           iconBg="bg-emerald-100"
           iconColor="text-emerald-600"
           label={t.settings_export}
-          value={`${transactions.length} 筆交易`}
+          value={`${transactions.length} ${t.settings_export_count}`}
           onClick={() => setShowExportMenu(!showExportMenu)}
           expanded={showExportMenu}
         >
@@ -365,7 +314,7 @@ export function SettingsPage() {
             >
               <FileSpreadsheet className="w-5 h-5 text-emerald-600" />
               <span className="text-xs font-medium text-foreground">CSV</span>
-              <span className="text-[10px] text-muted-foreground">Excel 可用</span>
+              <span className="text-[10px] text-muted-foreground">{t.settings_export_excel}</span>
             </button>
             <button
               onClick={() => exportData("json")}
@@ -373,7 +322,7 @@ export function SettingsPage() {
             >
               <FileJson className="w-5 h-5 text-emerald-600" />
               <span className="text-xs font-medium text-foreground">JSON</span>
-              <span className="text-[10px] text-muted-foreground">完整備份</span>
+              <span className="text-[10px] text-muted-foreground">{t.settings_export_backup}</span>
             </button>
           </div>
         </SettingsRow>
@@ -389,7 +338,7 @@ export function SettingsPage() {
         />
       </SettingsGroup>
 
-      {/* t.settings_app_update群組 */}
+      {/* 應用更新群組 */}
       <SettingsGroup title={t.settings_app_update}>
         <div className="px-4 py-3.5 space-y-3">
           <div className="flex items-center gap-3">
@@ -416,62 +365,40 @@ export function SettingsPage() {
               className="flex items-center gap-1 text-[11px] text-blue-600 hover:text-blue-700 px-2.5 py-1.5 rounded-md hover:bg-blue-50 transition disabled:opacity-50"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${versionStatus === "checking" ? "animate-spin" : ""}`} />
-              t.settings_recheck
+              {t.settings_recheck}
             </button>
           </div>
 
           {/* 狀態訊息 */}
           {versionStatus === "latest" && (
             <div className="text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
-              ✓ t.settings_latest
+              ✓ {t.settings_latest}
             </div>
           )}
           {versionStatus === "outdated" && latestRelease && (
             <div className="space-y-2">
               <div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                <p className="font-medium">發現新版本 {latestRelease.tag_name}</p>
+                <p className="font-medium">{t.settings_new_version} {latestRelease.tag_name}</p>
                 <p className="text-[10px] text-amber-600/80 mt-0.5">
-                  發布於 {new Date(latestRelease.published_at).toLocaleDateString("zh-TW")}
+                  {t.settings_published} {new Date(latestRelease.published_at).toLocaleDateString("zh-TW")}
                 </p>
               </div>
-              {downloadProgress !== null ? (
-                /* 下載進度條 */
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between text-[11px]">
-                    <span className="text-muted-foreground">
-                      {downloadProgress < 100 ? "下載中..." : "下載完成！點擊通知安裝"}
-                    </span>
-                    <span className="font-bold tabular-nums text-accent">{downloadProgress}%</span>
-                  </div>
-                  <div className="h-2.5 bg-muted rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-accent rounded-full transition-all duration-300 ease-out"
-                      style={{ width: `${downloadProgress}%` }}
-                    />
-                  </div>
-                  {downloadProgress < 100 && (
-                    <p className="text-[9px] text-muted-foreground/60 text-center">請保持 App 開啟，不要離開</p>
-                  )}
-                </div>
-              ) : downloadError ? (
-                <div className="text-[11px] text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">
-                  下載失敗：{downloadError}，已開啟瀏覽器下載
-                </div>
-              ) : (
-                <Button
-                  onClick={handleUpdate}
-                  className="w-full h-9 text-xs font-medium"
-                >
-                  <DownloadCloud className="w-3.5 h-3.5 mr-1" />
-                  t.settings_download_update
-                </Button>
-              )}
+              <Button
+                onClick={handleUpdate}
+                className="w-full h-9 text-xs font-medium"
+              >
+                <DownloadCloud className="w-3.5 h-3.5 mr-1" />
+                {t.settings_download_update}
+              </Button>
+              <p className="text-[9px] text-muted-foreground/70 text-center leading-relaxed">
+                {t.settings_open_browser}
+              </p>
             </div>
           )}
           {versionStatus === "error" && (
             <div className="space-y-2">
               <div className="text-[11px] text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">
-                檢查失敗：{checkError}
+                {t.settings_check_failed}：{checkError}
               </div>
               <div className="flex gap-2">
                 <Button
@@ -480,7 +407,7 @@ export function SettingsPage() {
                   className="flex-1 h-9 text-xs font-medium"
                 >
                   <RefreshCw className="w-3.5 h-3.5 mr-1" />
-                  重試
+                  {t.settings_retry}
                 </Button>
                 <Button
                   onClick={() => window.open(GITHUB_RELEASES_PAGE, "_blank")}
@@ -488,26 +415,26 @@ export function SettingsPage() {
                   className="flex-1 h-9 text-xs font-medium"
                 >
                   <DownloadCloud className="w-3.5 h-3.5 mr-1" />
-                  t.settings_manual_check
+                  {t.settings_manual_check}
                 </Button>
               </div>
             </div>
           )}
           {versionStatus === "checking" && (
             <div className="text-[11px] text-muted-foreground bg-muted/40 rounded-lg px-3 py-2">
-              正在檢查最新版本...
+              {t.settings_checking}
             </div>
           )}
         </div>
       </SettingsGroup>
 
-      {/* t.settings_about群組 */}
+      {/* 關於群組 */}
       <SettingsGroup title={t.settings_about}>
         <SettingsRow
           icon={Info}
           iconBg="bg-slate-100"
           iconColor="text-slate-600"
-          label="版本資訊"
+          label={t.settings_version_info}
           value={APP_VERSION_DISPLAY}
           onClick={() => setShowAbout(!showAbout)}
           expanded={showAbout}
@@ -515,26 +442,26 @@ export function SettingsPage() {
         >
           <div className="pt-2 space-y-2 text-xs">
             <div className="flex justify-between py-1">
-              <span className="text-muted-foreground">開發者</span>
+              <span className="text-muted-foreground">{t.settings_developer}</span>
               <span className="text-foreground font-medium">ArtifexStudio</span>
             </div>
             <div className="flex justify-between py-1">
-              <span className="text-muted-foreground">技術棧</span>
+              <span className="text-muted-foreground">{t.settings_tech_stack}</span>
               <span className="text-foreground font-medium">Next.js · TypeScript · Zustand</span>
             </div>
             <div className="flex justify-between py-1">
-              <span className="text-muted-foreground">更新日期</span>
+              <span className="text-muted-foreground">{t.settings_update_date}</span>
               <span className="text-foreground font-medium">2026.07</span>
             </div>
             <div className="flex justify-between py-1">
-              <span className="text-muted-foreground">版本標籤</span>
+              <span className="text-muted-foreground">{t.settings_version_tag}</span>
               <span className="text-foreground font-medium">{APP_VERSION}</span>
             </div>
           </div>
         </SettingsRow>
       </SettingsGroup>
 
-      {/* t.settings_clear_data確認對話框 */}
+      {/* 清除資料確認對話框 */}
       {showClearConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowClearConfirm(false)}>
           <Card className="w-full max-w-xs p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
@@ -542,9 +469,9 @@ export function SettingsPage() {
               <div className="w-12 h-12 rounded-full bg-rose-100 flex items-center justify-center mb-2">
                 <Trash2 className="w-6 h-6 text-rose-600" />
               </div>
-              <h3 className="text-base font-semibold text-foreground">清除所有資料？</h3>
+              <h3 className="text-base font-semibold text-foreground">{t.settings_clear_confirm_title}</h3>
               <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                將刪除 {transactions.length} 筆交易記錄與所有商品資料，此操作無法復原。
+                {t.settings_clear_confirm_msg.replace("{n}", String(transactions.length))}
               </p>
             </div>
             <div className="flex gap-2">
@@ -553,13 +480,13 @@ export function SettingsPage() {
                 onClick={() => setShowClearConfirm(false)}
                 className="flex-1 h-10"
               >
-                取消
+                {t.cancel}
               </Button>
               <Button
                 onClick={handleClear}
                 className="flex-1 h-10 bg-rose-600 hover:bg-rose-700 text-white"
               >
-                確認清除
+                {t.settings_clear_confirm}
               </Button>
             </div>
           </Card>
@@ -569,7 +496,7 @@ export function SettingsPage() {
   );
 }
 
-// ── t.settings_title群組容器 ──
+// ── 設定群組容器 ──
 function SettingsGroup({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
@@ -583,7 +510,7 @@ function SettingsGroup({ title, children }: { title: string; children: React.Rea
   );
 }
 
-// ── t.settings_title行項目（可展開）──
+// ── 設定行項目（可展開）──
 interface SettingsRowProps {
   icon: LucideIcon;
   iconBg: string;

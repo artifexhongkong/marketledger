@@ -1,7 +1,7 @@
 // 多語系翻譯系統
-// 支援 8 種語言：繁中/簡中/英文/泰文/馬來/越南/日文/韓文
+// 支援 5 種語言：繁中/簡中/英文/日文/韓文
 
-export type LangCode = "zh-TW" | "zh-CN" | "en" | "th" | "ms" | "vi" | "ja" | "ko";
+export type LangCode = "zh-TW" | "zh-CN" | "en" | "ja" | "ko";
 
 // 所有需要翻譯的文字 key
 export interface Translations {
@@ -93,7 +93,9 @@ export interface Translations {
   transactions_records: string;
   transactions_groups: string;
   transactions_no_records: string;
+  transactions_no_records_hint: string;
   transactions_no_match: string;
+  transactions_no_match_hint: string;
   transactions_search_placeholder: string;
   transactions_order: string;
   transactions_items: string;
@@ -167,6 +169,9 @@ export interface Translations {
   settings_clear_desc: string;
   settings_clear_confirm: string;
   settings_clear_confirm_title: string;
+  settings_clear_confirm_msg: string;
+  settings_cleared: string;
+  settings_logout_confirm: string;
   settings_app_update: string;
   settings_current_version: string;
   settings_recheck: string;
@@ -174,8 +179,17 @@ export interface Translations {
   settings_download_update: string;
   settings_latest: string;
   settings_new_version: string;
+  settings_published: string;
   settings_check_failed: string;
   settings_checking: string;
+  settings_retry: string;
+  settings_downloading: string;
+  settings_download_complete: string;
+  settings_keep_app_open: string;
+  settings_download_failed: string;
+  settings_open_browser: string;
+  settings_version_info: string;
+  settings_export_count: string;
   settings_about: string;
   settings_developer: string;
   settings_tech_stack: string;
@@ -311,7 +325,9 @@ const zhTW: Translations = {
   transactions_records: "交易記錄",
   transactions_groups: "組",
   transactions_no_records: "還沒有交易記錄",
+  transactions_no_records_hint: "前往「記帳」頁面開始記錄",
   transactions_no_match: "沒有符合條件的記錄",
+  transactions_no_match_hint: "試試其他搜索條件",
   transactions_search_placeholder: "搜索商品名稱或備註...",
   transactions_order: "商品",
   transactions_items: "項",
@@ -382,6 +398,9 @@ const zhTW: Translations = {
   settings_clear_desc: "刪除所有交易記錄",
   settings_clear_confirm: "確認清除",
   settings_clear_confirm_title: "清除所有資料？",
+  settings_clear_confirm_msg: "將刪除 {n} 筆交易記錄與所有商品資料，此操作無法復原。",
+  settings_cleared: "已清除所有交易記錄",
+  settings_logout_confirm: "確定要登出測試帳號嗎？",
   settings_app_update: "應用更新",
   settings_current_version: "目前版本",
   settings_recheck: "重新檢查",
@@ -389,8 +408,17 @@ const zhTW: Translations = {
   settings_download_update: "下載更新",
   settings_latest: "已是最新版本",
   settings_new_version: "發現新版本",
+  settings_published: "發布於",
   settings_check_failed: "檢查失敗",
   settings_checking: "正在檢查最新版本...",
+  settings_retry: "重試",
+  settings_downloading: "下載中...",
+  settings_download_complete: "下載完成！點擊通知安裝",
+  settings_keep_app_open: "請保持 App 開啟，不要離開",
+  settings_download_failed: "下載失敗",
+  settings_open_browser: "已開啟瀏覽器下載",
+  settings_version_info: "版本資訊",
+  settings_export_count: "筆交易",
   settings_about: "關於",
   settings_developer: "開發者",
   settings_tech_stack: "技術棧",
@@ -502,7 +530,9 @@ const zhCN: Translations = {
   transactions_records: "交易记录",
   transactions_groups: "组",
   transactions_no_records: "还没有交易记录",
+  transactions_no_records_hint: "前往「记账」页面开始记录",
   transactions_no_match: "没有符合条件的记录",
+  transactions_no_match_hint: "试试其他搜索条件",
   transactions_search_placeholder: "搜索商品名称或备注...",
   transactions_order: "商品",
   transactions_items: "项",
@@ -570,6 +600,9 @@ const zhCN: Translations = {
   settings_clear_desc: "删除所有交易记录",
   settings_clear_confirm: "确认清除",
   settings_clear_confirm_title: "清除所有数据？",
+  settings_clear_confirm_msg: "将删除 {n} 笔交易记录与所有商品数据，此操作无法复原。",
+  settings_cleared: "已清除所有交易记录",
+  settings_logout_confirm: "确定要登出测试帐号吗？",
   settings_app_update: "应用更新",
   settings_current_version: "目前版本",
   settings_recheck: "重新检查",
@@ -577,8 +610,17 @@ const zhCN: Translations = {
   settings_download_update: "下载更新",
   settings_latest: "已是最新版本",
   settings_new_version: "发现新版本",
+  settings_published: "发布于",
   settings_check_failed: "检查失败",
   settings_checking: "正在检查最新版本...",
+  settings_retry: "重试",
+  settings_downloading: "下载中...",
+  settings_download_complete: "下载完成！点击通知安装",
+  settings_keep_app_open: "请保持 App 开启，不要离开",
+  settings_download_failed: "下载失败",
+  settings_open_browser: "已开启浏览器下载",
+  settings_version_info: "版本信息",
+  settings_export_count: "笔交易",
   settings_about: "关于",
   settings_developer: "开发者",
   settings_tech_stack: "技术栈",
@@ -718,7 +760,9 @@ const en: Translations = {
   transactions_records: "Records",
   transactions_groups: "groups",
   transactions_no_records: "No transactions yet",
+  transactions_no_records_hint: "Go to the Record page to start",
   transactions_no_match: "No matching records",
+  transactions_no_match_hint: "Try other search criteria",
   transactions_search_placeholder: "Search product name or note...",
   transactions_order: "Items",
   transactions_items: "items",
@@ -789,6 +833,9 @@ const en: Translations = {
   settings_clear_desc: "Delete all transaction records",
   settings_clear_confirm: "Confirm Clear",
   settings_clear_confirm_title: "Clear all data?",
+  settings_clear_confirm_msg: "This will delete {n} transaction records and all product data. This cannot be undone.",
+  settings_cleared: "All transaction records cleared",
+  settings_logout_confirm: "Are you sure you want to log out of the test account?",
   settings_app_update: "App Update",
   settings_current_version: "Current Version",
   settings_recheck: "Recheck",
@@ -796,8 +843,17 @@ const en: Translations = {
   settings_download_update: "Download Update",
   settings_latest: "Up to date",
   settings_new_version: "New version available",
+  settings_published: "Published",
   settings_check_failed: "Check failed",
   settings_checking: "Checking for updates...",
+  settings_retry: "Retry",
+  settings_downloading: "Downloading...",
+  settings_download_complete: "Download complete! Tap notification to install",
+  settings_keep_app_open: "Please keep the app open",
+  settings_download_failed: "Download failed",
+  settings_open_browser: "Opened browser to download",
+  settings_version_info: "Version Info",
+  settings_export_count: "transactions",
   settings_about: "About",
   settings_developer: "Developer",
   settings_tech_stack: "Tech Stack",
@@ -844,11 +900,6 @@ const en: Translations = {
   time_format: "en-US",
 };
 
-// 支援的語言：繁中、英文、日文、韓文
-// 其他語言 fallback 到英文
-const th: Translations = { ...en };
-const ms: Translations = { ...en };
-const vi: Translations = { ...en };
 // Japanese
 const ja: Translations = {
   tab_home: "概況",
@@ -933,7 +984,9 @@ const ja: Translations = {
   transactions_records: "取引記録",
   transactions_groups: "件",
   transactions_no_records: "取引記録がありません",
+  transactions_no_records_hint: "「記帳」ページで記録を始めましょう",
   transactions_no_match: "条件に一致する記録がありません",
+  transactions_no_match_hint: "他の検索条件を試してください",
   transactions_search_placeholder: "商品名またはメモを検索...",
   transactions_order: "商品",
   transactions_items: "点",
@@ -1004,6 +1057,9 @@ const ja: Translations = {
   settings_clear_desc: "すべての取引記録を削除",
   settings_clear_confirm: "削除確認",
   settings_clear_confirm_title: "すべてのデータを削除しますか？",
+  settings_clear_confirm_msg: "{n} 件の取引記録とすべての商品データを削除します。この操作は元に戻せません。",
+  settings_cleared: "すべての取引記録を削除しました",
+  settings_logout_confirm: "テストアカウントからログアウトしますか？",
   settings_app_update: "アプリ更新",
   settings_current_version: "現在のバージョン",
   settings_recheck: "再確認",
@@ -1011,8 +1067,17 @@ const ja: Translations = {
   settings_download_update: "更新をダウンロード",
   settings_latest: "最新です",
   settings_new_version: "新バージョンがあります",
+  settings_published: "公開日",
   settings_check_failed: "確認失敗",
   settings_checking: "更新を確認中...",
+  settings_retry: "再試行",
+  settings_downloading: "ダウンロード中...",
+  settings_download_complete: "ダウンロード完了！通知をタップしてインストール",
+  settings_keep_app_open: "アプリを開いたままにしてください",
+  settings_download_failed: "ダウンロード失敗",
+  settings_open_browser: "ブラウザでダウンロードを開きました",
+  settings_version_info: "バージョン情報",
+  settings_export_count: "件",
   settings_about: "について",
   settings_developer: "開発者",
   settings_tech_stack: "技術スタック",
@@ -1142,7 +1207,9 @@ const ko: Translations = {
   transactions_records: "거래 기록",
   transactions_groups: "건",
   transactions_no_records: "거래 기록이 없습니다",
+  transactions_no_records_hint: "「기록」 페이지에서 기록을 시작하세요",
   transactions_no_match: "조건에 맞는 기록이 없습니다",
+  transactions_no_match_hint: "다른 검색 조건을 시도해 보세요",
   transactions_search_placeholder: "상품명 또는 메모 검색...",
   transactions_order: "상품",
   transactions_items: "개",
@@ -1213,6 +1280,9 @@ const ko: Translations = {
   settings_clear_desc: "모든 거래 기록 삭제",
   settings_clear_confirm: "삭제 확인",
   settings_clear_confirm_title: "모든 데이터를 삭제하시겠습니까?",
+  settings_clear_confirm_msg: "{n}건의 거래 기록과 모든 상품 데이터가 삭제됩니다. 이 작업은 되돌릴 수 없습니다.",
+  settings_cleared: "모든 거래 기록이 삭제되었습니다",
+  settings_logout_confirm: "테스트 계정에서 로그아웃하시겠습니까?",
   settings_app_update: "앱 업데이트",
   settings_current_version: "현재 버전",
   settings_recheck: "재확인",
@@ -1220,8 +1290,17 @@ const ko: Translations = {
   settings_download_update: "업데이트 다운로드",
   settings_latest: "최신 버전입니다",
   settings_new_version: "새 버전이 있습니다",
+  settings_published: "게시일",
   settings_check_failed: "확인 실패",
   settings_checking: "업데이트 확인 중...",
+  settings_retry: "다시 시도",
+  settings_downloading: "다운로드 중...",
+  settings_download_complete: "다운로드 완료! 알림을 탭하여 설치",
+  settings_keep_app_open: "앱을 열어둔 상태로 유지해 주세요",
+  settings_download_failed: "다운로드 실패",
+  settings_open_browser: "브라우저에서 다운로드를 열었습니다",
+  settings_version_info: "버전 정보",
+  settings_export_count: "건",
   settings_about: "정보",
   settings_developer: "개발자",
   settings_tech_stack: "기술 스택",
@@ -1272,9 +1351,6 @@ export const TRANSLATIONS: Record<string, Translations> = {
   "zh-TW": zhTW,
   "zh-CN": zhCN,
   en,
-  th,
-  ms,
-  vi,
   ja,
   ko,
 };

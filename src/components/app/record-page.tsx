@@ -22,11 +22,11 @@ export function RecordPage() {
       <div className="mx-4 mt-2 flex bg-muted rounded-lg p-0.5">
         <button onClick={() => setMode("record")}
           className={`flex-1 py-1.5 text-xs font-medium rounded-md transition ${mode === "record" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}>
-          t.record_title
+          {t.record_title}
         </button>
         <button onClick={() => setMode("products")}
           className={`flex-1 py-1.5 text-xs font-medium rounded-md transition ${mode === "products" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}>
-          商品
+          {t.products_title}
         </button>
       </div>
 
@@ -217,7 +217,7 @@ function RecordView() {
       )}
 
       <div className="px-4 flex-1 overflow-y-auto">
-        {/* ── 1. t.record_payment_method ── */}
+        {/* ── 1. 支付方式 ── */}
         <PaymentSelector payment={payment} setPayment={setPayment} />
 
         {/* ── 2. 商品快捷按鈕 ── */}
@@ -233,7 +233,7 @@ function RecordView() {
                     className="text-[10px] text-primary hover:text-primary/80 font-medium flex items-center gap-1"
                   >
                     <RotateCcw className="w-3 h-3" />
-                    t.record_undo_last
+                    {t.record_undo_last}
                   </button>
                 )}
               </div>
@@ -268,10 +268,10 @@ function RecordView() {
                 />
               ))}
             </div>
-            {/* 訂單清單 — 顯示這一單已點的商品 + t.total */}
+            {/* 訂單清單 — 顯示這一單已點的商品 + 合計 */}
             {currentOrder.length > 0 && (
               <div className="mt-2 bg-card border border-border rounded-xl overflow-hidden">
-                {/* 清單標題 + t.record_new_order按鈕 */}
+                {/* 清單標題 + 新一單按鈕 */}
                 <div className="flex items-center justify-between px-3 py-2 bg-muted/40 border-b border-border">
                   <div className="flex items-center gap-1.5">
                     <span className="text-[11px] font-semibold text-foreground">{t.record_order_details}</span>
@@ -285,7 +285,7 @@ function RecordView() {
                     className="flex items-center gap-1 text-[10px] text-accent hover:text-foreground px-2 py-1 rounded-md hover:bg-accent/10 transition"
                   >
                     <RotateCcw className="w-3 h-3" />
-                    t.record_new_order
+                    {t.record_new_order}
                   </button>
                 </div>
                 {/* 訂單項目列表 */}
@@ -306,7 +306,7 @@ function RecordView() {
                           <p className="text-[10px] text-accent truncate mt-0.5">📝 {item.note}</p>
                         )}
                       </div>
-                      {/* t.subtotal */}
+                      {/* 小計 */}
                       <span className="text-xs font-bold tabular-nums text-primary flex-shrink-0">
                         {formatCurrency(item.price * item.qty, currency as any)}
                       </span>
@@ -336,7 +336,7 @@ function RecordView() {
                     </div>
                   ))}
                 </div>
-                {/* t.total */}
+                {/* 合計 */}
                 <div className="px-3 py-2 bg-primary/5 border-t border-border flex items-center justify-between">
                   <span className="text-[11px] font-semibold text-foreground">{t.total}</span>
                   <span className="text-base font-bold tabular-nums text-primary">
@@ -388,7 +388,7 @@ function RecordView() {
                           />
                         </div>
                         <p className="text-[11px] text-muted-foreground text-center">
-                          t.subtotal：{formatCurrency(item.price * qty, currency as any)}
+                          {t.subtotal}：{formatCurrency(item.price * qty, currency as any)}
                         </p>
                         <Button
                           onClick={() => {
@@ -441,7 +441,7 @@ function RecordView() {
                     txType === "expense" ? "bg-rose-600 text-white" : "bg-muted text-muted-foreground"
                   }`}
                 >
-                  t.record_expense
+                  {t.record_expense}
                 </button>
                 <button
                   onClick={() => { setTxType("income"); setCategory("sales"); }}
@@ -449,7 +449,7 @@ function RecordView() {
                     txType === "income" ? "bg-emerald-600 text-white" : "bg-muted text-muted-foreground"
                   }`}
                 >
-                  t.record_income
+                  {t.record_income}
                 </button>
               </div>
 
@@ -509,7 +509,7 @@ function RecordView() {
                       onClick={() => { setCurrentMarket(null); setShowMarketPicker(false); }}
                       className="w-full text-left p-2 hover:bg-muted rounded-lg text-sm"
                     >
-                      t.record_no_market
+                      {t.record_no_market}
                     </button>
                     {markets.map((m) => (
                       <button
@@ -567,7 +567,7 @@ function RecordView() {
   );
 }
 
-// ── t.record_payment_method選擇器 ──
+// ── 支付方式選擇器 ──
 
 const PAYMENT_ICONS = ["💵", "💳", "⚡", "💬", "🅰️", "🟢", "🔵", "🟡", "📱", "🏦", "💸", "💰", "🎁", "✅", "📌", "🎯"];
 const PAYMENT_COLORS = ["#1A1D24", "#059669", "#E11D48", "#F59E0B", "#7C3AED", "#0891B2", "#DB2777", "#65A30D", "#6B7280"];
@@ -1206,7 +1206,7 @@ function ProductsView() {
     setName(""); setPrice(""); setUnit("個"); setColor(""); setShowColorPalette(false); setShowForm(false);
   };
 
-  // t.products_edit_product — 載入商品資料到表單
+  // 編輯商品 — 載入商品資料到表單
   const handleEditProduct = (product: { id: string; name: string; price: number; unit: string; color?: string }) => {
     setEditingProductId(product.id);
     setName(product.name);
@@ -1346,7 +1346,7 @@ function ProductsView() {
           variant="outline"
           className="w-full h-12 border-dashed border-primary text-primary hover:bg-primary/5"
         >
-          <Plus className="w-4 h-4 mr-1.5" /> t.products_add_product
+          <Plus className="w-4 h-4 mr-1.5" /> {t.products_add_product}
         </Button>
       ) : (
         <Card className="p-4 space-y-3">
@@ -1587,7 +1587,7 @@ function ProductsView() {
                         aria-label={t.products_edit_product}
                       >
                         <Pencil className="w-3.5 h-3.5" />
-                        t.products_edit
+                        {t.products_edit}
                       </button>
                     )}
                   </div>

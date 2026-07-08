@@ -96,13 +96,13 @@ export function StatsPage() {
           onClick={() => setPeriod("week")}
           className={`flex-1 py-1.5 text-xs font-medium rounded-md transition ${period === "week" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}
         >
-          t.stats_this_week
+          {t.stats_this_week}
         </button>
         <button
           onClick={() => setPeriod("month")}
           className={`flex-1 py-1.5 text-xs font-medium rounded-md transition ${period === "month" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}
         >
-          t.stats_this_month
+          {t.stats_this_month}
         </button>
       </div>
 

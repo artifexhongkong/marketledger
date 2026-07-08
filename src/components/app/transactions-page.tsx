@@ -47,7 +47,7 @@ export function TransactionsPage() {
       txs = txs.filter((t) => t.category === categoryFilter);
     }
 
-    // 搜索（t.transactions_order名/備註）
+    // 搜索（商品名/備註）
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toLowerCase();
       txs = txs.filter((t) =>
@@ -68,7 +68,7 @@ export function TransactionsPage() {
     return { income, expense, profit: income - expense, count: filteredTx.length };
   }, [filteredTx]);
 
-  const timeLabels: Record<TimeFilter, string> = { today: "今日", week: "本週", month: "本月", all: "全部" };
+  const timeLabels: Record<TimeFilter, string> = { today: t.today, week: t.week, month: t.month, all: t.all };
 
   return (
     <div className="px-4 pb-4 space-y-3">
@@ -164,20 +164,20 @@ export function TransactionsPage() {
         </div>
       </div>
 
-      {/* t.transactions_title（分組顯示） */}
+      {/* 交易記錄（分組顯示） */}
       <div>
         <div className="flex items-center justify-between mb-2 px-1">
           <h2 className="text-sm font-bold text-foreground">{t.transactions_title}</h2>
-          <span className="text-[11px] text-muted-foreground">{groups.length} 組</span>
+          <span className="text-[11px] text-muted-foreground">{groups.length} {t.transactions_groups}</span>
         </div>
         {groups.length === 0 ? (
           <Card className="p-8 text-center border-dashed">
             <Inbox className="w-10 h-10 text-muted-foreground/40 mx-auto mb-2" />
             <p className="text-sm font-medium text-foreground">
-              {searchQuery || categoryFilter !== "all" ? t.transactions_no_match : "還沒有t.transactions_title"}
+              {searchQuery || categoryFilter !== "all" ? t.transactions_no_match : t.transactions_no_records}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              {searchQuery || categoryFilter !== "all" ? "試試其他搜索條件" : "前往「記帳」頁面開始記錄"}
+              {searchQuery || categoryFilter !== "all" ? t.transactions_no_match_hint : t.transactions_no_records_hint}
             </p>
           </Card>
         ) : (
@@ -295,7 +295,7 @@ export function TxGroupCard({
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[11px] font-medium text-foreground truncate">
-                    {tx.note?.replace(/ x\d+$/, "") || txCat?.label || "銷售"}
+                    {tx.note?.replace(/ x\d+$/, "") || txCat?.label || t.cat_sales}
                   </p>
                   {tx.note?.includes(" · ") && (
                     <p className="text-[9px] text-accent truncate">

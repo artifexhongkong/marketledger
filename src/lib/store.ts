@@ -260,7 +260,7 @@ interface AppStore {
   hapticEnabled: boolean;
   hapticStrength: "light" | "medium" | "strong";
   darkMode: boolean;
-  language: string; // 語言代碼：zh-TW / zh-CN / en / th / ms
+  language: string; // 語言代碼：zh-TW / zh-CN / en / ja / ko
   languageInitialized: boolean; // 首次使用提示
   // Data
   transactions: Transaction[];
