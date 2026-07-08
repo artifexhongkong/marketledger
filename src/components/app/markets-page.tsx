@@ -13,8 +13,8 @@ import { Plus, X, MapPin, Calendar, Clock, Store, Trash2, ChevronLeft, ChevronRi
 import { useT } from "@/lib/i18n";
 
 const EVENT_COLORS = ["#1A1D24", "#059669", "#E11D48", "#F59E0B", "#7C3AED", "#0891B2"];
-const WEEKDAYS = ["日", "一", "二", "三", "四", "五", "六"];
-const MONTHS = ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"];
+// 中文週/月預設（fallback）；component 內使用 i18n 的 markets_weekday_xxx / markets_month_prefix
+const WEEKDAYS_FALLBACK = ["日", "一", "二", "三", "四", "五", "六"];
 
 function toDateKey(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
@@ -157,8 +157,8 @@ export function MarketsPage() {
   const selectedDateLabel = selectedDate ? (() => {
     const d = parseDateKey(selectedDate);
     const today = new Date(); const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
-    if (d.toDateString() === today.toDateString()) return "今日";
-    if (d.toDateString() === yesterday.toDateString()) return "昨日";
+    if (d.toDateString() === today.toDateString()) return t.markets_today;
+    if (d.toDateString() === yesterday.toDateString()) return t.markets_yesterday;
     return `${d.getMonth() + 1}/${d.getDate()}`;
   })() : null;
 
@@ -186,7 +186,7 @@ export function MarketsPage() {
       <div className="bg-gradient-to-br from-primary to-primary/85 rounded-2xl p-4 text-primary-foreground shadow-lg">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-[11px] text-primary-foreground/60 uppercase tracking-wider">{viewYear}年 {MONTHS[viewMonth]}</p>
+            <p className="text-[11px] text-primary-foreground/60 uppercase tracking-wider">{viewYear}{t.date_year} {viewMonth + 1}{t.markets_month_prefix}</p>
             <p className="text-2xl font-bold tabular-nums mt-0.5">
               {monthSummary.profit >= 0 ? "+" : "−"}{formatCurrency(Math.abs(monthSummary.profit), currency)}
             </p>
@@ -225,7 +225,7 @@ export function MarketsPage() {
             }}
             className={`text-[11px] font-semibold text-foreground px-2 py-0.5 rounded hover:bg-muted transition ${drawerState === "open" ? "bg-muted" : ""}`}
           >
-            {viewYear}年 {MONTHS[viewMonth]}
+            {viewYear}{t.date_year} {viewMonth + 1}{t.markets_month_prefix}
           </button>
           <button onClick={nextMonth} className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-muted"><ChevronRight className="w-4 h-4 text-foreground" /></button>
         </div>
@@ -233,7 +233,7 @@ export function MarketsPage() {
         {/* 日期網格（drawerState === "none" 或 "returning" 時顯示） */}
         {(drawerState === "none" || drawerState === "returning") && (
           <div className={drawerState === "returning" ? "animate-date-bounce-drop" : ""}>
-            <div className="grid grid-cols-7 gap-0.5 mb-1">{WEEKDAYS.map((w) => <div key={w} className="text-center text-[9px] font-medium text-muted-foreground py-0.5">{w}</div>)}</div>
+            <div className="grid grid-cols-7 gap-0.5 mb-1">{[t.markets_weekday_sun, t.markets_weekday_mon, t.markets_weekday_tue, t.markets_weekday_wed, t.markets_weekday_thu, t.markets_weekday_fri, t.markets_weekday_sat].map((w, i) => <div key={i} className="text-center text-[9px] font-medium text-muted-foreground py-0.5">{w}</div>)}</div>
             <div className="grid grid-cols-7 gap-0.5">
               {calendarDays.map((day, i) => {
                 if (!day) return <div key={`e-${i}`} />;
@@ -317,13 +317,13 @@ export function MarketsPage() {
 
               {/* 3x4 月份網格 — 緊湊佈局 */}
               <div className="grid grid-cols-4 gap-1">
-                {MONTHS.map((m, i) => {
+                {[0,1,2,3,4,5,6,7,8,9,10,11].map((i) => {
                   const isCurrent = i === viewMonth && pickerYear === viewYear;
                   const cellKey = `month-${i}`;
                   const isPressed = pressedCell === cellKey;
                   return (
                     <button
-                      key={m}
+                      key={cellKey}
                       onClick={() => {
                         // 觸發凹陷動畫
                         setPressedCell(cellKey);
@@ -350,7 +350,7 @@ export function MarketsPage() {
                         animation: `monthCellFadeIn 0.25s cubic-bezier(0.25, 1, 0.5, 1) ${i * 0.03}s both`,
                       }}
                     >
-                      {m}
+                      {i + 1}{t.markets_month_prefix}
                     </button>
                   );
                 })}
@@ -376,12 +376,12 @@ export function MarketsPage() {
             <div className="bg-card/95 backdrop-blur-md border border-border/60 rounded-b-2xl shadow-xl p-3 mx-1">
               <div className="flex items-center justify-between mb-2">
                 <div className="w-7 h-7" />
-                <span className="text-sm font-bold text-foreground">{pickerYear}年</span>
+                <span className="text-sm font-bold text-foreground">{pickerYear}{t.date_year}</span>
                 <div className="w-7 h-7" />
               </div>
               <div className="grid grid-cols-4 gap-1">
-                {MONTHS.map((m) => (
-                  <div key={m} className="py-2 rounded-md text-xs font-medium bg-muted/40 text-foreground text-center">{m}</div>
+                {[0,1,2,3,4,5,6,7,8,9,10,11].map((i) => (
+                  <div key={i} className="py-2 rounded-md text-xs font-medium bg-muted/40 text-foreground text-center">{i + 1}{t.markets_month_prefix}</div>
                 ))}
               </div>
             </div>
@@ -439,7 +439,7 @@ export function MarketsPage() {
       {/* 當月市集活動 */}
       {monthEvents.length > 0 && (
         <div className="space-y-2">
-          <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-1">{MONTHS[viewMonth]}市集（{monthEvents.length}）</p>
+          <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-1">{viewMonth + 1}{t.markets_month_prefix}{t.markets_title}（{monthEvents.length}）</p>
           {monthEvents.map((e) => <EventCard key={e.id} event={e} currency={currency} onEdit={() => handleEdit(e)} onDelete={() => handleDelete(e.id)} />)}
         </div>
       )}
@@ -501,6 +501,7 @@ function InfoRow({ icon, label, value }: { icon: React.ReactNode; label: string;
 
 // ── Agoda 風格日曆日期選擇器 ──
 function AgodaDatePicker({ startDate, endDate, onSelect }: { startDate: string; endDate: string; onSelect: (start: string, end: string) => void }) {
+  const t = useT();
   const [calYear, setCalYear] = useState(new Date().getFullYear());
   const [calMonth, setCalMonth] = useState(new Date().getMonth());
   const [selecting, setSelecting] = useState<"start" | "end">("start");
@@ -558,10 +559,10 @@ function AgodaDatePicker({ startDate, endDate, onSelect }: { startDate: string; 
     <div>
       <div className="flex items-center justify-between mb-2">
         <button type="button" onClick={prev} className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-muted"><ChevronLeft className="w-4 h-4" /></button>
-        <span className="text-sm font-bold">{calYear} {MONTHS[calMonth]}</span>
+        <span className="text-sm font-bold">{calYear}{t.date_year} {calMonth + 1}{t.markets_month_prefix}</span>
         <button type="button" onClick={next} className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-muted"><ChevronRight className="w-4 h-4" /></button>
       </div>
-      <div className="grid grid-cols-7 gap-0.5 mb-1">{WEEKDAYS.map((w) => <div key={w} className="text-center text-[9px] font-medium text-muted-foreground py-0.5">{w}</div>)}</div>
+      <div className="grid grid-cols-7 gap-0.5 mb-1">{[t.markets_weekday_sun, t.markets_weekday_mon, t.markets_weekday_tue, t.markets_weekday_wed, t.markets_weekday_thu, t.markets_weekday_fri, t.markets_weekday_sat].map((w, i) => <div key={i} className="text-center text-[9px] font-medium text-muted-foreground py-0.5">{w}</div>)}</div>
       <div className="grid grid-cols-7 gap-0.5">
         {days.map((d, i) => {
           if (!d) return <div key={`e${i}`} />;
@@ -574,17 +575,17 @@ function AgodaDatePicker({ startDate, endDate, onSelect }: { startDate: string; 
                 ${d.isPast ? "text-muted-foreground/30 cursor-not-allowed" : ""}
                 ${d.isToday && !d.isStart && !d.isEnd ? "ring-1 ring-accent/40" : ""}`}>
               {d.day}
-              {d.isStart && <span className="absolute -bottom-3 text-[7px] text-accent">開始</span>}
-              {d.isEnd && d.isEnd !== d.isStart && <span className="absolute -bottom-3 text-[7px] text-accent">結束</span>}
+              {d.isStart && <span className="absolute -bottom-3 text-[7px] text-accent">{t.markets_select_start}</span>}
+              {d.isEnd && d.isEnd !== d.isStart && <span className="absolute -bottom-3 text-[7px] text-accent">{t.markets_select_end_hint}</span>}
             </button>
           );
         })}
       </div>
       <div className="flex items-center justify-between mt-3 px-1">
         <span className="text-[10px] text-muted-foreground">
-          {!tempStart ? "點選市集開始日" : tempStart === tempEnd ? "再點一次取消，或點結束日" : `${tempStart} ~ ${tempEnd}`}
+          {!tempStart ? t.markets_select_start : tempStart === tempEnd ? t.markets_select_end_hint : `${tempStart} ~ ${tempEnd}`}
         </span>
-        <button type="button" onClick={() => { setTempStart(toDateKey(new Date())); setTempEnd(toDateKey(new Date())); setSelecting("start"); }} className="text-[10px] text-accent">重設</button>
+        <button type="button" onClick={() => { setTempStart(toDateKey(new Date())); setTempEnd(toDateKey(new Date())); setSelecting("start"); }} className="text-[10px] text-accent">{t.markets_add}</button>
       </div>
     </div>
   );
@@ -605,8 +606,8 @@ function EventFormModal({ onClose, onSave, currency, editingEvent }: { onClose: 
   const [color, setColor] = useState(editingEvent?.color || EVENT_COLORS[0]);
 
   const handleSave = () => {
-    if (!name.trim()) { alert(`請輸入${t.markets_market_name}`); return; }
-    if (endDate < startDate) { alert("結束日期不能早於開始日期"); return; }
+    if (!name.trim()) { alert(t.markets_market_name); return; }
+    if (endDate < startDate) { alert(t.markets_end_before_start); return; }
     onSave({ name: name.trim(), startDate, endDate, location: location.trim(), boothFee: parseFloat(boothFee) || 0, feeType, autoAddFee, boothNumber: boothNumber.trim(), businessHours: businessHours.trim(), notes: notes.trim(), color });
   };
 
@@ -614,7 +615,7 @@ function EventFormModal({ onClose, onSave, currency, editingEvent }: { onClose: 
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-[fadeIn_0.15s_ease-out]" onClick={onClose}>
       <Card className="w-full max-w-xs max-h-[88vh] overflow-y-auto scrollbar-hide p-5 space-y-3 animate-[scaleIn_0.2s_ease-out]" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between sticky top-0 bg-card pb-2 z-10">
-          <h3 className="text-base font-semibold text-foreground">{editingEvent ? "編輯市集" : "新增市集"}</h3>
+          <h3 className="text-base font-semibold text-foreground">{editingEvent ? t.markets_edit_market : t.markets_add_market}</h3>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
         </div>
 
@@ -651,7 +652,7 @@ function EventFormModal({ onClose, onSave, currency, editingEvent }: { onClose: 
         <div><p className="text-xs font-medium text-muted-foreground mb-1">{t.markets_color}</p><div className="flex gap-2">{EVENT_COLORS.map((c) => <button key={c} type="button" onClick={() => setColor(c)} className={`w-6 h-6 rounded-full transition ${color === c ? "ring-2 ring-offset-1 ring-foreground" : ""}`} style={{ backgroundColor: c }} />)}</div></div>
         <div><p className="text-xs font-medium text-muted-foreground mb-1">{t.markets_notes}</p><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="其他資訊..." className="bg-background text-sm min-h-[50px]" maxLength={200} /></div>
 
-        <Button onClick={handleSave} className="w-full h-10">{editingEvent ? "儲存修改" : "新增市集"}</Button>
+        <Button onClick={handleSave} className="w-full h-10">{editingEvent ? t.markets_edit_market : t.markets_add_market}</Button>
       </Card>
     </div>
   );
@@ -705,7 +706,7 @@ function StickyNotesSection({
     const d = new Date(ts);
     const now = new Date();
     if (d.toDateString() === now.toDateString()) {
-      return `今日 ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+      return `${t.markets_today} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
     }
     return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
   };

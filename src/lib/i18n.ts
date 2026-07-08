@@ -65,8 +65,6 @@ export interface Translations {
   record_enter_qty: string;
   record_modify_item: string;
   record_note_label: string;
-  record_no_products: string;
-  record_create_products: string;
 
   // 商品管理
   products_title: string;
@@ -234,11 +232,98 @@ export interface Translations {
   cat_misc: string;
   cat_other_expense: string;
 
+  // 支付方式
+  pay_cash: string;
+  pay_credit_card: string;
+  pay_apple_pay: string;
+  pay_google_pay: string;
+  pay_bank_transfer: string;
+  pay_paypal: string;
+  pay_payme: string;
+  pay_alipayhk: string;
+  pay_wechat_pay: string;
+  pay_fps: string;
+  pay_octopus: string;
+  pay_line_pay: string;
+  pay_jkopay: string;
+  pay_truemoney: string;
+  pay_tng: string;
+  pay_grabpay: string;
+  pay_duitnow: string;
+  pay_promptpay: string;
+  pay_other: string;
+  pay_unknown: string;
+  pay_custom: string;
+
+  // 支付方式分類（地區）
+  paycat_common: string;
+  paycat_hk: string;
+  paycat_tw: string;
+  paycat_sea: string;
+
   // 日期/時間
   date_today: string;
   date_yesterday: string;
   date_year: string;
   time_format: string;
+
+  // 商品表單（補充）
+  products_no_items: string;
+  products_no_items_hint: string;
+  products_selected_count: string;
+  products_select_hint: string;
+  products_long_press_hint: string;
+  products_delete_selected: string;
+  products_delete_confirm: string;
+  products_name_required: string;
+  products_price_required: string;
+  products_name_placeholder: string;
+  products_price_placeholder: string;
+  products_unit_placeholder: string;
+  products_color_label: string;
+  products_count: string;
+  products_view_grid: string;
+  products_view_list: string;
+  products_unit_default: string;
+
+  // 記帳頁 - 其他
+  record_amount_required: string;
+  record_tap_hint: string;
+  record_confirm: string;
+  record_close_notification: string;
+
+  // 市集頁
+  markets_weekday_sun: string;
+  markets_weekday_mon: string;
+  markets_weekday_tue: string;
+  markets_weekday_wed: string;
+  markets_weekday_thu: string;
+  markets_weekday_fri: string;
+  markets_weekday_sat: string;
+  markets_month_prefix: string;
+  markets_today: string;
+  markets_yesterday: string;
+  markets_select_start: string;
+  markets_select_end_hint: string;
+  markets_end_before_start: string;
+
+  // 新增支付方式 Modal
+  record_payment_add_title: string;
+  record_payment_name_label: string;
+  record_payment_name_placeholder: string;
+  record_payment_icon_label: string;
+  record_payment_color_label: string;
+  record_payment_add_button: string;
+  record_payment_name_required: string;
+
+  // 商品表單
+  record_no_products: string;
+  record_create_products: string;
+
+  // 版本檢查錯誤訊息
+  settings_err_rate_limit: string;
+  settings_err_no_release: string;
+  settings_err_check_failed: string;
 }
 
 // 繁體中文（預設）
@@ -459,10 +544,86 @@ const zhTW: Translations = {
   cat_misc: "雜費",
   cat_other_expense: "其他",
 
+  pay_cash: "現金",
+  pay_credit_card: "信用卡",
+  pay_apple_pay: "Apple Pay",
+  pay_google_pay: "Google Pay",
+  pay_bank_transfer: "銀行轉帳",
+  pay_paypal: "PayPal",
+  pay_payme: "PayMe",
+  pay_alipayhk: "AlipayHK",
+  pay_wechat_pay: "WeChat Pay",
+  pay_fps: "轉數快 FPS",
+  pay_octopus: "八達通",
+  pay_line_pay: "LINE Pay",
+  pay_jkopay: "街口支付",
+  pay_truemoney: "TrueMoney",
+  pay_tng: "Touch 'n Go",
+  pay_grabpay: "GrabPay",
+  pay_duitnow: "DuitNow",
+  pay_promptpay: "PromptPay",
+  pay_other: "其他",
+  pay_unknown: "未知",
+  pay_custom: "自訂",
+
+  paycat_common: "通用",
+  paycat_hk: "香港",
+  paycat_tw: "台灣",
+  paycat_sea: "東南亞",
+
   date_today: "今日",
   date_yesterday: "昨日",
   date_year: "年",
   time_format: "zh-TW",
+
+  products_no_items: "尚無商品",
+  products_no_items_hint: "切換到「商品管理」建立商品目錄",
+  products_selected_count: "已選 {n} 個商品",
+  products_select_hint: "點擊其他商品加入選擇 · 點擊空白處或取消鍵退出",
+  products_long_press_hint: "長按任一商品進入多選刪除模式 · 可一次選擇多個商品刪除 · 點擊空白處或取消鍵退出",
+  products_delete_selected: "刪除 ({n})",
+  products_delete_confirm: "確定要刪除選中的 {n} 個商品？",
+  products_name_required: "請輸入商品名稱",
+  products_price_required: "請輸入有效單價",
+  products_name_placeholder: "商品名稱",
+  products_price_placeholder: "單價",
+  products_unit_placeholder: "單位",
+  products_color_label: "按鈕顏色（選填，用於快速識別商品組）",
+  products_count: "共 {n} 個商品",
+  products_view_grid: "格子顯示",
+  products_view_list: "列表顯示",
+  products_unit_default: "個",
+
+  record_amount_required: "請輸入金額",
+  record_tap_hint: "點商品即記錄銷售",
+  record_confirm: "確認",
+  record_close_notification: "關閉通知",
+
+  markets_weekday_sun: "日",
+  markets_weekday_mon: "一",
+  markets_weekday_tue: "二",
+  markets_weekday_wed: "三",
+  markets_weekday_thu: "四",
+  markets_weekday_fri: "五",
+  markets_weekday_sat: "六",
+  markets_month_prefix: "",
+  markets_today: "今日",
+  markets_yesterday: "昨日",
+  markets_select_start: "點選市集開始日",
+  markets_select_end_hint: "再點一次取消，或點結束日",
+  markets_end_before_start: "結束日期不能早於開始日期",
+
+  record_payment_add_title: "新增支付方式",
+  record_payment_name_label: "名稱",
+  record_payment_name_placeholder: "例如：八達通、PayPal",
+  record_payment_icon_label: "圖示",
+  record_payment_color_label: "顏色",
+  record_payment_add_button: "新增",
+  record_payment_name_required: "請輸入名稱",
+
+  settings_err_rate_limit: "GitHub API 存取頻率受限，請稍後再試",
+  settings_err_no_release: "尚未發布任何版本",
+  settings_err_check_failed: "檢查失敗",
 };
 
 // 簡體中文
@@ -656,6 +817,71 @@ const zhCN: Translations = {
   cat_packaging: "包装材料",
   cat_misc: "杂费",
   cat_other_expense: "其他",
+
+  pay_cash: "现金",
+  pay_credit_card: "信用卡",
+  pay_bank_transfer: "银行转帐",
+  pay_octopus: "八达通",
+  pay_jkopay: "街口支付",
+  pay_fps: "转数快 FPS",
+  pay_other: "其他",
+  pay_unknown: "未知",
+  pay_custom: "自订",
+
+  paycat_common: "通用",
+  paycat_hk: "香港",
+  paycat_tw: "台湾",
+  paycat_sea: "东南亚",
+
+  products_no_items: "尚无商品",
+  products_no_items_hint: "切换到「商品管理」建立商品目录",
+  products_selected_count: "已选 {n} 个商品",
+  products_select_hint: "点击其他商品加入选择 · 点击空白处或取消键退出",
+  products_long_press_hint: "长按任一商品进入多选删除模式 · 可一次选择多个商品删除 · 点击空白处或取消键退出",
+  products_delete_selected: "删除 ({n})",
+  products_delete_confirm: "确定要删除选中的 {n} 个商品？",
+  products_name_required: "请输入商品名称",
+  products_price_required: "请输入有效单价",
+  products_name_placeholder: "商品名称",
+  products_price_placeholder: "单价",
+  products_unit_placeholder: "单位",
+  products_color_label: "按钮颜色（选填，用于快速识别商品组）",
+  products_count: "共 {n} 个商品",
+  products_view_grid: "格子显示",
+  products_view_list: "列表显示",
+  products_unit_default: "个",
+
+  record_amount_required: "请输入金额",
+  record_tap_hint: "点商品即记录销售",
+  record_confirm: "确认",
+  record_close_notification: "关闭通知",
+
+  markets_weekday_sun: "日",
+  markets_weekday_mon: "一",
+  markets_weekday_tue: "二",
+  markets_weekday_wed: "三",
+  markets_weekday_thu: "四",
+  markets_weekday_fri: "五",
+  markets_weekday_sat: "六",
+  markets_month_prefix: "",
+  markets_today: "今日",
+  markets_yesterday: "昨日",
+  markets_select_start: "点选市集开始日",
+  markets_select_end_hint: "再点一次取消，或点结束日",
+  markets_end_before_start: "结束日期不能早于开始日期",
+
+  record_payment_add_title: "新增支付方式",
+  record_payment_name_label: "名称",
+  record_payment_name_placeholder: "例如：八达通、PayPal",
+  record_payment_icon_label: "图标",
+  record_payment_color_label: "颜色",
+  record_payment_add_button: "新增",
+  record_payment_name_required: "请输入名称",
+
+  settings_err_rate_limit: "GitHub API 访问频率受限，请稍后再试",
+  settings_err_no_release: "尚未发布任何版本",
+  settings_err_check_failed: "检查失败",
+
   date_today: "今日",
   date_yesterday: "昨日",
   date_year: "年",
@@ -894,6 +1120,82 @@ const en: Translations = {
   cat_misc: "Misc",
   cat_other_expense: "Other",
 
+  pay_cash: "Cash",
+  pay_credit_card: "Credit Card",
+  pay_apple_pay: "Apple Pay",
+  pay_google_pay: "Google Pay",
+  pay_bank_transfer: "Bank Transfer",
+  pay_paypal: "PayPal",
+  pay_payme: "PayMe",
+  pay_alipayhk: "AlipayHK",
+  pay_wechat_pay: "WeChat Pay",
+  pay_fps: "FPS",
+  pay_octopus: "Octopus",
+  pay_line_pay: "LINE Pay",
+  pay_jkopay: "JKO Pay",
+  pay_truemoney: "TrueMoney",
+  pay_tng: "Touch 'n Go",
+  pay_grabpay: "GrabPay",
+  pay_duitnow: "DuitNow",
+  pay_promptpay: "PromptPay",
+  pay_other: "Other",
+  pay_unknown: "Unknown",
+  pay_custom: "Custom",
+
+  paycat_common: "Common",
+  paycat_hk: "Hong Kong",
+  paycat_tw: "Taiwan",
+  paycat_sea: "Southeast Asia",
+
+  products_no_items: "No products yet",
+  products_no_items_hint: "Switch to Product Management to create products",
+  products_selected_count: "{n} selected",
+  products_select_hint: "Tap other products to add · Tap blank or Cancel to exit",
+  products_long_press_hint: "Long press any product to enter multi-select mode · Select multiple to delete · Tap blank or Cancel to exit",
+  products_delete_selected: "Delete ({n})",
+  products_delete_confirm: "Delete {n} selected products?",
+  products_name_required: "Please enter product name",
+  products_price_required: "Please enter a valid price",
+  products_name_placeholder: "Product Name",
+  products_price_placeholder: "Price",
+  products_unit_placeholder: "Unit",
+  products_color_label: "Button color (optional, for grouping)",
+  products_count: "{n} products",
+  products_view_grid: "Grid View",
+  products_view_list: "List View",
+  products_unit_default: "pcs",
+
+  record_amount_required: "Please enter an amount",
+  record_tap_hint: "Tap product to record sale",
+  record_confirm: "Confirm",
+  record_close_notification: "Close notification",
+
+  markets_weekday_sun: "Sun",
+  markets_weekday_mon: "Mon",
+  markets_weekday_tue: "Tue",
+  markets_weekday_wed: "Wed",
+  markets_weekday_thu: "Thu",
+  markets_weekday_fri: "Fri",
+  markets_weekday_sat: "Sat",
+  markets_month_prefix: "",
+  markets_today: "Today",
+  markets_yesterday: "Yesterday",
+  markets_select_start: "Tap to select start date",
+  markets_select_end_hint: "Tap again to cancel, or tap end date",
+  markets_end_before_start: "End date cannot be before start date",
+
+  record_payment_add_title: "Add Payment Method",
+  record_payment_name_label: "Name",
+  record_payment_name_placeholder: "e.g. Octopus, PayPal",
+  record_payment_icon_label: "Icon",
+  record_payment_color_label: "Color",
+  record_payment_add_button: "Add",
+  record_payment_name_required: "Please enter a name",
+
+  settings_err_rate_limit: "GitHub API rate limited, please try again later",
+  settings_err_no_release: "No releases published yet",
+  settings_err_check_failed: "Check failed",
+
   date_today: "Today",
   date_yesterday: "Yesterday",
   date_year: "",
@@ -1118,6 +1420,82 @@ const ja: Translations = {
   cat_misc: "雑費",
   cat_other_expense: "その他",
 
+  pay_cash: "現金",
+  pay_credit_card: "クレジットカード",
+  pay_apple_pay: "Apple Pay",
+  pay_google_pay: "Google Pay",
+  pay_bank_transfer: "銀行振込",
+  pay_paypal: "PayPal",
+  pay_payme: "PayMe",
+  pay_alipayhk: "AlipayHK",
+  pay_wechat_pay: "WeChat Pay",
+  pay_fps: "FPS",
+  pay_octopus: "オクトパス",
+  pay_line_pay: "LINE Pay",
+  pay_jkopay: "街口支付",
+  pay_truemoney: "TrueMoney",
+  pay_tng: "Touch 'n Go",
+  pay_grabpay: "GrabPay",
+  pay_duitnow: "DuitNow",
+  pay_promptpay: "PromptPay",
+  pay_other: "その他",
+  pay_unknown: "不明",
+  pay_custom: "カスタム",
+
+  paycat_common: "共通",
+  paycat_hk: "香港",
+  paycat_tw: "台湾",
+  paycat_sea: "東南アジア",
+
+  products_no_items: "商品がありません",
+  products_no_items_hint: "「商品管理」に切り替えて商品を作成してください",
+  products_selected_count: "{n} 個選択中",
+  products_select_hint: "他の商品をタップして選択 · 空白またはキャンセルで終了",
+  products_long_press_hint: "商品を長押しして複数選択モードへ · 複数選択して削除可能 · 空白またはキャンセルで終了",
+  products_delete_selected: "削除 ({n})",
+  products_delete_confirm: "選択した {n} 個の商品を削除しますか？",
+  products_name_required: "商品名を入力してください",
+  products_price_required: "有効な単価を入力してください",
+  products_name_placeholder: "商品名",
+  products_price_placeholder: "単価",
+  products_unit_placeholder: "単位",
+  products_color_label: "ボタンカラー（任意、グループ識別用）",
+  products_count: "{n} 個の商品",
+  products_view_grid: "グリッド表示",
+  products_view_list: "リスト表示",
+  products_unit_default: "個",
+
+  record_amount_required: "金額を入力してください",
+  record_tap_hint: "商品をタップして販売を記録",
+  record_confirm: "確認",
+  record_close_notification: "通知を閉じる",
+
+  markets_weekday_sun: "日",
+  markets_weekday_mon: "月",
+  markets_weekday_tue: "火",
+  markets_weekday_wed: "水",
+  markets_weekday_thu: "木",
+  markets_weekday_fri: "金",
+  markets_weekday_sat: "土",
+  markets_month_prefix: "",
+  markets_today: "今日",
+  markets_yesterday: "昨日",
+  markets_select_start: "開始日を選択",
+  markets_select_end_hint: "もう一度タップでキャンセル、または終了日をタップ",
+  markets_end_before_start: "終了日は開始日より前にはできません",
+
+  record_payment_add_title: "支払い方法を追加",
+  record_payment_name_label: "名称",
+  record_payment_name_placeholder: "例：オクトパス、PayPal",
+  record_payment_icon_label: "アイコン",
+  record_payment_color_label: "カラー",
+  record_payment_add_button: "追加",
+  record_payment_name_required: "名称を入力してください",
+
+  settings_err_rate_limit: "GitHub APIのアクセス頻度が制限されています。後でもう一度お試しください",
+  settings_err_no_release: "まだリリースが公開されていません",
+  settings_err_check_failed: "確認失敗",
+
   date_today: "今日",
   date_yesterday: "昨日",
   date_year: "年",
@@ -1340,6 +1718,82 @@ const ko: Translations = {
   cat_packaging: "포장재",
   cat_misc: "잡비",
   cat_other_expense: "기타",
+
+  pay_cash: "현금",
+  pay_credit_card: "신용카드",
+  pay_apple_pay: "Apple Pay",
+  pay_google_pay: "Google Pay",
+  pay_bank_transfer: "계좌이체",
+  pay_paypal: "PayPal",
+  pay_payme: "PayMe",
+  pay_alipayhk: "AlipayHK",
+  pay_wechat_pay: "WeChat Pay",
+  pay_fps: "FPS",
+  pay_octopus: "옥토퍼스",
+  pay_line_pay: "LINE Pay",
+  pay_jkopay: "JKO Pay",
+  pay_truemoney: "TrueMoney",
+  pay_tng: "Touch 'n Go",
+  pay_grabpay: "GrabPay",
+  pay_duitnow: "DuitNow",
+  pay_promptpay: "PromptPay",
+  pay_other: "기타",
+  pay_unknown: "알 수 없음",
+  pay_custom: "사용자 정의",
+
+  paycat_common: "공통",
+  paycat_hk: "홍콩",
+  paycat_tw: "대만",
+  paycat_sea: "동남아시아",
+
+  products_no_items: "상품이 없습니다",
+  products_no_items_hint: "「상품 관리」로 전환하여 상품을 만드세요",
+  products_selected_count: "{n}개 선택됨",
+  products_select_hint: "다른 상품을 탭하여 선택 · 빈 곳 또는 취소를 탭하여 종료",
+  products_long_press_hint: "상품을 길게 눌러 다중 선택 모드로 진입 · 여러 상품을 선택하여 삭제 · 빈 곳 또는 취소를 탭하여 종료",
+  products_delete_selected: "삭제 ({n})",
+  products_delete_confirm: "선택한 {n}개의 상품을 삭제하시겠습니까?",
+  products_name_required: "상품명을 입력해 주세요",
+  products_price_required: "유효한 단가를 입력해 주세요",
+  products_name_placeholder: "상품명",
+  products_price_placeholder: "단가",
+  products_unit_placeholder: "단위",
+  products_color_label: "버튼 색상 (선택, 그룹 식별용)",
+  products_count: "{n}개의 상품",
+  products_view_grid: "그리드 보기",
+  products_view_list: "리스트 보기",
+  products_unit_default: "개",
+
+  record_amount_required: "금액을 입력해 주세요",
+  record_tap_hint: "상품을 탭하여 판매 기록",
+  record_confirm: "확인",
+  record_close_notification: "알림 닫기",
+
+  markets_weekday_sun: "일",
+  markets_weekday_mon: "월",
+  markets_weekday_tue: "화",
+  markets_weekday_wed: "수",
+  markets_weekday_thu: "목",
+  markets_weekday_fri: "금",
+  markets_weekday_sat: "토",
+  markets_month_prefix: "",
+  markets_today: "오늘",
+  markets_yesterday: "어제",
+  markets_select_start: "시작일을 선택하세요",
+  markets_select_end_hint: "다시 탭하여 취소, 또는 종료일을 탭하세요",
+  markets_end_before_start: "종료일은 시작일보다 이전일 수 없습니다",
+
+  record_payment_add_title: "결제 방법 추가",
+  record_payment_name_label: "이름",
+  record_payment_name_placeholder: "예: 옥토퍼스, PayPal",
+  record_payment_icon_label: "아이콘",
+  record_payment_color_label: "색상",
+  record_payment_add_button: "추가",
+  record_payment_name_required: "이름을 입력해 주세요",
+
+  settings_err_rate_limit: "GitHub API 접근 빈도가 제한되었습니다. 잠시 후 다시 시도해 주세요",
+  settings_err_no_release: "아직 게시된 릴리스가 없습니다",
+  settings_err_check_failed: "확인 실패",
 
   date_today: "오늘",
   date_yesterday: "어제",

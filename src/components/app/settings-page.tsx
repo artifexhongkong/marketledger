@@ -59,26 +59,26 @@ export function SettingsPage() {
       const res = await fetch(url, { cache: "no-store" });
       if (!res.ok) {
         if (res.status === 403 || res.status === 429) {
-          throw new Error("GitHub API 存取頻率受限，請稍後再試");
+          throw new Error(t.settings_err_rate_limit);
         }
         if (res.status === 404) {
-          throw new Error("尚未發布任何版本");
+          throw new Error(t.settings_err_no_release);
         }
         throw new Error(`HTTP ${res.status}`);
       }
       const data: LatestReleaseInfo[] = await res.json();
       if (!Array.isArray(data) || data.length === 0) {
-        throw new Error("尚未發布任何版本");
+        throw new Error(t.settings_err_no_release);
       }
       // /releases 回傳陣列，第一筆就是最新版（按建立時間倒序）
       setLatestRelease(data[0]);
       const cmp = compareVersions(data[0].tag_name, APP_VERSION);
       setVersionStatus(cmp > 0 ? "outdated" : "latest");
     } catch (e: any) {
-      setCheckError(e?.message || "檢查失敗");
+      setCheckError(e?.message || t.settings_err_check_failed);
       setVersionStatus("error");
     }
-  }, []);
+  }, [t]);
 
   // 進入設定頁時自動檢查一次
   useEffect(() => {

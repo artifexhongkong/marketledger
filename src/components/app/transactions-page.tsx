@@ -126,7 +126,7 @@ export function TransactionsPage() {
             categoryFilter === "all" ? "bg-accent text-accent-foreground" : "bg-muted text-muted-foreground"
           }`}
         >
-          全部
+          {t.all}
         </button>
         {CATEGORIES.map((c) => (
           <button
@@ -136,7 +136,7 @@ export function TransactionsPage() {
               categoryFilter === c.id ? "bg-accent text-accent-foreground" : "bg-muted text-muted-foreground"
             }`}
           >
-            {c.icon} {c.label}
+            {c.icon} {(t as any)[c.labelKey] || c.label}
           </button>
         ))}
       </div>
@@ -144,7 +144,7 @@ export function TransactionsPage() {
       {/* 摘要 Hero 卡 */}
       <div className="bg-gradient-to-br from-primary to-primary/85 rounded-2xl p-4 text-primary-foreground shadow-lg">
         <p className="text-[11px] text-primary-foreground/60 uppercase tracking-wider">
-          {timeLabels[timeFilter]}淨利
+          {timeLabels[timeFilter]}{t.stats_net_profit}
         </p>
         <p className="text-3xl font-bold tabular-nums mt-0.5">
           {filteredSummary.profit >= 0 ? "+" : "−"}{formatCurrency(Math.abs(filteredSummary.profit), currency)}
@@ -152,15 +152,15 @@ export function TransactionsPage() {
         <div className="flex items-center gap-4 mt-3 text-xs">
           <div className="flex items-center gap-1">
             <ArrowUpRight className="w-3 h-3 text-emerald-300" />
-            <span className="text-primary-foreground/60">收</span>
+            <span className="text-primary-foreground/60">{t.home_income}</span>
             <span className="font-semibold tabular-nums">{formatCurrency(filteredSummary.income, currency)}</span>
           </div>
           <div className="flex items-center gap-1">
             <ArrowDownRight className="w-3 h-3 text-rose-300" />
-            <span className="text-primary-foreground/60">支</span>
+            <span className="text-primary-foreground/60">{t.home_expense}</span>
             <span className="font-semibold tabular-nums">{formatCurrency(filteredSummary.expense, currency)}</span>
           </div>
-          <span className="text-primary-foreground/60">{filteredSummary.count} 筆</span>
+          <span className="text-primary-foreground/60">{filteredSummary.count} {t.transactions_records}</span>
         </div>
       </div>
 
@@ -228,9 +228,9 @@ export function TxGroupCard({
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5">
-              <p className="text-xs font-medium text-foreground truncate">{cat?.label || firstTx.category}</p>
+              <p className="text-xs font-medium text-foreground truncate">{(cat && (t as any)[cat.labelKey]) || cat?.label || firstTx.category}</p>
               {pay && (
-                <span className="text-[9px] text-muted-foreground bg-muted px-1 rounded">{pay.label}</span>
+                <span className="text-[9px] text-muted-foreground bg-muted px-1 rounded">{pay.labelKey && !String(firstTx.paymentMethod).startsWith("custom_") ? (t as any)[pay.labelKey] || pay.label : pay.label}</span>
               )}
             </div>
             <p className="text-[10px] text-muted-foreground truncate mt-0.5">
@@ -261,9 +261,9 @@ export function TxGroupCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
             <p className="text-xs font-medium text-foreground">{t.transactions_order}</p>
-            <span className="text-[9px] text-muted-foreground bg-muted px-1 rounded">{group.txs.length} 項</span>
+            <span className="text-[9px] text-muted-foreground bg-muted px-1 rounded">{group.txs.length} {t.transactions_items}</span>
             {pay && (
-              <span className="text-[9px] text-muted-foreground bg-muted px-1 rounded">{pay.label}</span>
+              <span className="text-[9px] text-muted-foreground bg-muted px-1 rounded">{pay.labelKey && !String(firstTx.paymentMethod).startsWith("custom_") ? (t as any)[pay.labelKey] || pay.label : pay.label}</span>
             )}
           </div>
           <p className="text-[10px] text-muted-foreground truncate mt-0.5">
@@ -295,7 +295,7 @@ export function TxGroupCard({
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[11px] font-medium text-foreground truncate">
-                    {tx.note?.replace(/ x\d+$/, "") || txCat?.label || t.cat_sales}
+                    {tx.note?.replace(/ x\d+$/, "") || (txCat && (t as any)[txCat.labelKey]) || txCat?.label || t.cat_sales}
                   </p>
                   {tx.note?.includes(" · ") && (
                     <p className="text-[9px] text-accent truncate">

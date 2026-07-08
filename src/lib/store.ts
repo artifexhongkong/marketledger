@@ -113,17 +113,18 @@ export const CURRENCIES: Record<CurrencyCode, { symbol: string; locale: string }
 
 // ── 精簡分類（市集攤商語境）──
 // 收入：銷售 / 其他收入
-// 支出：攤位費 / 進貨 / 雜費 / 其他
-export const CATEGORIES: { id: CategoryId; label: string; icon: string; type: TransactionType; color: string }[] = [
-  { id: "sales", label: "銷售", icon: "💰", type: "income", color: "#059669" },
-  { id: "other_income", label: "其他收入", icon: "➕", type: "income", color: "#10B981" },
-  { id: "rent", label: "攤位費", icon: "🏪", type: "expense", color: "#DC2626" },
-  { id: "stock", label: "進貨", icon: "📦", type: "expense", color: "#F59E0B" },
-  { id: "transport", label: "交通", icon: "🚌", type: "expense", color: "#7C3AED" },
-  { id: "food", label: "餐飲", icon: "🍜", type: "expense", color: "#E11D48" },
-  { id: "packaging", label: "包裝材料", icon: "🏷️", type: "expense", color: "#0891B2" },
-  { id: "misc", label: "雜費", icon: "💡", type: "expense", color: "#6B7280" },
-  { id: "other_expense", label: "其他", icon: "📝", type: "expense", color: "#9CA3AF" },
+// 支出：攤位費 / 進貨 / 交通 / 餐飲 / 包裝材料 / 雜費 / 其他
+// labelKey 對應 i18n.ts 的 cat_xxx key，由 getLocalizedCategoryLabel() 解析
+export const CATEGORIES: { id: CategoryId; labelKey: string; label: string; icon: string; type: TransactionType; color: string }[] = [
+  { id: "sales", labelKey: "cat_sales", label: "銷售", icon: "💰", type: "income", color: "#059669" },
+  { id: "other_income", labelKey: "cat_other_income", label: "其他收入", icon: "➕", type: "income", color: "#10B981" },
+  { id: "rent", labelKey: "cat_rent", label: "攤位費", icon: "🏪", type: "expense", color: "#DC2626" },
+  { id: "stock", labelKey: "cat_stock", label: "進貨", icon: "📦", type: "expense", color: "#F59E0B" },
+  { id: "transport", labelKey: "cat_transport", label: "交通", icon: "🚌", type: "expense", color: "#7C3AED" },
+  { id: "food", labelKey: "cat_food", label: "餐飲", icon: "🍜", type: "expense", color: "#E11D48" },
+  { id: "packaging", labelKey: "cat_packaging", label: "包裝材料", icon: "🏷️", type: "expense", color: "#0891B2" },
+  { id: "misc", labelKey: "cat_misc", label: "雜費", icon: "💡", type: "expense", color: "#6B7280" },
+  { id: "other_expense", labelKey: "cat_other_expense", label: "其他", icon: "📝", type: "expense", color: "#9CA3AF" },
 ];
 
 // 舊分類 ID → 新分類 ID 映射（用於資料遷移與顯示相容）
@@ -144,58 +145,64 @@ export function getCategoryInfo(id: string | undefined) {
   return CATEGORIES.find((c) => c.id === mapped) || CATEGORIES.find((c) => c.id === "other_expense");
 }
 
-export const PAYMENT_METHODS: Record<PaymentMethod, { label: string; icon: string; shortLabel: string; color: string }> = {
+// labelKey 對應 i18n.ts 的 pay_xxx key，由 getLocalizedPaymentLabel() 解析
+export const PAYMENT_METHODS: Record<PaymentMethod, { labelKey: string; label: string; icon: string; shortLabel: string; color: string }> = {
   // 通用
-  cash: { label: "現金", icon: "💵", shortLabel: "$", color: "#10B981" },
-  credit_card: { label: "信用卡", icon: "💳", shortLabel: "CC", color: "#1F2937" },
-  apple_pay: { label: "Apple Pay", icon: "", shortLabel: "", color: "#000000" },
-  google_pay: { label: "Google Pay", icon: "🅖", shortLabel: "G", color: "#4285F4" },
-  bank_transfer: { label: "銀行轉帳", icon: "🏦", shortLabel: "BT", color: "#0891B2" },
-  paypal: { label: "PayPal", icon: "🅿️", shortLabel: "PP", color: "#003087" },
-  payme: { label: "PayMe", icon: "🅿️", shortLabel: "PM", color: "#E2231A" }, // PayMe 從香港移到通用
+  cash: { labelKey: "pay_cash", label: "現金", icon: "💵", shortLabel: "$", color: "#10B981" },
+  credit_card: { labelKey: "pay_credit_card", label: "信用卡", icon: "💳", shortLabel: "CC", color: "#1F2937" },
+  apple_pay: { labelKey: "pay_apple_pay", label: "Apple Pay", icon: "", shortLabel: "", color: "#000000" },
+  google_pay: { labelKey: "pay_google_pay", label: "Google Pay", icon: "🅖", shortLabel: "G", color: "#4285F4" },
+  bank_transfer: { labelKey: "pay_bank_transfer", label: "銀行轉帳", icon: "🏦", shortLabel: "BT", color: "#0891B2" },
+  paypal: { labelKey: "pay_paypal", label: "PayPal", icon: "🅿️", shortLabel: "PP", color: "#003087" },
+  payme: { labelKey: "pay_payme", label: "PayMe", icon: "🅿️", shortLabel: "PM", color: "#E2231A" }, // PayMe 從香港移到通用
   // 香港
-  alipayhk: { label: "AlipayHK", icon: "🅰️", shortLabel: "AH", color: "#1677FF" },
-  wechat_pay: { label: "WeChat Pay", icon: "💬", shortLabel: "WX", color: "#09B83E" },
-  fps: { label: "FPS", icon: "⚡", shortLabel: "FPS", color: "#7C3AED" },
-  octopus: { label: "八達通", icon: "🐙", shortLabel: "八", color: "#D6001C" },
+  alipayhk: { labelKey: "pay_alipayhk", label: "AlipayHK", icon: "🅰️", shortLabel: "AH", color: "#1677FF" },
+  wechat_pay: { labelKey: "pay_wechat_pay", label: "WeChat Pay", icon: "💬", shortLabel: "WX", color: "#09B83E" },
+  fps: { labelKey: "pay_fps", label: "FPS", icon: "⚡", shortLabel: "FPS", color: "#7C3AED" },
+  octopus: { labelKey: "pay_octopus", label: "八達通", icon: "🐙", shortLabel: "八", color: "#D6001C" },
   // 台灣
-  line_pay: { label: "LINE Pay", icon: "🟢", shortLabel: "LP", color: "#06C755" },
-  jkopay: { label: "街口支付", icon: "🅹", shortLabel: "JK", color: "#E94B3C" },
+  line_pay: { labelKey: "pay_line_pay", label: "LINE Pay", icon: "🟢", shortLabel: "LP", color: "#06C755" },
+  jkopay: { labelKey: "pay_jkopay", label: "街口支付", icon: "🅹", shortLabel: "JK", color: "#E94B3C" },
   // 東南亞
-  truemoney: { label: "TrueMoney", icon: "🔵", shortLabel: "TM", color: "#FF6B00" },
-  tng: { label: "Touch 'n Go", icon: "🟡", shortLabel: "TNG", color: "#0A8A0A" },
-  grabpay: { label: "GrabPay", icon: "🟢", shortLabel: "GP", color: "#00B14F" },
-  duitnow: { label: "DuitNow", icon: "💠", shortLabel: "DN", color: "#1E40AF" },
-  promptpay: { label: "PromptPay", icon: "🅿️", shortLabel: "PP", color: "#2D6E5E" },
+  truemoney: { labelKey: "pay_truemoney", label: "TrueMoney", icon: "🔵", shortLabel: "TM", color: "#FF6B00" },
+  tng: { labelKey: "pay_tng", label: "Touch 'n Go", icon: "🟡", shortLabel: "TNG", color: "#0A8A0A" },
+  grabpay: { labelKey: "pay_grabpay", label: "GrabPay", icon: "🟢", shortLabel: "GP", color: "#00B14F" },
+  duitnow: { labelKey: "pay_duitnow", label: "DuitNow", icon: "💠", shortLabel: "DN", color: "#1E40AF" },
+  promptpay: { labelKey: "pay_promptpay", label: "PromptPay", icon: "🅿️", shortLabel: "PP", color: "#2D6E5E" },
   // 其他
-  other: { label: "其他", icon: "📋", shortLabel: "?", color: "#6B7280" },
+  other: { labelKey: "pay_other", label: "其他", icon: "📋", shortLabel: "?", color: "#6B7280" },
 };
 
 // ── 支付方式分類（按地區）──
 export interface PaymentCategory {
   id: string;
-  label: string;
+  labelKey: string;  // 對應 i18n.ts 的 paycat_xxx key
+  label: string;     // 預設（zh-TW）顯示文字
   payments: PaymentMethod[];
 }
 
 export const PAYMENT_CATEGORIES: PaymentCategory[] = [
   {
     id: "common",
+    labelKey: "paycat_common",
     label: "通用",
     payments: ["cash", "payme", "credit_card", "apple_pay", "google_pay", "bank_transfer", "paypal"],
   },
   {
     id: "hk",
+    labelKey: "paycat_hk",
     label: "香港",
     payments: ["fps", "alipayhk", "wechat_pay", "octopus"],
   },
   {
     id: "tw",
+    labelKey: "paycat_tw",
     label: "台灣",
     payments: ["line_pay", "jkopay"],
   },
   {
     id: "sea",
+    labelKey: "paycat_sea",
     label: "東南亞",
     payments: ["truemoney", "tng", "grabpay", "duitnow", "promptpay"],
   },
@@ -203,20 +210,21 @@ export const PAYMENT_CATEGORIES: PaymentCategory[] = [
 
 /**
  * 取得支付方式的顯示資訊（支援自訂支付方式）
+ * labelKey 為對應 i18n.ts 的 pay_xxx key；component 端使用時應用 useT() 解析
  */
 export function getPaymentMethodInfo(
   method: PaymentMethod | string | undefined,
   customMethods: CustomPaymentMethod[] = []
-): { label: string; icon: string; shortLabel: string; color: string } {
-  if (!method) return { label: "未知", icon: "💳", shortLabel: "?", color: "#6B7280" };
+): { label: string; labelKey: string; icon: string; shortLabel: string; color: string } {
+  if (!method) return { label: "未知", labelKey: "pay_unknown", icon: "💳", shortLabel: "?", color: "#6B7280" };
   const m = method as string;
   if (m.startsWith("custom_")) {
     const custom = customMethods.find((c) => `custom_${c.id}` === m);
-    if (custom) return { label: custom.label, icon: custom.icon, shortLabel: custom.label.slice(0, 2).toUpperCase(), color: "#6B7280" };
-    return { label: "自訂", icon: "💳", shortLabel: "?", color: "#6B7280" };
+    if (custom) return { label: custom.label, labelKey: "pay_custom", icon: custom.icon, shortLabel: custom.label.slice(0, 2).toUpperCase(), color: "#6B7280" };
+    return { label: "自訂", labelKey: "pay_custom", icon: "💳", shortLabel: "?", color: "#6B7280" };
   }
   const info = PAYMENT_METHODS[m as keyof typeof PAYMENT_METHODS];
-  return info || { label: m, icon: "💳", shortLabel: "?", color: "#6B7280" };
+  return info || { label: m, labelKey: "pay_unknown", icon: "💳", shortLabel: "?", color: "#6B7280" };
 }
 
 export const DEFAULT_MARKETS: MarketData[] = [

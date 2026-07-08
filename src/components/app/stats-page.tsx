@@ -187,8 +187,8 @@ export function StatsPage() {
                 <div className="flex items-center justify-between mb-0.5">
                   <div className="flex items-center gap-1.5">
                     <span className="text-xs">{cat?.icon}</span>
-                    <span className="text-[11px] font-medium text-foreground">{cat?.label}</span>
-                    <span className="text-[9px] text-muted-foreground">{count} 筆</span>
+                    <span className="text-[11px] font-medium text-foreground">{(cat && (t as any)[cat.labelKey]) || cat?.label}</span>
+                    <span className="text-[9px] text-muted-foreground">{count} {t.transactions_records}</span>
                   </div>
                   <span
                     className="text-[11px] font-bold tabular-nums"

@@ -127,7 +127,7 @@ export function HomePage() {
               return (
                 <div key={catId} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-card border border-border">
                   <span className="text-xs">{cat.icon}</span>
-                  <span className="text-[11px] text-muted-foreground">{cat.label}</span>
+                  <span className="text-[11px] text-muted-foreground">{(t as any)[cat.labelKey] || cat.label}</span>
                   <span className="text-xs font-bold tabular-nums"
                     style={{ color: cat.type === "income" ? "#059669" : "#E11D48" }}>
                     {cat.type === "income" ? "+" : "−"}{formatCurrency(amount, currency)}
