@@ -25,7 +25,7 @@ export function LoginScreen() {
     setError("");
 
     if (!username.trim() || !password.trim()) {
-      setError("請輸入t.login_username和t.login_password");
+      setError(`請輸入${t.login_username}和${t.login_password}`);
       return;
     }
 
@@ -81,7 +81,7 @@ export function LoginScreen() {
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="輸入t.login_username"
+                  placeholder={`輸入${t.login_username}`}
                   autoCapitalize="none"
                   autoCorrect="off"
                   className="bg-background pl-9 h-11 text-sm"
@@ -100,7 +100,7 @@ export function LoginScreen() {
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="輸入t.login_password"
+                  placeholder={`輸入${t.login_password}`}
                   className="bg-background pl-9 pr-9 h-11 text-sm"
                   disabled={loading}
                 />

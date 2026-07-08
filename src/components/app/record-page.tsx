@@ -426,7 +426,7 @@ function RecordView() {
           >
             <span className="flex items-center gap-2">
               <SlidersHorizontal className="w-4 h-4 text-muted-foreground" />
-              手動t.record_title（自訂金額 / 支出 / 分類）
+              {t.record_manual_entry}
             </span>
             <ChevronDown className={`w-4 h-4 text-muted-foreground transition ${showAdvanced ? "rotate-180" : ""}`} />
           </button>
@@ -539,7 +539,7 @@ function RecordView() {
               </div>
 
               <Button onClick={handleSubmit} className="w-full h-11 font-semibold">
-                ✓ 完成t.record_title
+                {t.record_complete}
               </Button>
             </div>
           )}
@@ -1193,7 +1193,7 @@ function ProductsView() {
 
   const handleAdd = () => {
     const p = parseFloat(price);
-    if (!name.trim()) return alert("請輸入t.products_name");
+    if (!name.trim()) return alert(`請輸入${t.products_name}`);
     if (!p || p <= 0) return alert("請輸入有效單價");
     if (editingProductId) {
       // 編輯模式

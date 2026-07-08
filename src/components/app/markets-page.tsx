@@ -605,7 +605,7 @@ function EventFormModal({ onClose, onSave, currency, editingEvent }: { onClose: 
   const [color, setColor] = useState(editingEvent?.color || EVENT_COLORS[0]);
 
   const handleSave = () => {
-    if (!name.trim()) { alert("請輸入t.markets_market_name"); return; }
+    if (!name.trim()) { alert(`請輸入${t.markets_market_name}`); return; }
     if (endDate < startDate) { alert("結束日期不能早於開始日期"); return; }
     onSave({ name: name.trim(), startDate, endDate, location: location.trim(), boothFee: parseFloat(boothFee) || 0, feeType, autoAddFee, boothNumber: boothNumber.trim(), businessHours: businessHours.trim(), notes: notes.trim(), color });
   };

@@ -7,13 +7,9 @@ import { Check, Globe } from "lucide-react";
 
 export const LANGUAGES = [
   { code: "zh-TW", label: "繁體中文", native: "繁體中文", flag: "🇹🇼" },
-  { code: "zh-CN", label: "簡體中文", native: "简体中文", flag: "🇨🇳" },
   { code: "en", label: "English", native: "English", flag: "🇬🇧" },
-  { code: "th", label: "泰文", native: "ภาษาไทย", flag: "🇹🇭" },
-  { code: "ms", label: "馬來文", native: "Bahasa Melayu", flag: "🇲🇾" },
-  { code: "vi", label: "越南文", native: "Tiếng Việt", flag: "🇻🇳" },
-  { code: "ja", label: "日文", native: "日本語", flag: "🇯🇵" },
-  { code: "ko", label: "韓文", native: "한국어", flag: "🇰🇷" },
+  { code: "ja", label: "日本語", native: "日本語", flag: "🇯🇵" },
+  { code: "ko", label: "한국어", native: "한국어", flag: "🇰🇷" },
 ];
 
 export function LanguageSetup() {

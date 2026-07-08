@@ -212,7 +212,7 @@ export function SettingsPage() {
       </SettingsGroup>
 
       {/* 偏好t.settings_title群組 */}
-      <SettingsGroup title="偏好t.settings_title">
+      <SettingsGroup title={t.settings_preferences}>
         <SettingsRow
           icon={Coins}
           iconBg="bg-amber-100"

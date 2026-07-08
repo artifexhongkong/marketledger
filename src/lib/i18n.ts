@@ -844,7 +844,8 @@ const en: Translations = {
   time_format: "en-US",
 };
 
-// 其他語言先用英文 fallback
+// 支援的語言：繁中、英文、日文、韓文
+// 其他語言 fallback 到英文
 const th: Translations = { ...en };
 const ms: Translations = { ...en };
 const vi: Translations = { ...en };
