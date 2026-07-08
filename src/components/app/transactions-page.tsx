@@ -74,7 +74,7 @@ export function TransactionsPage() {
     <div className="px-4 pb-4 space-y-3">
       {/* 標題區 */}
       <div className="pt-2">
-        <h1 className="text-xl font-bold tracking-tight text-foreground">t.transactions_title</h1>
+        <h1 className="text-xl font-bold tracking-tight text-foreground">{t.transactions_title}</h1>
         {currentMarket && (
           <div className="mt-1 inline-flex items-center gap-1 text-[11px] bg-primary/8 text-primary px-2 py-0.5 rounded-full">
             📍 {currentMarket.name}
@@ -105,7 +105,7 @@ export function TransactionsPage() {
         <Input
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="t.transactions_search_placeholder"
+          placeholder={t.transactions_search_placeholder}
           className="bg-background pl-9 pr-9 h-10 text-sm"
         />
         {searchQuery && (
@@ -167,14 +167,14 @@ export function TransactionsPage() {
       {/* t.transactions_title（分組顯示） */}
       <div>
         <div className="flex items-center justify-between mb-2 px-1">
-          <h2 className="text-sm font-bold text-foreground">t.transactions_title</h2>
+          <h2 className="text-sm font-bold text-foreground">{t.transactions_title}</h2>
           <span className="text-[11px] text-muted-foreground">{groups.length} 組</span>
         </div>
         {groups.length === 0 ? (
           <Card className="p-8 text-center border-dashed">
             <Inbox className="w-10 h-10 text-muted-foreground/40 mx-auto mb-2" />
             <p className="text-sm font-medium text-foreground">
-              {searchQuery || categoryFilter !== "all" ? "t.transactions_no_match" : "還沒有t.transactions_title"}
+              {searchQuery || categoryFilter !== "all" ? t.transactions_no_match : "還沒有t.transactions_title"}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
               {searchQuery || categoryFilter !== "all" ? "試試其他搜索條件" : "前往「記帳」頁面開始記錄"}
@@ -208,6 +208,7 @@ export function TxGroupCard({
   onToggle: () => void;
   compact?: boolean;
 }) {
+  const t = useT();
   const customPaymentMethods = useAppStore((s) => s.customPaymentMethods);
   const firstTx = group.txs[0];
   const cat = getCategoryInfo(firstTx.category);
@@ -259,7 +260,7 @@ export function TxGroupCard({
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
-            <p className="text-xs font-medium text-foreground">t.transactions_order</p>
+            <p className="text-xs font-medium text-foreground">{t.transactions_order}</p>
             <span className="text-[9px] text-muted-foreground bg-muted px-1 rounded">{group.txs.length} 項</span>
             {pay && (
               <span className="text-[9px] text-muted-foreground bg-muted px-1 rounded">{pay.label}</span>
@@ -309,7 +310,7 @@ export function TxGroupCard({
             );
           })}
           <div className="px-3 py-2 bg-primary/5 flex items-center justify-between">
-            <span className="text-[10px] font-semibold text-foreground">t.transactions_summary</span>
+            <span className="text-[10px] font-semibold text-foreground">{t.transactions_summary}</span>
             <span className="text-xs font-bold tabular-nums" style={{ color: "#059669" }}>
               {formatCurrency(group.totalAmount, currency)}
             </span>

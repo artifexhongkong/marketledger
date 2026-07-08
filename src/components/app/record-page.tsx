@@ -12,10 +12,11 @@ import { Plus, Store, X, ChevronDown, Undo2, Check, RotateCcw, SlidersHorizontal
 import type { TransactionType, CategoryId, PaymentMethod, Product } from "@/lib/store";
 
 export function RecordPage() {
+  const t = useT();
   const [mode, setMode] = useState<"record" | "products">("record");
   return (
     <div className="pb-4 flex flex-col h-full">
-      <h1 className="text-xl font-bold pt-4 px-4 text-foreground">t.record_title</h1>
+      <h1 className="text-xl font-bold pt-4 px-4 text-foreground">{t.record_title}</h1>
 
       {/* Mode toggle — segmented control */}
       <div className="mx-4 mt-2 flex bg-muted rounded-lg p-0.5">
@@ -221,9 +222,9 @@ function RecordView() {
         {products.length > 0 ? (
           <div className="mt-4">
             <div className="flex items-center justify-between mb-2">
-              <p className="text-xs text-muted-foreground font-medium">t.record_tap_to_record</p>
+              <p className="text-xs text-muted-foreground font-medium">{t.record_tap_to_record}</p>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] text-muted-foreground/70">t.record_long_press_hint</span>
+                <span className="text-[10px] text-muted-foreground/70">{t.record_long_press_hint}</span>
                 {lastTx && (
                   <button
                     onClick={handleUndo}
@@ -270,7 +271,7 @@ function RecordView() {
                 {/* 清單標題 + t.record_new_order按鈕 */}
                 <div className="flex items-center justify-between px-3 py-2 bg-muted/40 border-b border-border">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[11px] font-semibold text-foreground">t.record_order_details</span>
+                    <span className="text-[11px] font-semibold text-foreground">{t.record_order_details}</span>
                     <span className="text-[10px] text-muted-foreground">({currentOrder.length} 項)</span>
                   </div>
                   <button
@@ -334,7 +335,7 @@ function RecordView() {
                 </div>
                 {/* t.total */}
                 <div className="px-3 py-2 bg-primary/5 border-t border-border flex items-center justify-between">
-                  <span className="text-[11px] font-semibold text-foreground">t.total</span>
+                  <span className="text-[11px] font-semibold text-foreground">{t.total}</span>
                   <span className="text-base font-bold tabular-nums text-primary">
                     {formatCurrency(currentOrder.reduce((sum, item) => sum + item.price * item.qty, 0), currency)}
                   </span>
@@ -347,7 +348,7 @@ function RecordView() {
               <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setEditingOrderItem(null)}>
                 <div className="bg-card rounded-xl p-4 w-full max-w-[280px] space-y-3" onClick={(e) => e.stopPropagation()}>
                   <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-semibold text-foreground">t.record_modify_item</h4>
+                    <h4 className="text-sm font-semibold text-foreground">{t.record_modify_item}</h4>
                     <button onClick={() => setEditingOrderItem(null)} className="text-muted-foreground hover:text-foreground">
                       <X className="w-4 h-4" />
                     </button>
@@ -374,7 +375,7 @@ function RecordView() {
                         </div>
                         {/* 備註 */}
                         <div>
-                          <label className="text-[11px] text-muted-foreground mb-1 block">t.record_note_optional</label>
+                          <label className="text-[11px] text-muted-foreground mb-1 block">{t.record_note_optional}</label>
                           <Textarea
                             value={editNoteValue}
                             onChange={(e) => setEditNoteValue(e.target.value)}
@@ -409,8 +410,8 @@ function RecordView() {
         ) : (
           <div className="mt-5 bg-muted/50 rounded-xl p-6 text-center border border-dashed border-border">
             <p className="text-2xl mb-1">📦</p>
-            <p className="text-sm font-medium text-foreground">t.record_no_products</p>
-            <p className="text-xs text-muted-foreground mt-1">t.record_create_products</p>
+            <p className="text-sm font-medium text-foreground">{t.record_no_products}</p>
+            <p className="text-xs text-muted-foreground mt-1">{t.record_create_products}</p>
           </div>
         )}
 
@@ -495,7 +496,7 @@ function RecordView() {
                 >
                   <span className="flex items-center gap-2 text-foreground">
                     <Store className="w-4 h-4 text-muted-foreground" />
-                    {currentMarket ? currentMarket.name : "t.record_no_market"}
+                    {currentMarket ? currentMarket.name : t.record_no_market}
                   </span>
                   <ChevronDown className="w-4 h-4 text-muted-foreground" />
                 </button>
@@ -524,7 +525,7 @@ function RecordView() {
 
               {/* 備註 */}
               <div>
-                <p className="text-xs text-muted-foreground mb-1.5 font-medium">t.record_note_optional</p>
+                <p className="text-xs text-muted-foreground mb-1.5 font-medium">{t.record_note_optional}</p>
                 <Textarea
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
@@ -575,6 +576,7 @@ function PaymentSelector({
   payment: PaymentMethod;
   setPayment: (p: PaymentMethod) => void;
 }) {
+  const t = useT();
   const { customPaymentMethods, addCustomPaymentMethod, deleteCustomPaymentMethod, visiblePayments, togglePaymentVisibility, reorderVisiblePayments } = useAppStore();
   const [showMore, setShowMore] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -649,7 +651,7 @@ function PaymentSelector({
   return (
     <div className="mt-3" onClick={handleSortAreaClick}>
       <div className="flex items-center justify-between mb-2">
-        <p className="text-xs text-muted-foreground font-medium">t.record_payment_method</p>
+        <p className="text-xs text-muted-foreground font-medium">{t.record_payment_method}</p>
         {!sortMode && <p className="text-[10px] text-muted-foreground/50">長按排序</p>}
         {sortMode && <p className="text-[10px] text-accent/70">拖拽排序中</p>}
       </div>
@@ -1075,7 +1077,7 @@ function ProductButton({
       )}
       {s.mode === "qtyInput" && (
         <div className="absolute inset-0 bg-accent/10 flex flex-col items-center justify-center px-1 z-20">
-          <p className="text-[9px] text-accent font-semibold mb-0.5">t.record_qty</p>
+          <p className="text-[9px] text-accent font-semibold mb-0.5">{t.record_qty}</p>
           <input
             type="text"
             inputMode="numeric"
@@ -1343,20 +1345,20 @@ function ProductsView() {
       ) : (
         <Card className="p-4 space-y-3">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold">{editingProductId ? "t.products_edit_product" : "t.products_add_product"}</h3>
+            <h3 className="text-sm font-semibold">{editingProductId ? t.products_edit_product : t.products_add_product}</h3>
             <button onClick={handleCancelForm} className="text-muted-foreground hover:text-foreground">
               <X className="w-4 h-4" />
             </button>
           </div>
           <div className="space-y-2">
-            <Input placeholder="t.products_name" value={name} onChange={(e) => setName(e.target.value)} className="bg-background" />
+            <Input placeholder={t.products_name} value={name} onChange={(e) => setName(e.target.value)} className="bg-background" />
             <div className="flex gap-2">
               <Input placeholder="單價" value={price} onChange={(e) => setPrice(e.target.value)} inputMode="decimal" className="bg-background flex-1" />
               <Input placeholder="單位" value={unit} onChange={(e) => setUnit(e.target.value)} className="bg-background w-24" />
             </div>
             {/* 按鈕顏色（可選，用於視覺分組） */}
             <div>
-              <p className="text-[11px] text-muted-foreground mb-1.5">t.products_color</p>
+              <p className="text-[11px] text-muted-foreground mb-1.5">{t.products_color}</p>
               <div className="flex gap-1.5 flex-wrap items-center">
                 <button
                   onClick={() => setColor("")}
@@ -1430,14 +1432,14 @@ function ProductsView() {
               )}
             </div>
           </div>
-          <Button onClick={handleAdd} className="w-full">{editingProductId ? "t.products_save_edit" : "t.products_save"}</Button>
+          <Button onClick={handleAdd} className="w-full">{editingProductId ? t.products_save_edit : t.products_save}</Button>
         </Card>
       )}
 
       {products.length === 0 ? (
         <Card className="p-8 text-center border-dashed">
           <p className="text-3xl mb-2">📦</p>
-          <p className="text-sm font-medium text-foreground">t.record_no_products</p>
+          <p className="text-sm font-medium text-foreground">{t.record_no_products}</p>
           <p className="text-xs text-muted-foreground mt-1">建立商品後即可一鍵記錄銷售</p>
         </Card>
       ) : (
@@ -1508,7 +1510,7 @@ function ProductsView() {
                           handleEditProduct(p);
                         }}
                         className="absolute top-1 right-1 w-5 h-5 rounded-full bg-accent/15 flex items-center justify-center z-10 hover:bg-accent/30 transition"
-                        aria-label="t.products_edit_product"
+                        aria-label={t.products_edit_product}
                       >
                         <Pencil className="w-2.5 h-2.5 text-accent" />
                       </button>
@@ -1576,7 +1578,7 @@ function ProductsView() {
                           handleEditProduct(p);
                         }}
                         className="flex items-center gap-1 text-[11px] text-accent hover:text-foreground px-2 py-1.5 rounded-md hover:bg-accent/10 transition flex-shrink-0"
-                        aria-label="t.products_edit_product"
+                        aria-label={t.products_edit_product}
                       >
                         <Pencil className="w-3.5 h-3.5" />
                         t.products_edit

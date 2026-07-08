@@ -87,7 +87,7 @@ export function StatsPage() {
     <div className="px-4 pb-4 space-y-3">
       {/* 標題 */}
       <div className="pt-2">
-        <h1 className="text-xl font-bold tracking-tight text-foreground">t.stats_title</h1>
+        <h1 className="text-xl font-bold tracking-tight text-foreground">{t.stats_title}</h1>
       </div>
 
       {/* 期間切換 */}
@@ -111,21 +111,21 @@ export function StatsPage() {
         <Card className="p-3">
           <div className="flex items-center gap-1.5 mb-1">
             <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
-            <p className="text-[10px] text-muted-foreground">t.stats_income</p>
+            <p className="text-[10px] text-muted-foreground">{t.stats_income}</p>
           </div>
           <p className="text-lg font-bold tabular-nums text-emerald-600">{formatCurrency(stats.income, currency)}</p>
         </Card>
         <Card className="p-3">
           <div className="flex items-center gap-1.5 mb-1">
             <TrendingDown className="w-3.5 h-3.5 text-rose-500" />
-            <p className="text-[10px] text-muted-foreground">t.stats_expense</p>
+            <p className="text-[10px] text-muted-foreground">{t.stats_expense}</p>
           </div>
           <p className="text-lg font-bold tabular-nums text-rose-600">{formatCurrency(stats.expense, currency)}</p>
         </Card>
         <Card className="p-3">
           <div className="flex items-center gap-1.5 mb-1">
             <Wallet className="w-3.5 h-3.5 text-primary" />
-            <p className="text-[10px] text-muted-foreground">t.stats_net_profit</p>
+            <p className="text-[10px] text-muted-foreground">{t.stats_net_profit}</p>
           </div>
           <p className={`text-lg font-bold tabular-nums ${stats.profit >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
             {stats.profit >= 0 ? "+" : "−"}{formatCurrency(Math.abs(stats.profit), currency)}
@@ -134,7 +134,7 @@ export function StatsPage() {
         <Card className="p-3">
           <div className="flex items-center gap-1.5 mb-1">
             <ShoppingBag className="w-3.5 h-3.5 text-accent" />
-            <p className="text-[10px] text-muted-foreground">t.stats_avg_order</p>
+            <p className="text-[10px] text-muted-foreground">{t.stats_avg_order}</p>
           </div>
           <p className="text-lg font-bold tabular-nums text-foreground">
             {stats.orderCount > 0 ? formatCurrency(stats.avgOrder, currency) : "—"}
@@ -177,9 +177,9 @@ export function StatsPage() {
 
       {/* 分類佔比 */}
       <Card className="p-3">
-        <p className="text-xs font-semibold text-foreground mb-2">t.stats_category_stats</p>
+        <p className="text-xs font-semibold text-foreground mb-2">{t.stats_category_stats}</p>
         {categoryList.length === 0 ? (
-          <p className="text-xs text-muted-foreground text-center py-3">t.stats_no_data</p>
+          <p className="text-xs text-muted-foreground text-center py-3">{t.stats_no_data}</p>
         ) : (
           <div className="space-y-2">
             {categoryList.map(({ cat, income, expense, count, total }) => (

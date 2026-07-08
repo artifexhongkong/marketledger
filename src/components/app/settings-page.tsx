@@ -189,10 +189,10 @@ export function SettingsPage() {
 
   return (
     <div className="px-5 pb-4 space-y-4">
-      <h1 className="text-xl font-bold pt-4 text-foreground">t.settings_title</h1>
+      <h1 className="text-xl font-bold pt-4 text-foreground">{t.settings_title}</h1>
 
       {/* t.settings_test_account資訊 */}
-      <SettingsGroup title="t.settings_test_account">
+      <SettingsGroup title={t.settings_test_account}>
         <div className="px-4 py-3 flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-accent/15 flex items-center justify-center flex-shrink-0">
             <CheckCircle2 className="w-4 h-4 text-accent" />
@@ -217,7 +217,7 @@ export function SettingsPage() {
           icon={Coins}
           iconBg="bg-amber-100"
           iconColor="text-amber-600"
-          label="t.settings_currency"
+          label={t.settings_currency}
           value={`${CURRENCIES[currency].symbol} ${currency}`}
           onClick={() => setShowCurrencyPicker(!showCurrencyPicker)}
           expanded={showCurrencyPicker}
@@ -245,7 +245,7 @@ export function SettingsPage() {
           icon={Globe}
           iconBg="bg-blue-100"
           iconColor="text-blue-600"
-          label="t.settings_language"
+          label={t.settings_language}
           value={LANGUAGES.find((l) => l.code === language)?.native || language}
           onClick={() => { setShowLanguagePicker(!showLanguagePicker); setShowCurrencyPicker(false); }}
           expanded={showLanguagePicker}
@@ -276,8 +276,8 @@ export function SettingsPage() {
               <Vibrate className="w-4 h-4 text-purple-600" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground">t.settings_haptic</p>
-              <p className="text-[10px] text-muted-foreground">t.settings_haptic_desc</p>
+              <p className="text-sm font-medium text-foreground">{t.settings_haptic}</p>
+              <p className="text-[10px] text-muted-foreground">{t.settings_haptic_desc}</p>
             </div>
             <button
               onClick={() => {
@@ -294,7 +294,7 @@ export function SettingsPage() {
           {/* 強弱選擇（只在開啟時顯示） */}
           {hapticEnabled && (
             <div className="mt-3 pl-11">
-              <p className="text-[10px] text-muted-foreground mb-1.5">t.settings_haptic_strength</p>
+              <p className="text-[10px] text-muted-foreground mb-1.5">{t.settings_haptic_strength}</p>
               <div className="flex gap-1.5">
                 {(["light", "medium", "strong"] as const).map((s) => (
                   <button
@@ -329,8 +329,8 @@ export function SettingsPage() {
             <Moon className="w-4 h-4 text-slate-300" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-foreground">t.settings_dark_mode</p>
-            <p className="text-[10px] text-muted-foreground">t.settings_dark_mode_desc</p>
+            <p className="text-sm font-medium text-foreground">{t.settings_dark_mode}</p>
+            <p className="text-[10px] text-muted-foreground">{t.settings_dark_mode_desc}</p>
           </div>
           <button
             onClick={() => {
@@ -348,12 +348,12 @@ export function SettingsPage() {
       </SettingsGroup>
 
       {/* t.settings_data_management群組 */}
-      <SettingsGroup title="t.settings_data_management">
+      <SettingsGroup title={t.settings_data_management}>
         <SettingsRow
           icon={Download}
           iconBg="bg-emerald-100"
           iconColor="text-emerald-600"
-          label="t.settings_export"
+          label={t.settings_export}
           value={`${transactions.length} 筆交易`}
           onClick={() => setShowExportMenu(!showExportMenu)}
           expanded={showExportMenu}
@@ -382,15 +382,15 @@ export function SettingsPage() {
           icon={Trash2}
           iconBg="bg-rose-100"
           iconColor="text-rose-600"
-          label="t.settings_clear_data"
-          value="t.settings_clear_desc"
+          label={t.settings_clear_data}
+          value={t.settings_clear_desc}
           onClick={() => setShowClearConfirm(true)}
           isLast
         />
       </SettingsGroup>
 
       {/* t.settings_app_update群組 */}
-      <SettingsGroup title="t.settings_app_update">
+      <SettingsGroup title={t.settings_app_update}>
         <div className="px-4 py-3.5 space-y-3">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
@@ -407,7 +407,7 @@ export function SettingsPage() {
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground">t.settings_current_version</p>
+              <p className="text-sm font-medium text-foreground">{t.settings_current_version}</p>
               <p className="text-[11px] text-muted-foreground">{APP_VERSION_DISPLAY}</p>
             </div>
             <button
@@ -502,7 +502,7 @@ export function SettingsPage() {
       </SettingsGroup>
 
       {/* t.settings_about群組 */}
-      <SettingsGroup title="t.settings_about">
+      <SettingsGroup title={t.settings_about}>
         <SettingsRow
           icon={Info}
           iconBg="bg-slate-100"
