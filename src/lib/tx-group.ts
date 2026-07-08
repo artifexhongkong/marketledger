@@ -14,7 +14,7 @@ export interface TxGroup {
 
 // 把交易清單分組
 export function groupTransactions(transactions: Transaction[]): TxGroup[] {
-  // 先按時間倒序
+  // 先按時間倒序（最新在前）
   const sorted = [...transactions].sort((a, b) => b.createdAt - a.createdAt);
   const groups: TxGroup[] = [];
   let currentGroup: TxGroup | null = null;
@@ -32,12 +32,15 @@ export function groupTransactions(transactions: Transaction[]): TxGroup[] {
         itemCount: 1,
       });
     } else {
-      // 收入 — 檢查是否跟上一筆屬於同一組
+      // 收入 — 檢查是否跟「最新一筆」屬於同一組
+      // currentGroup.startTime 是這組最新交易的時間（不更新）
+      // tx.createdAt 是當前交易的時間（比 startTime 舊）
+      // 差值 = startTime - tx.createdAt（正數）
       if (currentGroup && (currentGroup.startTime - tx.createdAt) < 60000) {
         // 同一組（時間差 < 60 秒）
         currentGroup.txs.push(tx);
         currentGroup.totalAmount += tx.amount;
-        currentGroup.startTime = tx.createdAt; // 更新為最新的
+        // 注意：不更新 startTime，保持為最新交易的時間
         // 從 note 解析數量（格式：「商品名 x數量」或「商品名」）
         const qtyMatch = tx.note?.match(/x(\d+)$/);
         currentGroup.itemCount += qtyMatch ? parseInt(qtyMatch[1]) : 1;
@@ -50,7 +53,7 @@ export function groupTransactions(transactions: Transaction[]): TxGroup[] {
           type: "single",
           txs: [tx],
           totalAmount: tx.amount,
-          startTime: tx.createdAt,
+          startTime: tx.createdAt, // 這組最新交易的時間
           itemCount: qtyMatch ? parseInt(qtyMatch[1]) : 1,
         };
       }
