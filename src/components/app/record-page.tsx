@@ -418,7 +418,7 @@ function RecordView() {
           </div>
         )}
 
-        {/* ── 3. 手動t.record_title：可收合的進階區塊 ── */}
+        {/* ── 3. 手動記帳：可收合的進階區塊 ── */}
         <div className="mt-5">
           <button
             onClick={() => setShowAdvanced(!showAdvanced)}

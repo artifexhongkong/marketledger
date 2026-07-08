@@ -7,6 +7,7 @@ import { Check, Globe } from "lucide-react";
 
 export const LANGUAGES = [
   { code: "zh-TW", label: "繁體中文", native: "繁體中文", flag: "🇹🇼" },
+  { code: "zh-CN", label: "簡體中文", native: "简体中文", flag: "🇨🇳" },
   { code: "en", label: "English", native: "English", flag: "🇬🇧" },
   { code: "ja", label: "日本語", native: "日本語", flag: "🇯🇵" },
   { code: "ko", label: "한국어", native: "한국어", flag: "🇰🇷" },
