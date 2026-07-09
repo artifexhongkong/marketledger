@@ -1,5 +1,6 @@
 package com.artifexstudio.marketledger.auth.viewmodel
 
+import android.app.Activity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.artifexstudio.marketledger.auth.model.GoogleUser
@@ -10,16 +11,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-/**
- * 登入 ViewModel
- *
- * 職責：
- * - 管理 [LoginState] 狀態
- * - 使用 viewModelScope 發起非同步登入
- * - 登入成功後保存 Google ID Token（可透過 [idToken] 取得）
- *
- * @param repository Google 身份驗證 Repository
- */
 class LoginViewModel(
     private val repository: GoogleAuthRepository
 ) : ViewModel() {
@@ -27,24 +18,19 @@ class LoginViewModel(
     private val _loginState = MutableStateFlow<LoginState>(LoginState.Idle)
     val loginState: StateFlow<LoginState> = _loginState.asStateFlow()
 
-    /** 登入成功後的 Google ID Token（供 UI 或其他模組使用） */
     var idToken: String? = null
         private set
 
-    /** 登入成功後的使用者資訊 */
     var currentUser: GoogleUser? = null
         private set
 
-    /**
-     * 發起 Google 登入
-     */
-    fun signIn() {
+    fun signIn(activity: Activity) {
         if (_loginState.value is LoginState.Loading) return
 
         _loginState.value = LoginState.Loading
 
         viewModelScope.launch {
-            val result = repository.signIn()
+            val result = repository.signIn(activity)
 
             result.onSuccess { user ->
                 idToken = user.idToken
@@ -56,16 +42,10 @@ class LoginViewModel(
         }
     }
 
-    /**
-     * 重設狀態為 Idle（用於關閉錯誤提示後重設）
-     */
     fun resetState() {
         _loginState.value = LoginState.Idle
     }
 
-    /**
-     * 登出
-     */
     fun signOut() {
         idToken = null
         currentUser = null
