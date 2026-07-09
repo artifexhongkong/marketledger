@@ -175,6 +175,32 @@ export interface Translations {
   auth_restore_done: string;
   auth_restore_confirm: string;
 
+  // 會員系統
+  membership_title: string;
+  membership_free: string;
+  membership_pro: string;
+  membership_business: string;
+  membership_current_plan: string;
+  membership_upgrade: string;
+  membership_monthly: string;
+  membership_expires: string;
+  membership_free_forever: string;
+  membership_cancel: string;
+  membership_features: string;
+  membership_feature_unlimited: string;
+  membership_feature_cloud_backup: string;
+  membership_feature_advanced_reports: string;
+  membership_feature_custom_categories: string;
+  membership_feature_export: string;
+  membership_feature_multi_device: string;
+  membership_feature_max_products: string;
+  membership_feature_max_markets: string;
+  membership_feature_max_transactions: string;
+  membership_demo_badge: string;
+  membership_coming_soon: string;
+  membership_current: string;
+  membership_select_plan: string;
+
   // 設定頁
   settings_title: string;
   settings_test_account: string;
@@ -547,6 +573,31 @@ const zhTW: Translations = {
   auth_restore_done: "✓ 已從 Google Drive 還原",
   auth_restore_confirm: "還原會覆蓋目前所有資料，確定嗎？",
 
+  membership_title: "會員方案",
+  membership_free: "免費版",
+  membership_pro: "專業版",
+  membership_business: "商業版",
+  membership_current_plan: "目前方案",
+  membership_upgrade: "升級方案",
+  membership_monthly: "/月",
+  membership_expires: "到期日",
+  membership_free_forever: "永久免費",
+  membership_cancel: "取消訂閱",
+  membership_features: "功能",
+  membership_feature_unlimited: "無限制",
+  membership_feature_cloud_backup: "雲端備份",
+  membership_feature_advanced_reports: "進階報表",
+  membership_feature_custom_categories: "自訂分類",
+  membership_feature_export: "匯出資料",
+  membership_feature_multi_device: "多裝置同步",
+  membership_feature_max_products: "最多 {n} 個商品",
+  membership_feature_max_markets: "最多 {n} 個市集",
+  membership_feature_max_transactions: "每月 {n} 筆交易",
+  membership_demo_badge: "Demo",
+  membership_coming_soon: "即將推出",
+  membership_current: "目前",
+  membership_select_plan: "選擇方案",
+
   settings_title: "設定",
   settings_test_account: "測試帳號",
   settings_logged_in: "已登入測試帳號",
@@ -879,6 +930,31 @@ const zhCN: Translations = {
   auth_backup_done: "✓ 已备份到 Google Drive",
   auth_restore_done: "✓ 已从 Google Drive 还原",
   auth_restore_confirm: "还原会覆盖目前所有数据，确定吗？",
+
+  membership_title: "会员方案",
+  membership_free: "免费版",
+  membership_pro: "专业版",
+  membership_business: "商业版",
+  membership_current_plan: "目前方案",
+  membership_upgrade: "升级方案",
+  membership_monthly: "/月",
+  membership_expires: "到期日",
+  membership_free_forever: "永久免费",
+  membership_cancel: "取消订阅",
+  membership_features: "功能",
+  membership_feature_unlimited: "无限制",
+  membership_feature_cloud_backup: "云端备份",
+  membership_feature_advanced_reports: "进阶报表",
+  membership_feature_custom_categories: "自定义分类",
+  membership_feature_export: "导出数据",
+  membership_feature_multi_device: "多装置同步",
+  membership_feature_max_products: "最多 {n} 个商品",
+  membership_feature_max_markets: "最多 {n} 个市集",
+  membership_feature_max_transactions: "每月 {n} 笔交易",
+  membership_demo_badge: "Demo",
+  membership_coming_soon: "即将推出",
+  membership_current: "目前",
+  membership_select_plan: "选择方案",
 
   settings_title: "设定",
   settings_test_account: "测试帐号",
@@ -1231,6 +1307,31 @@ const en: Translations = {
   auth_backup_done: "✓ Backed up to Google Drive",
   auth_restore_done: "✓ Restored from Google Drive",
   auth_restore_confirm: "Restore will overwrite all current data. Are you sure?",
+
+  membership_title: "Membership Plans",
+  membership_free: "Free",
+  membership_pro: "Pro",
+  membership_business: "Business",
+  membership_current_plan: "Current Plan",
+  membership_upgrade: "Upgrade",
+  membership_monthly: "/mo",
+  membership_expires: "Expires",
+  membership_free_forever: "Free Forever",
+  membership_cancel: "Cancel Subscription",
+  membership_features: "Features",
+  membership_feature_unlimited: "Unlimited",
+  membership_feature_cloud_backup: "Cloud Backup",
+  membership_feature_advanced_reports: "Advanced Reports",
+  membership_feature_custom_categories: "Custom Categories",
+  membership_feature_export: "Export Data",
+  membership_feature_multi_device: "Multi-device Sync",
+  membership_feature_max_products: "Up to {n} products",
+  membership_feature_max_markets: "Up to {n} markets",
+  membership_feature_max_transactions: "{n} transactions/month",
+  membership_demo_badge: "Demo",
+  membership_coming_soon: "Coming Soon",
+  membership_current: "Current",
+  membership_select_plan: "Select Plan",
 
   settings_title: "Settings",
   settings_test_account: "Test Account",
@@ -1586,6 +1687,31 @@ const ja: Translations = {
   auth_restore_done: "✓ Google Drive から復元しました",
   auth_restore_confirm: "復元すると現在のすべてのデータが上書きされます。よろしいですか？",
 
+  membership_title: "会員プラン",
+  membership_free: "無料版",
+  membership_pro: "プロ版",
+  membership_business: "ビジネス版",
+  membership_current_plan: "現在のプラン",
+  membership_upgrade: "アップグレード",
+  membership_monthly: "/月",
+  membership_expires: "有効期限",
+  membership_free_forever: "永久無料",
+  membership_cancel: "サブスク解約",
+  membership_features: "機能",
+  membership_feature_unlimited: "無制限",
+  membership_feature_cloud_backup: "クラウドバックアップ",
+  membership_feature_advanced_reports: "詳細レポート",
+  membership_feature_custom_categories: "カスタムカテゴリー",
+  membership_feature_export: "データエクスポート",
+  membership_feature_multi_device: "マルチデバイス同期",
+  membership_feature_max_products: "最大{n}商品",
+  membership_feature_max_markets: "最大{n}市場",
+  membership_feature_max_transactions: "月{n}件",
+  membership_demo_badge: "デモ",
+  membership_coming_soon: "近日公開",
+  membership_current: "現在",
+  membership_select_plan: "プランを選択",
+
   settings_title: "設定",
   settings_test_account: "テストアカウント",
   settings_logged_in: "テストアカウントでログイン中",
@@ -1938,6 +2064,31 @@ const ko: Translations = {
   auth_backup_done: "✓ Google Drive에 백업됨",
   auth_restore_done: "✓ Google Drive에서 복원됨",
   auth_restore_confirm: "복원하면 현재 모든 데이터가 덮어씌워집니다. 계속하시겠습니까?",
+
+  membership_title: "멤버십 플랜",
+  membership_free: "무료",
+  membership_pro: "프로",
+  membership_business: "비즈니스",
+  membership_current_plan: "현재 플랜",
+  membership_upgrade: "업그레이드",
+  membership_monthly: "/월",
+  membership_expires: "만료일",
+  membership_free_forever: "영구 무료",
+  membership_cancel: "구독 취소",
+  membership_features: "기능",
+  membership_feature_unlimited: "무제한",
+  membership_feature_cloud_backup: "클라우드 백업",
+  membership_feature_advanced_reports: "고급 보고서",
+  membership_feature_custom_categories: "맞춤 카테고리",
+  membership_feature_export: "데이터 내보내기",
+  membership_feature_multi_device: "다중 기기 동기화",
+  membership_feature_max_products: "최대 {n}개 상품",
+  membership_feature_max_markets: "최대 {n}개 시장",
+  membership_feature_max_transactions: "월 {n}건 거래",
+  membership_demo_badge: "데모",
+  membership_coming_soon: "출시 예정",
+  membership_current: "현재",
+  membership_select_plan: "플랜 선택",
 
   settings_title: "설정",
   settings_test_account: "테스트 계정",

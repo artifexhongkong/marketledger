@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Cloud, CloudOff, LogOut, Database, Upload, Download, AlertCircle, ChevronLeft } from "lucide-react";
 import { useT } from "@/lib/i18n";
+import { MembershipCard } from "@/components/app/membership-card";
 
 const WEB_GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "";
 const ANDROID_GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || "";
@@ -222,6 +223,9 @@ export function AuthPage({ onBack }: { onBack: () => void }) {
             <p className="text-xs text-muted-foreground">{user.email}</p>
           </div>
         </div>
+
+        {/* 會員方案 */}
+        <MembershipCard />
 
         {/* 儲存模式 */}
         <Card className="p-4 space-y-3">
