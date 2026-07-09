@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Home, PencilLine, ClipboardList, Settings as SettingsIcon, MapPin, BarChart3, Store, User } from "lucide-react";
+import { useEffect, useState, useRef } from "react";
+import { Home, PencilLine, ClipboardList, Settings as SettingsIcon, MapPin, BarChart3 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { useAuthStore } from "@/lib/auth-store";
 import { useT } from "@/lib/i18n";
@@ -15,14 +15,27 @@ import { AuthPage } from "@/components/app/auth-section";
 import { LoginScreen } from "@/components/app/login-screen";
 import { CurrencySetup } from "@/components/app/currency-setup";
 import { LanguageSetup } from "@/components/app/language-setup";
+import { TopBar } from "@/components/app/top-bar";
 
 type TabId = "home" | "record" | "transactions" | "markets" | "stats" | "settings" | "account";
 
 const TAB_IDS: TabId[] = ["home", "record", "markets", "transactions", "stats", "settings"];
 
+// Tab 對應的標題和圖示
+const TAB_META: Record<string, { titleKey: keyof ReturnType<typeof useT>; icon: typeof Home }> = {
+  home: { titleKey: "tab_home", icon: Home },
+  record: { titleKey: "tab_record", icon: PencilLine },
+  markets: { titleKey: "tab_markets", icon: MapPin },
+  transactions: { titleKey: "tab_transactions", icon: ClipboardList },
+  stats: { titleKey: "tab_stats", icon: BarChart3 },
+  settings: { titleKey: "tab_settings", icon: SettingsIcon },
+};
+
 export default function Page() {
   const [tab, setTab] = useState<TabId>("home");
   const [hydrated, setHydrated] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
   const seedDemo = useAppStore((s) => s.seedDemo);
   const cleanupOrphanedTxs = useAppStore((s) => s.cleanupOrphanedTxs);
   const migrateCategories = useAppStore((s) => s.migrateCategories);
@@ -46,7 +59,6 @@ export default function Page() {
     migrateCategories();
     cleanupOrphanedTxs();
     seedDemo();
-    // 同步 dark mode class
     if (typeof document !== "undefined") {
       document.documentElement.classList.toggle("dark", darkMode);
     }
@@ -61,10 +73,25 @@ export default function Page() {
     return () => window.removeEventListener("navigate-tab", handler as EventListener);
   }, []);
 
-  // 帳號頁面是獨立覆蓋層
   const showAccount = tab === "account";
 
-  // 未通過測試帳號登入 → 顯示登入畫面
+  // 切換 Tab 時重置滾動位置
+  const handleTabChange = (id: TabId) => {
+    if (tab === "record" && id !== "record") {
+      useAppStore.getState().clearOrder();
+    }
+    setTab(id);
+    // 重置滾動到頂部
+    if (scrollRef.current) {
+      scrollRef.current.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
+  // 取得當前 Tab 的標題和圖示
+  const currentMeta = TAB_META[tab];
+  const currentTitle = currentMeta ? t[currentMeta.titleKey] : t.tab_home;
+  const CurrentIcon = currentMeta?.icon;
+
   if (hydrated && !testAuthed) {
     return (
       <main className="min-h-screen bg-slate-200 flex items-center justify-center overflow-hidden">
@@ -79,7 +106,6 @@ export default function Page() {
     );
   }
 
-  // 已登入但未選擇語言 → 顯示語言選擇畫面
   if (hydrated && testAuthed && !languageInitialized) {
     return (
       <main className="min-h-screen bg-slate-200 flex items-center justify-center overflow-hidden">
@@ -94,7 +120,6 @@ export default function Page() {
     );
   }
 
-  // 已登入但未選擇貨幣 → 顯示貨幣選擇畫面
   if (hydrated && testAuthed && !currencyInitialized) {
     return (
       <main className="min-h-screen bg-slate-200 flex items-center justify-center overflow-hidden">
@@ -121,24 +146,18 @@ export default function Page() {
             <AuthPage onBack={() => setTab("home")} />
           ) : (
             <>
-              {/* 頂部 bar — 極簡，logo + 帳號鈕 */}
-              <div className="flex-shrink-0 bg-background/95 backdrop-blur-md flex items-center justify-between px-4 h-11">
-                <img src="/logo.png" alt="市集記賬本" className="h-9 w-9 object-contain flex-shrink-0" />
-                <button
-                  onClick={() => setTab("account")}
-                  className="w-8 h-8 rounded-full bg-accent/10 hover:bg-accent/20 flex items-center justify-center border border-accent/15 transition"
-                  aria-label="帳號"
-                >
-                  {user?.picture ? (
-                    <img src={user.picture} alt="" className="w-7 h-7 rounded-full" />
-                  ) : (
-                    <User className="w-4 h-4 text-accent" />
-                  )}
-                </button>
-              </div>
+              {/* 新版頂部導航欄 — 滾動隱藏/顯示 */}
+              <TopBar
+                title={currentTitle}
+                icon={CurrentIcon}
+                userPicture={user?.picture}
+                onAccountClick={() => setTab("account")}
+                scrollContainerRef={scrollRef}
+              />
 
               {/* Content area */}
               <div
+                ref={scrollRef}
                 className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide"
                 style={{ WebkitOverflowScrolling: "touch", overscrollBehavior: "contain", touchAction: "pan-y" }}
               >
@@ -157,19 +176,13 @@ export default function Page() {
               </div>
 
               {/* Tab bar */}
-              <div className="bg-card flex items-stretch justify-between px-0.5 pt-2 pb-5 flex-shrink-0">
-                {TABS.map(({ id, label, icon: Icon }) => {
+              <div className="bg-card flex items-stretch justify-between px-0.5 pt-2 pb-5 flex-shrink-0 border-t border-border/40">
+                {TABS.map(({ id, label, icon: TabIcon }) => {
                   const active = tab === id;
                   return (
-                    <button key={id} onClick={() => {
-                      // 離開記帳頁面時清空當前訂單（開始新一單）
-                      if (tab === "record" && id !== "record") {
-                        useAppStore.getState().clearOrder();
-                      }
-                      setTab(id);
-                    }}
+                    <button key={id} onClick={() => handleTabChange(id)}
                       className="flex-1 flex flex-col items-center justify-center gap-1 py-1 transition min-w-0">
-                      <Icon
+                      <TabIcon
                         className={`w-5 h-5 transition-all ${active ? "text-accent scale-110" : "text-muted-foreground"}`}
                         strokeWidth={active ? 2.5 : 2}
                       />
