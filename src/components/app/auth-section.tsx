@@ -5,7 +5,7 @@ import { useAuthStore } from "@/lib/auth-store";
 import { useAppStore } from "@/lib/store";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Cloud, CloudOff, LogOut, Database, Upload, Download, AlertCircle, ChevronLeft, Shield, Zap, Crown, Check, Sparkles, Loader2 } from "lucide-react";
+import { Cloud, CloudOff, LogOut, Database, Upload, Download, AlertCircle, ChevronLeft, Shield, Zap, Crown, Check, Sparkles, Loader2, ArrowLeft } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { MembershipCard } from "@/components/app/membership-card";
 
@@ -187,14 +187,11 @@ export function AuthPage({ onBack }: { onBack: () => void }) {
   if (!user) {
     return (
       <div className="flex flex-col h-full bg-background">
-        {/* Header — 漸層背景 */}
-        <div className="bg-gradient-to-br from-primary via-primary to-primary/80 text-primary-foreground relative overflow-hidden flex-shrink-0">
-          <div className="absolute top-0 right-0 w-48 h-48 bg-accent/10 rounded-full blur-3xl" />
-          <div className="absolute bottom-0 left-0 w-32 h-32 bg-accent/5 rounded-full blur-2xl" />
-          <div className="relative flex items-center px-4 h-14">
-            <button onClick={onBack} className="flex items-center gap-1 text-primary-foreground/80 hover:text-primary-foreground transition">
-              <ChevronLeft className="w-5 h-5" />
-              <span className="text-sm font-medium">{t.common_back}</span>
+        {/* Header — 與主App一致的背景色 */}
+        <div className="bg-background/95 backdrop-blur-md flex-shrink-0 border-b border-border/40">
+          <div className="relative flex items-center px-3 h-11">
+            <button onClick={onBack} className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors active:scale-95">
+              <ArrowLeft className="w-5 h-5" strokeWidth={2} />
             </button>
           </div>
         </div>
@@ -270,17 +267,15 @@ export function AuthPage({ onBack }: { onBack: () => void }) {
   // ========== 已登入頁面 ==========
   return (
     <div className="flex flex-col h-full bg-background">
-      {/* Header */}
-      <div className="bg-gradient-to-br from-primary via-primary to-primary/80 text-primary-foreground relative overflow-hidden flex-shrink-0">
-        <div className="absolute top-0 right-0 w-40 h-40 bg-accent/10 rounded-full blur-3xl" />
-        <div className="relative flex items-center justify-between px-4 h-14">
-          <button onClick={onBack} className="flex items-center gap-1 text-primary-foreground/80 hover:text-primary-foreground transition">
-            <ChevronLeft className="w-5 h-5" />
-            <span className="text-sm font-medium">{t.common_back}</span>
+      {/* Header — 與主App一致 */}
+      <div className="bg-background/95 backdrop-blur-md flex-shrink-0 border-b border-border/40">
+        <div className="relative flex items-center justify-between px-3 h-11">
+          <button onClick={onBack} className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors active:scale-95">
+            <ArrowLeft className="w-5 h-5" strokeWidth={2} />
           </button>
-          <button onClick={handleSignOut} className="flex items-center gap-1 text-primary-foreground/60 hover:text-primary-foreground transition px-2 py-1 rounded-lg">
+          <button onClick={handleSignOut} className="flex items-center gap-1 text-rose-500 hover:text-rose-600 transition-colors px-2 py-1 rounded-lg active:scale-95">
             <LogOut className="w-4 h-4" />
-            <span className="text-xs">{t.settings_logout}</span>
+            <span className="text-xs font-medium">{t.settings_logout}</span>
           </button>
         </div>
       </div>
