@@ -18,9 +18,12 @@ interface TopBarProps {
  * 頂部導航欄 — 帶滾動隱藏/顯示動效
  *
  * 行為：
- * - 往上滑（手指往下滑動，內容往下走）→ Top Bar 立刻顯示
- * - 往下滑（手指往上滑動，內容往上走，瀏覽更多）→ Top Bar 隱藏
+ * - 往上滑（手指往下滑，內容往下走）→ Top Bar 立刻顯示
+ * - 往下滑（手指往上滑，內容往上走）→ Top Bar 隱藏
  * - 250ms ease-in-out
+ *
+ * 實現方式：用 margin-top 負值 + height 動畫
+ * 不用 transform（transform 不影響佈局，會留空白）
  */
 export function TopBar({
   logoSrc = "/logo.png",
@@ -34,6 +37,7 @@ export function TopBar({
   const [visible, setVisible] = useState(true);
   const lastScrollY = useRef(0);
   const ticking = useRef(false);
+  const BAR_HEIGHT = 45; // h-11 = 44px + 1px border
 
   const handleScroll = useCallback(() => {
     if (ticking.current) return;
@@ -52,10 +56,10 @@ export function TopBar({
       if (currentScrollY <= 10) {
         setVisible(true);
       } else if (delta < -2) {
-        // scrollTop 減少 = 手指往下滑 = 內容往下走 = 往上滑 → 顯示
+        // scrollTop 減少 = 手指往下滑 = 往上滑 → 顯示
         setVisible(true);
       } else if (delta > 2) {
-        // scrollTop 增加 = 手指往上滑 = 內容往上走 = 往下滑 → 隱藏
+        // scrollTop 增加 = 手指往上滑 = 往下滑 → 隱藏
         setVisible(false);
       }
 
@@ -74,9 +78,10 @@ export function TopBar({
 
   return (
     <div
-      className="flex-shrink-0 z-20 overflow-hidden transition-transform duration-250 ease-in-out"
+      className="overflow-hidden transition-all duration-250 ease-in-out flex-shrink-0"
       style={{
-        transform: visible ? "translateY(0)" : "translateY(-100%)",
+        height: visible ? `${BAR_HEIGHT}px` : "0px",
+        marginTop: visible ? "0px" : `-${BAR_HEIGHT}px`,
         transitionTimingFunction: "cubic-bezier(0.25, 0.1, 0.25, 1)",
       }}
     >
