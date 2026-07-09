@@ -25,11 +25,27 @@ if [ ! -f "$KEYSTORE_SOURCE" ]; then
     -keyalg RSA -keysize 2048 -validity 10000
 fi
 
-# 2. Build web app (static export)
-echo "📦 Building web app..."
+# 2. Build web app — APK 需要靜態匯出模式
+echo "📦 Building web app (export mode for APK)..."
 cd "$PROJECT_DIR"
+
+# 暫時切換到 export 模式
+cp next.config.ts next.config.ts.bak
+cat > next.config.ts << 'NEXTCONFIG'
+import type { NextConfig } from "next";
+const nextConfig: NextConfig = {
+  output: "export",
+  typescript: { ignoreBuildErrors: true },
+  reactStrictMode: false,
+};
+export default nextConfig;
+NEXTCONFIG
+
 rm -rf out .next
 npm run build 2>&1 | tail -5
+
+# 恢復原始 config（standalone 模式）
+mv next.config.ts.bak next.config.ts
 
 # 3. Add android platform if not exists
 if [ ! -d "$ANDROID_DIR" ]; then

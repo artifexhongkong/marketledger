@@ -11,6 +11,9 @@ import { useT } from "@/lib/i18n";
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "";
 const SCOPES = "https://www.googleapis.com/auth/drive.appdata openid email profile";
 
+// 偵測是否在 Capacitor Android WebView 環境
+const isCapacitorAndroid = typeof window !== "undefined" && !!(window as any).Capacitor?.isNativePlatform?.();
+
 export function AuthPage({ onBack }: { onBack: () => void }) {
   const t = useT();
   const { user, accessToken, storageMode, setUser, setAccessToken, setStorageMode, signOut } = useAuthStore();
@@ -30,8 +33,38 @@ export function AuthPage({ onBack }: { onBack: () => void }) {
   }, []);
 
   const handleLogin = async () => {
-    if (!googleLoaded) { setError(t.auth_google_not_loaded); return; }
     if (!GOOGLE_CLIENT_ID) { setError(t.auth_no_client_id); return; }
+
+    // Android WebView 環境：GIS popup 會被擋，改用系統瀏覽器 OAuth 流程
+    if (isCapacitorAndroid) {
+      setLoading(true); setError(null);
+      try {
+        const redirectUri = "https://accounts.google.com/oauth/callback";
+        const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+          `client_id=${GOOGLE_CLIENT_ID}` +
+          `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+          `&response_type=token` +
+          `&scope=${encodeURIComponent(SCOPES)}` +
+          `&include_granted_scopes=true` +
+          `&prompt=consent`;
+
+        // 用 Capacitor Browser 開啟系統瀏覽器
+        const { Browser } = await import("@capacitor/browser");
+        await Browser.open({ url: authUrl });
+
+        // 監聽 URL 變化取得 access_token
+        // 注意：這個方案需要自訂 URL scheme 處理，目前先提示用戶
+        setError("Android 版請先在網頁版登入，或使用測試帳號登入。Google 登入功能在 Android 上的完整支援需要額外設定自訂 URL scheme。");
+        setLoading(false);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : t.auth_login_failed);
+        setLoading(false);
+      }
+      return;
+    }
+
+    // 網頁環境：使用 GIS Token Client（正常流程）
+    if (!googleLoaded) { setError(t.auth_google_not_loaded); return; }
     setLoading(true); setError(null);
     try {
       const tokenClient = (window as any).google.accounts.oauth2.initTokenClient({
