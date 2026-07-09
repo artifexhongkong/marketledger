@@ -1,191 +1,184 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuthStore } from "@/lib/auth-store";
 import { useAppStore } from "@/lib/store";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Cloud, CloudOff, LogOut, Database, Upload, Download, AlertCircle, ChevronLeft } from "lucide-react";
+import { Cloud, CloudOff, LogOut, Database, Upload, Download, AlertCircle, ChevronLeft, Shield, Zap, Crown, Check, Sparkles, Loader2 } from "lucide-react";
 import { useT } from "@/lib/i18n";
 import { MembershipCard } from "@/components/app/membership-card";
 
-const WEB_GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "";
-const ANDROID_GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || "";
+const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "";
 const SCOPES = "https://www.googleapis.com/auth/drive.appdata openid email profile";
 
-// 偵測是否在 Capacitor Android WebView 環境
-const isCapacitorAndroid = typeof window !== "undefined" && !!(window as any).Capacitor?.isNativePlatform?.();
+// 偵測是否在 Capacitor 原生環境
+const isNative = typeof window !== "undefined" && !!(window as any).Capacitor?.isNativePlatform?.();
 
 export function AuthPage({ onBack }: { onBack: () => void }) {
   const t = useT();
   const { user, accessToken, storageMode, setUser, setAccessToken, setStorageMode, signOut } = useAuthStore();
-  const [googleLoaded, setGoogleLoaded] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [backupStatus, setBackupStatus] = useState<string | null>(null);
+  const [authProgress, setAuthProgress] = useState<string>("");
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    // 如果已載入，直接標記
-    if ((window as any).google?.accounts?.oauth2) { setGoogleLoaded(true); return; }
-
-    // 載入 GIS script
-    const script = document.createElement("script");
-    script.src = "https://accounts.google.com/gsi/client";
-    script.async = true;
-    script.defer = true;
-
-    script.onload = () => {
-      // 確認 google.accounts.oauth2 真的可用
-      if ((window as any).google?.accounts?.oauth2) {
-        setGoogleLoaded(true);
-      } else {
-        // GIS 載入了但 oauth2 未就緒，等待一下再檢查
-        setTimeout(() => {
-          if ((window as any).google?.accounts?.oauth2) {
-            setGoogleLoaded(true);
-          }
-        }, 1000);
-      }
-    };
-
-    script.onerror = () => {
-      // 載入失敗，嘗試重新載入一次
-      setTimeout(() => {
-        const retryScript = document.createElement("script");
-        retryScript.src = "https://accounts.google.com/gsi/client";
-        retryScript.async = true;
-        retryScript.onload = () => {
-          if ((window as any).google?.accounts?.oauth2) {
-            setGoogleLoaded(true);
-          }
-        };
-        document.head.appendChild(retryScript);
-      }, 1000);
-    };
-
-    document.head.appendChild(script);
-
-    // 輪詢檢查（Android WebView 有時 onload 不觸發）
-    const pollInterval = setInterval(() => {
-      if ((window as any).google?.accounts?.oauth2) {
-        setGoogleLoaded(true);
-        clearInterval(pollInterval);
-      }
-    }, 500);
-
-    // 10 秒後停止輪詢
-    setTimeout(() => clearInterval(pollInterval), 10000);
-
-    return () => clearInterval(pollInterval);
-  }, []);
-
-  // 處理從 access_token 取得使用者資訊的共用函數
+  // 從 access_token 取得使用者資訊
   const fetchUserInfo = async (token: string) => {
     try {
       const res = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
         headers: { Authorization: `Bearer ${token}` },
       });
       const info = await res.json();
-      setUser({ email: info.email, name: info.name, picture: info.picture, sub: info.sub });
+      if (info.email) {
+        setUser({ email: info.email, name: info.name || info.email, picture: info.picture || "", sub: info.sub || "" });
+        return true;
+      }
+      return false;
     } catch {
-      setUser({ email: t.auth_logged_in, name: t.auth_google_user, picture: "", sub: "" });
+      return false;
     }
   };
 
-  // Android 環境：監聽 appUrlOpen 事件接收 OAuth 回調
-  useEffect(() => {
-    if (!isCapacitorAndroid) return;
-
-    let listener: any;
-    (async () => {
-      try {
-        const { App } = await import("@capacitor/app");
-        listener = await App.addListener("appUrlOpen", async (data: any) => {
-          const url: string = data.url || "";
-          // 解析 URL 中的 access_token
-          if (url.includes("access_token=")) {
-            const tokenMatch = url.match(/access_token=([^&]+)/);
-            if (tokenMatch) {
-              const token = decodeURIComponent(tokenMatch[1]);
-              setAccessToken(token);
-              await fetchUserInfo(token);
-              setLoading(false);
-              // 關閉系統瀏覽器
-              try {
-                const { Browser } = await import("@capacitor/browser");
-                await Browser.close();
-              } catch {}
-            }
-          } else if (url.includes("error=")) {
-            const errorMatch = url.match(/error=([^&]+)/);
-            setError(errorMatch ? decodeURIComponent(errorMatch[1]) : t.auth_login_failed);
-            setLoading(false);
-          }
-        });
-      } catch (e) {
-        // App plugin 載入失敗，靜默處理
-      }
-    })();
-
-    return () => {
-      if (listener?.remove) listener.remove();
-    };
-  }, []);
+  // ========== Google 登入 ==========
 
   const handleLogin = async () => {
-    const clientId = WEB_GOOGLE_CLIENT_ID;
-    if (!clientId) { setError(t.auth_no_client_id); return; }
+    if (!GOOGLE_CLIENT_ID) { setError(t.auth_no_client_id); return; }
 
-    setLoading(true); setError(null);
-
-    // 等待 GIS 就緒（最多等 15 秒）
-    let waitCount = 0;
-    while (!(window as any).google?.accounts?.oauth2 && waitCount < 30) {
-      await new Promise(r => setTimeout(r, 500));
-      waitCount++;
-    }
-
-    // 如果還是沒載入，嘗試手動載入
-    if (!(window as any).google?.accounts?.oauth2) {
-      try {
-        await new Promise<void>((resolve, reject) => {
-          const script = document.createElement("script");
-          script.src = "https://accounts.google.com/gsi/client";
-          script.async = true;
-          script.onload = () => resolve();
-          script.onerror = () => reject(new Error("Failed to load"));
-          document.head.appendChild(script);
-          setTimeout(() => reject(new Error("Timeout")), 5000);
-        });
-        await new Promise(r => setTimeout(r, 500));
-      } catch {
-        setError(t.auth_google_not_loaded);
-        setLoading(false);
-        return;
-      }
-    }
-
-    if (!(window as any).google?.accounts?.oauth2) {
-      setError(t.auth_google_not_loaded);
-      setLoading(false);
-      return;
-    }
+    setLoading(true);
+    setError(null);
+    setAuthProgress(t.auth_loading);
 
     try {
-      const tokenClient = (window as any).google.accounts.oauth2.initTokenClient({
-        client_id: clientId, scope: SCOPES,
-        callback: async (response: any) => {
-          if (response.error) { setError(response.error_description || t.auth_login_failed); setLoading(false); return; }
-          const token = response.access_token;
-          setAccessToken(token);
-          await fetchUserInfo(token);
-          setLoading(false);
-        },
+      if (isNative) {
+        await nativeGoogleLogin();
+      } else {
+        await webGoogleLogin();
+      }
+    } catch (e: any) {
+      setError(e?.message || t.auth_login_failed);
+    } finally {
+      setLoading(false);
+      setAuthProgress("");
+    }
+  };
+
+  // --- 網頁版登入：GIS Token Client ---
+  const webGoogleLogin = async () => {
+    // 確保 GIS 已載入
+    if (!(window as any).google?.accounts?.oauth2) {
+      await loadGISScript();
+    }
+
+    if (!(window as any).google?.accounts?.oauth2) {
+      throw new Error(t.auth_google_not_loaded);
+    }
+
+    return new Promise<void>((resolve, reject) => {
+      try {
+        const tokenClient = (window as any).google.accounts.oauth2.initTokenClient({
+          client_id: GOOGLE_CLIENT_ID,
+          scope: SCOPES,
+          callback: async (response: any) => {
+            if (response.error) {
+              reject(new Error(response.error_description || t.auth_login_failed));
+              return;
+            }
+            const token = response.access_token;
+            setAccessToken(token);
+            const ok = await fetchUserInfo(token);
+            if (!ok) reject(new Error(t.auth_login_failed));
+            else resolve();
+          },
+        });
+        tokenClient.requestAccessToken();
+      } catch (e) {
+        reject(e);
+      }
+    });
+  };
+
+  // --- Android 原生登入：系統瀏覽器 OAuth + redirect 監聽 ---
+  const nativeGoogleLogin = async () => {
+    // 使用 http://localhost 作為 redirect_uri
+    // Google 登入後會重導到 http://localhost#access_token=xxx
+    // Capacitor WebView 會攔截這個 URL
+    const redirectUri = "http://localhost";
+    const authUrl = "https://accounts.google.com/o/oauth2/v2/auth?" +
+      `client_id=${GOOGLE_CLIENT_ID}` +
+      `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+      `&response_type=token` +
+      `&scope=${encodeURIComponent(SCOPES)}` +
+      `&include_granted_scopes=true` +
+      `&prompt=consent`;
+
+    setAuthProgress(t.auth_loading);
+
+    // 監聽 appUrlOpen 事件
+    const { App } = await import("@capacitor/app");
+
+    const tokenPromise = new Promise<string>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error(t.auth_login_failed));
+      }, 120000); // 2 分鐘超時
+
+      App.addListener("appUrlOpen", (data: any) => {
+        const url: string = data.url || "";
+        clearTimeout(timeout);
+
+        if (url.includes("access_token=")) {
+          const match = url.match(/access_token=([^&]+)/);
+          if (match) {
+            resolve(decodeURIComponent(match[1]));
+          } else {
+            reject(new Error(t.auth_login_failed));
+          }
+        } else if (url.includes("error=")) {
+          const match = url.match(/error=([^&]+)/);
+          reject(new Error(match ? decodeURIComponent(match[1]) : t.auth_login_failed));
+        }
       });
-      tokenClient.requestAccessToken();
-    } catch (e) { setError(e instanceof Error ? e.message : t.auth_login_failed); setLoading(false); }
+    });
+
+    // 開啟系統瀏覽器
+    const { Browser } = await import("@capacitor/browser");
+    await Browser.open({ url: authUrl });
+
+    // 等待 token
+    const token = await tokenPromise;
+    setAccessToken(token);
+
+    // 關閉瀏覽器
+    try { await Browser.close(); } catch {}
+
+    // 取得使用者資訊
+    const ok = await fetchUserInfo(token);
+    if (!ok) throw new Error(t.auth_login_failed);
+  };
+
+  // 載入 GIS script
+  const loadGISScript = (): Promise<void> => {
+    return new Promise((resolve) => {
+      if ((window as any).google?.accounts?.oauth2) { resolve(); return; }
+      const script = document.createElement("script");
+      script.src = "https://accounts.google.com/gsi/client";
+      script.async = true;
+      script.onload = () => {
+        // 等待 google.accounts.oauth2 初始化
+        let tries = 0;
+        const check = setInterval(() => {
+          if ((window as any).google?.accounts?.oauth2) {
+            clearInterval(check);
+            resolve();
+          } else if (tries++ > 20) {
+            clearInterval(check);
+            resolve();
+          }
+        }, 100);
+      };
+      script.onerror = () => resolve();
+      document.head.appendChild(script);
+    });
   };
 
   const handleSignOut = () => {
@@ -195,87 +188,126 @@ export function AuthPage({ onBack }: { onBack: () => void }) {
     signOut();
   };
 
+  // ========== 未登入頁面 ==========
   if (!user) {
     return (
       <div className="flex flex-col h-full bg-background">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-primary via-primary to-primary/90 text-primary-foreground relative overflow-hidden flex-shrink-0">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-accent/8 rounded-full blur-2xl" />
+        {/* Header — 漸層背景 */}
+        <div className="bg-gradient-to-br from-primary via-primary to-primary/80 text-primary-foreground relative overflow-hidden flex-shrink-0">
+          <div className="absolute top-0 right-0 w-48 h-48 bg-accent/10 rounded-full blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-32 h-32 bg-accent/5 rounded-full blur-2xl" />
           <div className="relative flex items-center px-4 h-14">
-            <button onClick={onBack} className="flex items-center gap-1 text-primary-foreground/80 hover:text-primary-foreground">
+            <button onClick={onBack} className="flex items-center gap-1 text-primary-foreground/80 hover:text-primary-foreground transition">
               <ChevronLeft className="w-5 h-5" />
-              <span className="text-sm">{t.common_back}</span>
+              <span className="text-sm font-medium">{t.common_back}</span>
             </button>
           </div>
         </div>
 
         {/* Content */}
-        <div className="flex-1 flex flex-col items-center justify-center px-6 gap-6">
-          <div className="text-center space-y-2">
-            <div className="w-16 h-16 rounded-2xl bg-accent/15 flex items-center justify-center mx-auto">
-              <CloudOff className="w-8 h-8 text-accent" />
+        <div className="flex-1 overflow-y-auto px-6 py-8 flex flex-col">
+          {/* Logo + 標題 */}
+          <div className="text-center space-y-4 mb-8">
+            <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-accent/20 to-accent/5 flex items-center justify-center mx-auto shadow-lg">
+              <Shield className="w-10 h-10 text-accent" strokeWidth={1.8} />
             </div>
-            <h1 className="text-xl font-bold text-foreground">{t.auth_title}</h1>
-            <p className="text-xs text-muted-foreground leading-relaxed max-w-xs">
-              {t.auth_desc}
-            </p>
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">{t.auth_title}</h1>
+              <p className="text-sm text-muted-foreground leading-relaxed max-w-xs mx-auto mt-2">
+                {t.auth_desc}
+              </p>
+            </div>
           </div>
 
-          <Button onClick={handleLogin} disabled={loading}
-            className="w-full max-w-xs h-11 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 font-medium">
-            {loading ? t.auth_loading : (
-              <span className="flex items-center gap-2">
-                <svg className="w-4 h-4" viewBox="0 0 24 24">
-                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                </svg>
-                {t.auth_google_login}
-              </span>
-            )}
-          </Button>
+          {/* 功能亮點 */}
+          <div className="space-y-2.5 mb-8">
+            {[
+              { icon: Cloud, text: t.auth_cloud_desc },
+              { icon: Shield, text: t.auth_local_desc },
+              { icon: Zap, text: t.membership_feature_multi_device },
+            ].map((item, i) => (
+              <div key={i} className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-muted/40">
+                <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center flex-shrink-0">
+                  <item.icon className="w-4 h-4 text-accent" />
+                </div>
+                <span className="text-xs text-foreground font-medium">{item.text}</span>
+              </div>
+            ))}
+          </div>
 
-          {error && (
-            <p className="text-xs text-rose-600 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{error}</p>
-          )}
+          {/* Google 登入按鈕 */}
+          <div className="mt-auto space-y-3">
+            <Button
+              onClick={handleLogin}
+              disabled={loading}
+              className="w-full h-12 bg-white border-2 border-gray-200 text-gray-800 hover:bg-gray-50 hover:border-gray-300 font-semibold rounded-2xl shadow-sm transition-all"
+            >
+              {loading ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  {authProgress || t.auth_loading}
+                </span>
+              ) : (
+                <span className="flex items-center gap-3">
+                  <svg className="w-5 h-5" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                  </svg>
+                  {t.auth_google_login}
+                </span>
+              )}
+            </Button>
+
+            {error && (
+              <div className="flex items-start gap-2 px-4 py-3 rounded-xl bg-rose-50 border border-rose-100">
+                <AlertCircle className="w-4 h-4 text-rose-500 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-rose-700 leading-relaxed">{error}</p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     );
   }
 
-  // 已登入
+  // ========== 已登入頁面 ==========
   return (
     <div className="flex flex-col h-full bg-background">
       {/* Header */}
-      <div className="bg-gradient-to-r from-primary via-primary to-primary/90 text-primary-foreground relative overflow-hidden flex-shrink-0">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-accent/8 rounded-full blur-2xl" />
+      <div className="bg-gradient-to-br from-primary via-primary to-primary/80 text-primary-foreground relative overflow-hidden flex-shrink-0">
+        <div className="absolute top-0 right-0 w-40 h-40 bg-accent/10 rounded-full blur-3xl" />
         <div className="relative flex items-center justify-between px-4 h-14">
-          <button onClick={onBack} className="flex items-center gap-1 text-primary-foreground/80 hover:text-primary-foreground">
-            <ChevronLeft className="w-5 h-5" /><span className="text-sm">{t.common_back}</span>
+          <button onClick={onBack} className="flex items-center gap-1 text-primary-foreground/80 hover:text-primary-foreground transition">
+            <ChevronLeft className="w-5 h-5" />
+            <span className="text-sm font-medium">{t.common_back}</span>
           </button>
-          <button onClick={handleSignOut} className="p-1.5 text-primary-foreground/60 hover:text-primary-foreground">
+          <button onClick={handleSignOut} className="flex items-center gap-1 text-primary-foreground/60 hover:text-primary-foreground transition px-2 py-1 rounded-lg">
             <LogOut className="w-4 h-4" />
+            <span className="text-xs">{t.settings_logout}</span>
           </button>
         </div>
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-5">
-        {/* 用戶資訊 */}
-        <div className="flex flex-col items-center gap-3">
-          {user.picture ? (
-            <img src={user.picture} alt="" className="w-20 h-20 rounded-full border-2 border-accent/30 shadow-lg" />
-          ) : (
-            <div className="w-20 h-20 rounded-full bg-accent/15 flex items-center justify-center border-2 border-accent/30">
-              <span className="text-2xl font-bold text-accent">{user.name.charAt(0)}</span>
+      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4">
+        {/* 用戶資訊卡片 */}
+        <Card className="overflow-hidden">
+          <div className="bg-gradient-to-r from-accent/10 to-accent/5 px-4 py-5 flex items-center gap-4">
+            {user.picture ? (
+              <img src={user.picture} alt="" className="w-16 h-16 rounded-full border-2 border-accent/30 shadow-md" />
+            ) : (
+              <div className="w-16 h-16 rounded-full bg-accent/15 flex items-center justify-center border-2 border-accent/30">
+                <span className="text-xl font-bold text-accent">{user.name.charAt(0).toUpperCase()}</span>
+              </div>
+            )}
+            <div className="flex-1 min-w-0">
+              <p className="text-base font-bold text-foreground truncate">{user.name}</p>
+              <p className="text-xs text-muted-foreground truncate">{user.email}</p>
             </div>
-          )}
-          <div className="text-center">
-            <p className="text-base font-bold text-foreground">{user.name}</p>
-            <p className="text-xs text-muted-foreground">{user.email}</p>
           </div>
-        </div>
+        </Card>
 
         {/* 會員方案 */}
         <MembershipCard />

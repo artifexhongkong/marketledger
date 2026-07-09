@@ -22,20 +22,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- Google OAuth 回調 intent-filter — 接收多種 scheme -->
+            <!-- Google OAuth 回調 — http://localhost redirect -->
             <intent-filter android:autoVerify="false">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <!-- 反向域名格式（Google 官方推薦） -->
-                <data android:scheme="com.googleusercontent.apps.724810310371-75kg6tq0seqcb6aofuk8su1jtf8mhgee" android:host="oauthredirect" />
-            </intent-filter>
-            <!-- 備用：自訂 scheme -->
-            <intent-filter android:autoVerify="false">
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="com.artifexstudio.marketledger" android:host="oauth" />
+                <data android:scheme="http" android:host="localhost" />
             </intent-filter>
 
         </activity>
