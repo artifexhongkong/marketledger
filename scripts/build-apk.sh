@@ -48,6 +48,20 @@ npx cap sync android 2>&1 | tail -3
 echo "🔑 Copying fixed keystore..."
 cp "$KEYSTORE_SOURCE" "$ANDROID_DIR/app/debug.keystore"
 
+# 5b. Copy custom launcher icons from assets
+echo "🎨 Copying launcher icons..."
+ICONS_SOURCE="$PROJECT_DIR/assets/android-icons"
+if [ -d "$ICONS_SOURCE" ]; then
+  for folder in mipmap-mdpi mipmap-hdpi mipmap-xhdpi mipmap-xxhdpi mipmap-xxxhdpi; do
+    if [ -d "$ICONS_SOURCE/$folder" ]; then
+      cp -f "$ICONS_SOURCE/$folder/"*.png "$ANDROID_DIR/app/src/main/res/$folder/" 2>/dev/null
+    fi
+  done
+  echo "   Launcher icons updated"
+else
+  echo "   No custom icons found, using default"
+fi
+
 # 6. Configure build.gradle with signingConfig (version auto-synced from version.ts)
 echo "⚙️ Configuring build.gradle..."
 VERSION_TAG=$(grep 'APP_VERSION' "$PROJECT_DIR/src/lib/version.ts" | head -1 | sed 's/.*"\(v[^"]*\)".*/\1/')
