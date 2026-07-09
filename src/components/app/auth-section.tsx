@@ -12,8 +12,11 @@ import { MembershipCard } from "@/components/app/membership-card";
 const WEB_GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "";
 const ANDROID_GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || "";
 const SCOPES = "https://www.googleapis.com/auth/drive.appdata openid email profile";
-// Android OAuth 回調用的自訂 URL scheme
-const ANDROID_REDIRECT_URI = "com.artifexstudio.marketledger://oauth";
+// Android OAuth 回調 URI — 使用反向域名格式（Google 官方推薦）
+// 格式: com.googleusercontent.apps.<Client_ID_前綴>:/oauthredirect
+const ANDROID_REDIRECT_URI = ANDROID_GOOGLE_CLIENT_ID
+  ? `com.googleusercontent.apps.${ANDROID_GOOGLE_CLIENT_ID.split(".")[0]}:/oauthredirect`
+  : "com.artifexstudio.marketledger://oauth";
 
 // 偵測是否在 Capacitor Android WebView 環境
 const isCapacitorAndroid = typeof window !== "undefined" && !!(window as any).Capacitor?.isNativePlatform?.();
