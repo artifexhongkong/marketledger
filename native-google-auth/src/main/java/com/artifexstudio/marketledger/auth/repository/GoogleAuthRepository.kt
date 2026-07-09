@@ -1,6 +1,6 @@
 package com.artifexstudio.marketledger.auth.repository
 
-import android.content.Context
+import android.app.Activity
 import android.util.Base64
 import android.util.Log
 import androidx.credentials.CredentialManager
@@ -24,30 +24,21 @@ import org.json.JSONObject
  * 透過 [GetGoogleIdTokenOption] 發起 Google 登入請求，
  * 成功後解析 [GoogleIdTokenCredential] 取得 ID Token 與使用者資訊。
  *
- * @param context Android Context
+ * @param activity Android Activity（Credential Manager 需要 Activity 來顯示 UI）
  * @param webClientId 來自 Google Cloud Console 的 Web Client ID
- *                    （注意：Android 版 Credential Manager 需要傳入 Web Client ID，
- *                     不是 Android Client ID。Google 會自動用 Android Client 的
- *                     package name + SHA-1 做驗證。）
  */
 class GoogleAuthRepository(
-    private val context: Context,
+    private val activity: Activity,
     private val webClientId: String
 ) {
     companion object {
         private const val TAG = "GoogleAuthRepository"
     }
 
-    private val credentialManager = CredentialManager.create(context)
+    private val credentialManager = CredentialManager.create(activity)
 
     /**
      * 發起 Google 登入
-     *
-     * 流程：
-     * 1. 建立 GetGoogleIdOption，指定 serverClientId = Web Client ID
-     * 2. 用 CredentialManager 發起 GetCredentialRequest
-     * 3. 成功後解析 GoogleIdTokenCredential
-     * 4. 從 ID Token (JWT) 中解碼出使用者 email、name、picture
      *
      * @return [Result] 包含 [GoogleUser] 或例外
      */
@@ -55,9 +46,9 @@ class GoogleAuthRepository(
         try {
             // 1. 建立 Google ID 選項
             val googleIdOption = GetGoogleIdOption.Builder()
-                .setFilterByAuthorizedAccounts(false) // 允許顯示所有 Google 帳號
-                .setServerClientId(webClientId)       // Web Client ID（Credential Manager 要求）
-                .setAutoSelectEnabled(false)          // 不自動選擇，讓用戶確認
+                .setFilterByAuthorizedAccounts(false)
+                .setServerClientId(webClientId)
+                .setAutoSelectEnabled(false)
                 .build()
 
             // 2. 建立 Credential Request
@@ -65,9 +56,9 @@ class GoogleAuthRepository(
                 .addCredentialOption(googleIdOption)
                 .build()
 
-            // 3. 發起請求
+            // 3. 發起請求 — 必須傳入 Activity
             val result = credentialManager.getCredential(
-                context = context,
+                context = activity,
                 request = request
             )
 
@@ -119,10 +110,7 @@ class GoogleAuthRepository(
     }
 
     /**
-     * 解碼 JWT ID Token，取出 payload 中的使用者資訊
-     *
-     * JWT 格式: header.payload.signature
-     * payload 是 Base64Url 編碼的 JSON
+     * 解碼 JWT ID Token
      */
     private fun decodeIdToken(idToken: String): Map<String, String> {
         return try {
@@ -130,7 +118,6 @@ class GoogleAuthRepository(
             if (parts.size < 2) return emptyMap()
 
             val payload = parts[1]
-            // Base64 URL decode
             val decodedBytes = Base64.decode(
                 payload.padEnd((payload.length + 3) / 4 * 4, '='),
                 Base64.URL_SAFE or Base64.NO_WRAP

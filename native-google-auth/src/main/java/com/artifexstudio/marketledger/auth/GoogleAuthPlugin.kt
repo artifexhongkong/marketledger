@@ -35,7 +35,8 @@ class GoogleAuthPlugin : Plugin() {
 
     override fun load() {
         super.load()
-        repository = GoogleAuthRepository(context, webClientId)
+        // Credential Manager 需要 Activity（不是 Context）
+        repository = GoogleAuthRepository(getActivity(), webClientId)
     }
 
     /**
