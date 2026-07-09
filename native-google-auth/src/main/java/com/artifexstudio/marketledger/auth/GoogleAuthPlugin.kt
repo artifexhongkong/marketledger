@@ -21,46 +21,43 @@ class GoogleAuthPlugin : Plugin() {
         private const val WEB_CLIENT_ID = "724810310371-317ttn085ffoem8stqbdeigehrh5j417.apps.googleusercontent.com"
     }
 
-    private var repository: GoogleAuthRepository? = null
+    // 不快取 repository — 每次呼叫時動態取得 Activity
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
-
-    override fun load() {
-        super.load()
-        Log.d(TAG, "=== GoogleAuthPlugin load() ===")
-        try {
-            val activity = getActivity()
-            Log.d(TAG, "Activity: ${activity?.javaClass?.simpleName}")
-            if (activity != null) {
-                repository = GoogleAuthRepository(activity, WEB_CLIENT_ID)
-                Log.d(TAG, "✅ Repository initialized successfully")
-            } else {
-                Log.e(TAG, "❌ getActivity() returned null")
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "❌ Failed to init repository", e)
-        }
-    }
 
     @PluginMethod
     fun signIn(call: PluginCall) {
-        Log.d(TAG, "=== signIn() called ===")
+        Log.d(TAG, "========== signIn() called ==========")
 
-        val repo = repository
-        if (repo == null) {
-            Log.e(TAG, "❌ Repository is null — plugin not properly initialized")
-            resolveError(call, "GoogleAuth 未初始化，請重啟 App")
+        // 每次呼叫時取得當前的 Activity（不快取）
+        val activity = getActivity()
+        if (activity == null) {
+            Log.e(TAG, "❌ getActivity() returned null")
+            resolveError(call, "無法取得 Activity")
             return
         }
+
+        Log.d(TAG, "Activity: ${activity.javaClass.name}")
+        Log.d(TAG, "Is finishing: ${activity.isFinishing}")
+        Log.d(TAG, "Is destroyed: ${activity.isDestroyed}")
+
+        if (activity.isFinishing || activity.isDestroyed) {
+            Log.e(TAG, "❌ Activity is finishing or destroyed")
+            resolveError(call, "Activity 已失效，請重試")
+            return
+        }
+
+        // 每次建立新的 repository（傳入當前的 Activity）
+        val repository = GoogleAuthRepository(WEB_CLIENT_ID)
 
         Log.d(TAG, "Launching coroutine on Main dispatcher...")
 
         scope.launch {
             try {
-                Log.d(TAG, "Calling repository.signIn()...")
-                val result = repo.signIn()
+                Log.d(TAG, "Calling repository.signIn(activity)...")
+                val result = repository.signIn(activity)
 
                 result.onSuccess { user: GoogleUser ->
-                    Log.d(TAG, "✅ 登入成功: email=${user.email}, name=${user.displayName}")
+                    Log.d(TAG, "✅ 登入成功: ${user.email}")
                     val ret = JSObject()
                     val userObj = JSObject()
                     userObj.put("email", user.email)
@@ -71,15 +68,12 @@ class GoogleAuthPlugin : Plugin() {
                     ret.put("success", true)
                     call.resolve(ret)
                 }.onFailure { error ->
-                    Log.e(TAG, "❌ 登入失敗: ${error.message}", error)
+                    Log.e(TAG, "❌ 登入失敗: ${error.message}")
                     resolveError(call, error.message ?: "登入失敗")
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "❌ Coroutine 例外: ${e.message}", e)
+                Log.e(TAG, "❌ Coroutine 例外: ${e.javaClass.name}: ${e.message}", e)
                 resolveError(call, e.message ?: "登入失敗（例外）")
-            } catch (e: Throwable) {
-                Log.e(TAG, "❌ Coroutine Throwable: ${e.message}", e)
-                resolveError(call, e.message ?: "登入失敗（Throwable）")
             }
         }
     }
@@ -91,9 +85,6 @@ class GoogleAuthPlugin : Plugin() {
         call.resolve(ret)
     }
 
-    /**
-     * 統一的錯誤回傳 — 確保所有路徑都 resolve call
-     */
     private fun resolveError(call: PluginCall, message: String) {
         try {
             val ret = JSObject()
@@ -101,11 +92,8 @@ class GoogleAuthPlugin : Plugin() {
             ret.put("error", message)
             call.resolve(ret)
         } catch (e: Exception) {
-            Log.e(TAG, "resolveError 也失敗了: ${e.message}", e)
-            // 最後手段：用 reject
-            try {
-                call.reject(message)
-            } catch (_: Exception) {}
+            Log.e(TAG, "resolveError 也失敗: ${e.message}", e)
+            try { call.reject(message) } catch (_: Exception) {}
         }
     }
 }
