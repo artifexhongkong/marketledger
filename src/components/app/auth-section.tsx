@@ -103,18 +103,14 @@ export function AuthPage({ onBack }: { onBack: () => void }) {
   const nativeGoogleLogin = async () => {
     setAuthProgress(t.auth_loading);
 
-    // 動態載入 Capacitor 並註冊 plugin
     const { Capacitor, registerPlugin } = await import("@capacitor/core");
 
-    // 嘗試兩種方式取得 GoogleAuth plugin
+    // 取得 GoogleAuth plugin
     let GoogleAuth = (Capacitor as any).Plugins?.GoogleAuth;
-
     if (!GoogleAuth) {
       try {
-        // 用 registerPlugin 註冊原生 plugin
         GoogleAuth = registerPlugin("GoogleAuth");
       } catch {
-        // registerPlugin 失敗，直接用 Plugins 存取
         GoogleAuth = (Capacitor as any).Plugins?.GoogleAuth;
       }
     }
@@ -123,8 +119,19 @@ export function AuthPage({ onBack }: { onBack: () => void }) {
       throw new Error("GoogleAuth plugin 未載入");
     }
 
-    // 呼叫原生 signIn
-    const result = await GoogleAuth.signIn();
+    // 加入 15 秒超時保護，防止 promise 永遠掛起
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error("登入超時，請重試")), 15000);
+    });
+
+    const signInPromise = GoogleAuth.signIn();
+
+    let result;
+    try {
+      result = await Promise.race([signInPromise, timeoutPromise]);
+    } catch (e: any) {
+      throw new Error(e?.message || "登入失敗");
+    }
 
     if (!result || result.success === false) {
       throw new Error(result?.error || t.auth_login_failed);
@@ -135,7 +142,6 @@ export function AuthPage({ onBack }: { onBack: () => void }) {
       throw new Error(t.auth_login_failed);
     }
 
-    // 設定使用者資訊
     setAccessToken(user.idToken || "native-token");
     setUser({
       email: user.email,

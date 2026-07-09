@@ -12,8 +12,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
 
 @CapacitorPlugin(name = "GoogleAuth")
 class GoogleAuthPlugin : Plugin() {
@@ -24,73 +22,65 @@ class GoogleAuthPlugin : Plugin() {
     }
 
     private var repository: GoogleAuthRepository? = null
+    private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     override fun load() {
         super.load()
-        Log.d(TAG, "GoogleAuthPlugin loaded")
+        Log.d(TAG, "=== GoogleAuthPlugin load() ===")
         try {
-            repository = GoogleAuthRepository(getActivity(), WEB_CLIENT_ID)
-            Log.d(TAG, "Repository initialized")
+            val activity = getActivity()
+            Log.d(TAG, "Activity: ${activity?.javaClass?.simpleName}")
+            if (activity != null) {
+                repository = GoogleAuthRepository(activity, WEB_CLIENT_ID)
+                Log.d(TAG, "✅ Repository initialized successfully")
+            } else {
+                Log.e(TAG, "❌ getActivity() returned null")
+            }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to init repository", e)
+            Log.e(TAG, "❌ Failed to init repository", e)
         }
     }
 
     @PluginMethod
     fun signIn(call: PluginCall) {
-        Log.d(TAG, "signIn called")
+        Log.d(TAG, "=== signIn() called ===")
 
         val repo = repository
         if (repo == null) {
-            Log.e(TAG, "Repository is null")
-            val ret = JSObject()
-            ret.put("success", false)
-            ret.put("error", "Repository 未初始化")
-            call.resolve(ret)
+            Log.e(TAG, "❌ Repository is null — plugin not properly initialized")
+            resolveError(call, "GoogleAuth 未初始化，請重啟 App")
             return
         }
 
-        // 使用 runBlocking 在當前線程等待結果
-        // Credential Manager 的 getCredential 是 suspend 函數
-        // 但它內部會啟動 Activity，所以需要在主線程呼叫
-        try {
-            val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
-            scope.launch {
-                try {
-                    val result = repo.signIn()
+        Log.d(TAG, "Launching coroutine on Main dispatcher...")
 
-                    result.onSuccess { user: GoogleUser ->
-                        Log.d(TAG, "登入成功: ${user.email}")
-                        val ret = JSObject()
-                        val userObj = JSObject()
-                        userObj.put("email", user.email)
-                        userObj.put("name", user.displayName)
-                        userObj.put("picture", user.profilePicUrl ?: "")
-                        userObj.put("idToken", user.idToken)
-                        ret.put("user", userObj)
-                        ret.put("success", true)
-                        call.resolve(ret)
-                    }.onFailure { error ->
-                        Log.e(TAG, "登入失敗: ${error.message}")
-                        val ret = JSObject()
-                        ret.put("success", false)
-                        ret.put("error", error.message ?: "登入失敗")
-                        call.resolve(ret)
-                    }
-                } catch (e: Exception) {
-                    Log.e(TAG, "登入例外", e)
+        scope.launch {
+            try {
+                Log.d(TAG, "Calling repository.signIn()...")
+                val result = repo.signIn()
+
+                result.onSuccess { user: GoogleUser ->
+                    Log.d(TAG, "✅ 登入成功: email=${user.email}, name=${user.displayName}")
                     val ret = JSObject()
-                    ret.put("success", false)
-                    ret.put("error", e.message ?: "登入失敗")
+                    val userObj = JSObject()
+                    userObj.put("email", user.email)
+                    userObj.put("name", user.displayName)
+                    userObj.put("picture", user.profilePicUrl ?: "")
+                    userObj.put("idToken", user.idToken)
+                    ret.put("user", userObj)
+                    ret.put("success", true)
                     call.resolve(ret)
+                }.onFailure { error ->
+                    Log.e(TAG, "❌ 登入失敗: ${error.message}", error)
+                    resolveError(call, error.message ?: "登入失敗")
                 }
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ Coroutine 例外: ${e.message}", e)
+                resolveError(call, e.message ?: "登入失敗（例外）")
+            } catch (e: Throwable) {
+                Log.e(TAG, "❌ Coroutine Throwable: ${e.message}", e)
+                resolveError(call, e.message ?: "登入失敗（Throwable）")
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "啟動 coroutine 失敗", e)
-            val ret = JSObject()
-            ret.put("success", false)
-            ret.put("error", e.message ?: "登入失敗")
-            call.resolve(ret)
         }
     }
 
@@ -99,5 +89,23 @@ class GoogleAuthPlugin : Plugin() {
         val ret = JSObject()
         ret.put("isLoggedIn", false)
         call.resolve(ret)
+    }
+
+    /**
+     * 統一的錯誤回傳 — 確保所有路徑都 resolve call
+     */
+    private fun resolveError(call: PluginCall, message: String) {
+        try {
+            val ret = JSObject()
+            ret.put("success", false)
+            ret.put("error", message)
+            call.resolve(ret)
+        } catch (e: Exception) {
+            Log.e(TAG, "resolveError 也失敗了: ${e.message}", e)
+            // 最後手段：用 reject
+            try {
+                call.reject(message)
+            } catch (_: Exception) {}
+        }
     }
 }
