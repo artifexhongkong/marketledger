@@ -26,12 +26,59 @@ export function AuthPage({ onBack }: { onBack: () => void }) {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+
+    // 如果已載入，直接標記
     if ((window as any).google?.accounts?.oauth2) { setGoogleLoaded(true); return; }
+
+    // 載入 GIS script
     const script = document.createElement("script");
     script.src = "https://accounts.google.com/gsi/client";
     script.async = true;
-    script.onload = () => setGoogleLoaded(true);
+    script.defer = true;
+
+    script.onload = () => {
+      // 確認 google.accounts.oauth2 真的可用
+      if ((window as any).google?.accounts?.oauth2) {
+        setGoogleLoaded(true);
+      } else {
+        // GIS 載入了但 oauth2 未就緒，等待一下再檢查
+        setTimeout(() => {
+          if ((window as any).google?.accounts?.oauth2) {
+            setGoogleLoaded(true);
+          }
+        }, 1000);
+      }
+    };
+
+    script.onerror = () => {
+      // 載入失敗，嘗試重新載入一次
+      setTimeout(() => {
+        const retryScript = document.createElement("script");
+        retryScript.src = "https://accounts.google.com/gsi/client";
+        retryScript.async = true;
+        retryScript.onload = () => {
+          if ((window as any).google?.accounts?.oauth2) {
+            setGoogleLoaded(true);
+          }
+        };
+        document.head.appendChild(retryScript);
+      }, 1000);
+    };
+
     document.head.appendChild(script);
+
+    // 輪詢檢查（Android WebView 有時 onload 不觸發）
+    const pollInterval = setInterval(() => {
+      if ((window as any).google?.accounts?.oauth2) {
+        setGoogleLoaded(true);
+        clearInterval(pollInterval);
+      }
+    }, 500);
+
+    // 10 秒後停止輪詢
+    setTimeout(() => clearInterval(pollInterval), 10000);
+
+    return () => clearInterval(pollInterval);
   }, []);
 
   // 處理從 access_token 取得使用者資訊的共用函數
@@ -88,33 +135,44 @@ export function AuthPage({ onBack }: { onBack: () => void }) {
   }, []);
 
   const handleLogin = async () => {
-    // Android 和網頁都用網頁版 Client ID + GIS Token Client
-    // GIS 的 popup 在 Capacitor WebView 中可以正常運作
     const clientId = WEB_GOOGLE_CLIENT_ID;
     if (!clientId) { setError(t.auth_no_client_id); return; }
 
-    // 確保 GIS script 已載入（Android 可能需要重試）
-    let retries = 0;
-    while (!googleLoaded && retries < 10) {
-      await new Promise(r => setTimeout(r, 300));
-      retries++;
+    setLoading(true); setError(null);
+
+    // 等待 GIS 就緒（最多等 15 秒）
+    let waitCount = 0;
+    while (!(window as any).google?.accounts?.oauth2 && waitCount < 30) {
+      await new Promise(r => setTimeout(r, 500));
+      waitCount++;
     }
 
+    // 如果還是沒載入，嘗試手動載入
     if (!(window as any).google?.accounts?.oauth2) {
-      // GIS 仍未載入，嘗試重新載入
-      const script = document.createElement("script");
-      script.src = "https://accounts.google.com/gsi/client";
-      script.async = true;
-      document.head.appendChild(script);
-      await new Promise(r => setTimeout(r, 2000));
+      try {
+        await new Promise<void>((resolve, reject) => {
+          const script = document.createElement("script");
+          script.src = "https://accounts.google.com/gsi/client";
+          script.async = true;
+          script.onload = () => resolve();
+          script.onerror = () => reject(new Error("Failed to load"));
+          document.head.appendChild(script);
+          setTimeout(() => reject(new Error("Timeout")), 5000);
+        });
+        await new Promise(r => setTimeout(r, 500));
+      } catch {
+        setError(t.auth_google_not_loaded);
+        setLoading(false);
+        return;
+      }
     }
 
     if (!(window as any).google?.accounts?.oauth2) {
       setError(t.auth_google_not_loaded);
+      setLoading(false);
       return;
     }
 
-    setLoading(true); setError(null);
     try {
       const tokenClient = (window as any).google.accounts.oauth2.initTokenClient({
         client_id: clientId, scope: SCOPES,
