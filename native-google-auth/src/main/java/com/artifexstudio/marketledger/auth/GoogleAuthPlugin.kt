@@ -7,78 +7,93 @@ import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.CapacitorPlugin
 import com.artifexstudio.marketledger.auth.repository.GoogleAuthRepository
 import com.artifexstudio.marketledger.auth.model.GoogleUser
+import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 
-/**
- * Capacitor Plugin — Google 認證
- *
- * 讓 WebView（前端 JS）可以呼叫原生 Android Credential Manager 進行 Google 登入。
- *
- * 前端使用方式：
- *   const { GoogleAuth } = Capacitor.Plugins;
- *   const result = await GoogleAuth.signIn();
- *   // result.user.email, result.user.name, result.user.picture, result.user.idToken
- */
 @CapacitorPlugin(name = "GoogleAuth")
 class GoogleAuthPlugin : Plugin() {
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    companion object {
+        private const val TAG = "GoogleAuthPlugin"
+        private const val WEB_CLIENT_ID = "724810310371-317ttn085ffoem8stqbdeigehrh5j417.apps.googleusercontent.com"
+    }
 
-    // Web Client ID（從環境變數或硬編碼）
-    // 注意：Credential Manager API 需要傳入 Web Client ID
-    private val webClientId = "724810310371-317ttn085ffoem8stqbdeigehrh5j417.apps.googleusercontent.com"
-
-    private lateinit var repository: GoogleAuthRepository
+    private var repository: GoogleAuthRepository? = null
 
     override fun load() {
         super.load()
-        // Credential Manager 需要 Activity（不是 Context）
-        repository = GoogleAuthRepository(getActivity(), webClientId)
-    }
-
-    /**
-     * 發起 Google 登入
-     *
-     * 前端呼叫：
-     *   const result = await GoogleAuth.signIn();
-     *   console.log(result.user);
-     *
-     * 成功回傳：
-     *   { user: { email, name, picture, idToken } }
-     *
-     * 失敗回傳：
-     *   { error: "錯誤訊息" }
-     */
-    @PluginMethod
-    fun signIn(call: PluginCall) {
-        scope.launch {
-            val result = repository.signIn()
-
-            result.onSuccess { user: GoogleUser ->
-                val ret = JSObject()
-                val userObj = JSObject()
-                userObj.put("email", user.email)
-                userObj.put("name", user.displayName)
-                userObj.put("picture", user.profilePicUrl ?: "")
-                userObj.put("idToken", user.idToken)
-                ret.put("user", userObj)
-                ret.put("success", true)
-                call.resolve(ret)
-            }.onFailure { error ->
-                val ret = JSObject()
-                ret.put("success", false)
-                ret.put("error", error.message ?: "登入失敗")
-                call.resolve(ret)
-            }
+        Log.d(TAG, "GoogleAuthPlugin loaded")
+        try {
+            repository = GoogleAuthRepository(getActivity(), WEB_CLIENT_ID)
+            Log.d(TAG, "Repository initialized")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to init repository", e)
         }
     }
 
-    /**
-     * 檢查是否已登入（目前總是回傳 false，因為 token 存在前端）
-     */
+    @PluginMethod
+    fun signIn(call: PluginCall) {
+        Log.d(TAG, "signIn called")
+
+        val repo = repository
+        if (repo == null) {
+            Log.e(TAG, "Repository is null")
+            val ret = JSObject()
+            ret.put("success", false)
+            ret.put("error", "Repository 未初始化")
+            call.resolve(ret)
+            return
+        }
+
+        // 使用 runBlocking 在當前線程等待結果
+        // Credential Manager 的 getCredential 是 suspend 函數
+        // 但它內部會啟動 Activity，所以需要在主線程呼叫
+        try {
+            val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+            scope.launch {
+                try {
+                    val result = repo.signIn()
+
+                    result.onSuccess { user: GoogleUser ->
+                        Log.d(TAG, "登入成功: ${user.email}")
+                        val ret = JSObject()
+                        val userObj = JSObject()
+                        userObj.put("email", user.email)
+                        userObj.put("name", user.displayName)
+                        userObj.put("picture", user.profilePicUrl ?: "")
+                        userObj.put("idToken", user.idToken)
+                        ret.put("user", userObj)
+                        ret.put("success", true)
+                        call.resolve(ret)
+                    }.onFailure { error ->
+                        Log.e(TAG, "登入失敗: ${error.message}")
+                        val ret = JSObject()
+                        ret.put("success", false)
+                        ret.put("error", error.message ?: "登入失敗")
+                        call.resolve(ret)
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "登入例外", e)
+                    val ret = JSObject()
+                    ret.put("success", false)
+                    ret.put("error", e.message ?: "登入失敗")
+                    call.resolve(ret)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "啟動 coroutine 失敗", e)
+            val ret = JSObject()
+            ret.put("success", false)
+            ret.put("error", e.message ?: "登入失敗")
+            call.resolve(ret)
+        }
+    }
+
     @PluginMethod
     fun checkStatus(call: PluginCall) {
         val ret = JSObject()

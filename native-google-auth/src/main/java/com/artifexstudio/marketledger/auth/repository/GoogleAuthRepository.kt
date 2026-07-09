@@ -42,7 +42,7 @@ class GoogleAuthRepository(
      *
      * @return [Result] 包含 [GoogleUser] 或例外
      */
-    suspend fun signIn(): Result<GoogleUser> = withContext(Dispatchers.IO) {
+    suspend fun signIn(): Result<GoogleUser> = withContext(Dispatchers.Main) {
         try {
             // 1. 建立 Google ID 選項
             val googleIdOption = GetGoogleIdOption.Builder()

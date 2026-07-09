@@ -103,18 +103,31 @@ export function AuthPage({ onBack }: { onBack: () => void }) {
   const nativeGoogleLogin = async () => {
     setAuthProgress(t.auth_loading);
 
-    // 使用原生 Capacitor Plugin 呼叫 Android Credential Manager
-    const { Capacitor } = await import("@capacitor/core");
-    const GoogleAuth = (Capacitor as any).Plugins?.GoogleAuth;
+    // 動態載入 Capacitor 並註冊 plugin
+    const { Capacitor, registerPlugin } = await import("@capacitor/core");
+
+    // 嘗試兩種方式取得 GoogleAuth plugin
+    let GoogleAuth = (Capacitor as any).Plugins?.GoogleAuth;
+
+    if (!GoogleAuth) {
+      try {
+        // 用 registerPlugin 註冊原生 plugin
+        GoogleAuth = registerPlugin("GoogleAuth");
+      } catch {
+        // registerPlugin 失敗，直接用 Plugins 存取
+        GoogleAuth = (Capacitor as any).Plugins?.GoogleAuth;
+      }
+    }
 
     if (!GoogleAuth) {
       throw new Error("GoogleAuth plugin 未載入");
     }
 
+    // 呼叫原生 signIn
     const result = await GoogleAuth.signIn();
 
-    if (!result.success) {
-      throw new Error(result.error || t.auth_login_failed);
+    if (!result || result.success === false) {
+      throw new Error(result?.error || t.auth_login_failed);
     }
 
     const user = result.user;
