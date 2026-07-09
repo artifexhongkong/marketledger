@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Cloud, CloudOff, LogOut, Database, Upload, Download, AlertCircle, ChevronLeft } from "lucide-react";
 import { useT } from "@/lib/i18n";
 
-const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "";
+const WEB_GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "";
+const ANDROID_GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || "";
 const SCOPES = "https://www.googleapis.com/auth/drive.appdata openid email profile";
 // Android OAuth 回調用的自訂 URL scheme
 const ANDROID_REDIRECT_URI = "com.artifexstudio.marketledger://oauth";
@@ -88,14 +89,16 @@ export function AuthPage({ onBack }: { onBack: () => void }) {
   }, []);
 
   const handleLogin = async () => {
-    if (!GOOGLE_CLIENT_ID) { setError(t.auth_no_client_id); return; }
+    // 根據環境選擇正確的 Client ID
+    const clientId = isCapacitorAndroid ? ANDROID_GOOGLE_CLIENT_ID : WEB_GOOGLE_CLIENT_ID;
+    if (!clientId) { setError(t.auth_no_client_id); return; }
 
     // Android WebView 環境：用系統瀏覽器 OAuth + 自訂 URL scheme 回調
     if (isCapacitorAndroid) {
       setLoading(true); setError(null);
       try {
         const authUrl = "https://accounts.google.com/o/oauth2/v2/auth?" +
-          `client_id=${GOOGLE_CLIENT_ID}` +
+          `client_id=${clientId}` +
           `&redirect_uri=${encodeURIComponent(ANDROID_REDIRECT_URI)}` +
           `&response_type=token` +
           `&scope=${encodeURIComponent(SCOPES)}` +
@@ -118,7 +121,7 @@ export function AuthPage({ onBack }: { onBack: () => void }) {
     setLoading(true); setError(null);
     try {
       const tokenClient = (window as any).google.accounts.oauth2.initTokenClient({
-        client_id: GOOGLE_CLIENT_ID, scope: SCOPES,
+        client_id: clientId, scope: SCOPES,
         callback: async (response: any) => {
           if (response.error) { setError(response.error_description || t.auth_login_failed); setLoading(false); return; }
           const token = response.access_token;
