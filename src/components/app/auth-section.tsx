@@ -12,11 +12,6 @@ import { MembershipCard } from "@/components/app/membership-card";
 const WEB_GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "";
 const ANDROID_GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || "";
 const SCOPES = "https://www.googleapis.com/auth/drive.appdata openid email profile";
-// Android OAuth 回調 URI — 使用反向域名格式（Google 官方推薦）
-// 格式: com.googleusercontent.apps.<Client_ID_前綴>:/oauthredirect
-const ANDROID_REDIRECT_URI = ANDROID_GOOGLE_CLIENT_ID
-  ? `com.googleusercontent.apps.${ANDROID_GOOGLE_CLIENT_ID.split(".")[0]}:/oauthredirect`
-  : "com.artifexstudio.marketledger://oauth";
 
 // 偵測是否在 Capacitor Android WebView 環境
 const isCapacitorAndroid = typeof window !== "undefined" && !!(window as any).Capacitor?.isNativePlatform?.();
@@ -93,35 +88,32 @@ export function AuthPage({ onBack }: { onBack: () => void }) {
   }, []);
 
   const handleLogin = async () => {
-    // 根據環境選擇正確的 Client ID
-    const clientId = isCapacitorAndroid ? ANDROID_GOOGLE_CLIENT_ID : WEB_GOOGLE_CLIENT_ID;
+    // Android 和網頁都用網頁版 Client ID + GIS Token Client
+    // GIS 的 popup 在 Capacitor WebView 中可以正常運作
+    const clientId = WEB_GOOGLE_CLIENT_ID;
     if (!clientId) { setError(t.auth_no_client_id); return; }
 
-    // Android WebView 環境：用系統瀏覽器 OAuth + 自訂 URL scheme 回調
-    if (isCapacitorAndroid) {
-      setLoading(true); setError(null);
-      try {
-        const authUrl = "https://accounts.google.com/o/oauth2/v2/auth?" +
-          `client_id=${clientId}` +
-          `&redirect_uri=${encodeURIComponent(ANDROID_REDIRECT_URI)}` +
-          `&response_type=token` +
-          `&scope=${encodeURIComponent(SCOPES)}` +
-          `&include_granted_scopes=true` +
-          `&prompt=consent`;
+    // 確保 GIS script 已載入（Android 可能需要重試）
+    let retries = 0;
+    while (!googleLoaded && retries < 10) {
+      await new Promise(r => setTimeout(r, 300));
+      retries++;
+    }
 
-        // 用 Capacitor Browser 開啟系統瀏覽器
-        const { Browser } = await import("@capacitor/browser");
-        await Browser.open({ url: authUrl });
-        // 等待 appUrlOpen 事件回調（在上面的 useEffect 處理）
-      } catch (e) {
-        setError(e instanceof Error ? e.message : t.auth_login_failed);
-        setLoading(false);
-      }
+    if (!(window as any).google?.accounts?.oauth2) {
+      // GIS 仍未載入，嘗試重新載入
+      const script = document.createElement("script");
+      script.src = "https://accounts.google.com/gsi/client";
+      script.async = true;
+      document.head.appendChild(script);
+      await new Promise(r => setTimeout(r, 2000));
+    }
+
+    if (!(window as any).google?.accounts?.oauth2) {
+      setError(t.auth_google_not_loaded);
       return;
     }
 
-    // 網頁環境：使用 GIS Token Client（正常流程）
-    if (!googleLoaded) { setError(t.auth_google_not_loaded); return; }
     setLoading(true); setError(null);
     try {
       const tokenClient = (window as any).google.accounts.oauth2.initTokenClient({
