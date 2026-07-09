@@ -105,7 +105,7 @@ class GoogleAuthRepository(
             Result.failure(Exception("沒有可用的 Google 帳號，請先在手機設定中加入 Google 帳號"))
 
         } catch (e: GetCredentialException) {
-            Log.e(TAG, "Credential 錯誤: ${e.typeName} - ${e.message}")
+            Log.e(TAG, "Credential 錯誤: ${e.javaClass.simpleName} - ${e.message}")
             Result.failure(Exception("登入失敗: ${e.message}"))
 
         } catch (e: GoogleIdTokenParsingException) {
