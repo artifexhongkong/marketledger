@@ -164,7 +164,7 @@ export function AuthPage({ onBack }: { onBack: () => void }) {
             </p>
           </div>
 
-          <Button onClick={handleLogin} disabled={loading || !googleLoaded}
+          <Button onClick={handleLogin} disabled={loading}
             className="w-full max-w-xs h-11 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 font-medium">
             {loading ? t.auth_loading : (
               <span className="flex items-center gap-2">
