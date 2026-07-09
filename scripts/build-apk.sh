@@ -96,14 +96,15 @@ VERSION_CODE=$(echo "$VERSION_NAME" | sed 's/-test//' | awk -F. '{print $1*10000
 
 cat > "$ANDROID_DIR/app/build.gradle" << GRADLE_EOF
 apply plugin: 'com.android.application'
+apply plugin: 'org.jetbrains.kotlin.android'
 
 android {
     namespace = "com.artifexstudio.marketledger"
-    compileSdk = rootProject.ext.compileSdkVersion
+    compileSdk = 36
     defaultConfig {
         applicationId "com.artifexstudio.marketledger"
-        minSdkVersion rootProject.ext.minSdkVersion
-        targetSdkVersion rootProject.ext.targetSdkVersion
+        minSdkVersion 24
+        targetSdkVersion 36
         versionCode ${VERSION_CODE}
         versionName "${VERSION_NAME}"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -128,12 +129,21 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = '17'
+    }
 }
 
 repositories {
     flatDir{
         dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
     }
+    google()
+    mavenCentral()
 }
 
 dependencies {
@@ -146,6 +156,15 @@ dependencies {
     androidTestImplementation "androidx.test.ext:junit:\$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:\$androidxEspressoCoreVersion"
     implementation project(':capacitor-cordova-android-plugins')
+
+    // Credential Manager API（Google 官方最新推薦）
+    implementation 'androidx.credentials:credentials:1.5.0'
+    implementation 'androidx.credentials:credentials-play-services-auth:1.5.0'
+    implementation 'com.google.android.libraries.identity.googleid:googleid:1.1.1'
+
+    // Kotlin Coroutines
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0'
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7'
 }
 
 apply from: 'capacitor.build.gradle'
@@ -156,6 +175,80 @@ echo "📍 Creating local.properties..."
 cat > "$ANDROID_DIR/local.properties" << 'EOF'
 sdk.dir=/tmp/android-sdk
 EOF
+
+# 7b. Configure root build.gradle with Kotlin plugin
+echo "⚙️ Configuring root build.gradle..."
+cat > "$ANDROID_DIR/build.gradle" << 'ROOTGRADLE'
+// Top-level build file
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.7.3'
+        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.24'
+    }
+}
+
+apply from: "variables.gradle"
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+task clean(type: Delete) {
+    delete rootProject.buildDir
+}
+ROOTGRADLE
+
+# 7c. Configure settings.gradle
+echo "⚙️ Configuring settings.gradle..."
+cat > "$ANDROID_DIR/settings.gradle" << 'SETTINGS'
+include ':app'
+include ':capacitor-cordova-android-plugins'
+project(':capacitor-cordova-android-plugins').projectDir = new File('./node_modules/@capacitor/cordova-android-plugins/capacitor-cordova-android-plugins')
+apply from: 'capacitor.settings.gradle'
+SETTINGS
+
+# 7d. Copy Kotlin source files into Android project
+echo "📦 Copying Kotlin auth module..."
+mkdir -p "$ANDROID_DIR/app/src/main/java/com/artifexstudio/marketledger/auth/model"
+mkdir -p "$ANDROID_DIR/app/src/main/java/com/artifexstudio/marketledger/auth/repository"
+mkdir -p "$ANDROID_DIR/app/src/main/java/com/artifexstudio/marketledger/auth/viewmodel"
+mkdir -p "$ANDROID_DIR/app/src/main/java/com/artifexstudio/marketledger/auth/ui"
+
+cp "$PROJECT_DIR/native-google-auth/src/main/java/com/artifexstudio/marketledger/auth/model/GoogleUser.kt" \
+   "$ANDROID_DIR/app/src/main/java/com/artifexstudio/marketledger/auth/model/"
+cp "$PROJECT_DIR/native-google-auth/src/main/java/com/artifexstudio/marketledger/auth/repository/GoogleAuthRepository.kt" \
+   "$ANDROID_DIR/app/src/main/java/com/artifexstudio/marketledger/auth/repository/"
+cp "$PROJECT_DIR/native-google-auth/src/main/java/com/artifexstudio/marketledger/auth/viewmodel/LoginViewModel.kt" \
+   "$ANDROID_DIR/app/src/main/java/com/artifexstudio/marketledger/auth/viewmodel/"
+cp "$PROJECT_DIR/native-google-auth/src/main/java/com/artifexstudio/marketledger/auth/GoogleAuthPlugin.kt" \
+   "$ANDROID_DIR/app/src/main/java/com/artifexstudio/marketledger/auth/"
+echo "   Kotlin auth module copied"
+
+# 7e. Update MainActivity.java to register GoogleAuthPlugin
+echo "🔧 Updating MainActivity.java..."
+cat > "$ANDROID_DIR/app/src/main/java/com/artifexstudio/marketledger/MainActivity.java" << 'MAINACT'
+package com.artifexstudio.marketledger;
+
+import android.os.Bundle;
+import com.getcapacitor.BridgeActivity;
+import com.artifexstudio.marketledger.auth.GoogleAuthPlugin;
+
+public class MainActivity extends BridgeActivity {
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        registerPlugin(GoogleAuthPlugin.class);
+        super.onCreate(savedInstanceState);
+    }
+}
+MAINACT
+echo "   MainActivity.java updated"
 
 # 8. Setup JDK and Android SDK if not exists
 if [ ! -d "/tmp/jdk21" ] || [ ! -d "/tmp/android-sdk/platforms" ]; then

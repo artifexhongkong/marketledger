@@ -99,62 +99,37 @@ export function AuthPage({ onBack }: { onBack: () => void }) {
     });
   };
 
-  // --- Android 原生登入：Android Client ID + 系統瀏覽器 OAuth ---
+  // --- Android 原生登入：Capacitor GoogleAuth Plugin（Credential Manager API） ---
   const nativeGoogleLogin = async () => {
-    // 使用 Android Client ID
-    // redirect_uri 用反向域名格式（Google 自動支援，不需手動設定）
-    const reverseDomain = `com.googleusercontent.apps.${ANDROID_GOOGLE_CLIENT_ID.split(".")[0]}:/oauthredirect`;
-    const authUrl = "https://accounts.google.com/o/oauth2/v2/auth?" +
-      `client_id=${ANDROID_GOOGLE_CLIENT_ID}` +
-      `&redirect_uri=${encodeURIComponent(reverseDomain)}` +
-      `&response_type=token` +
-      `&scope=${encodeURIComponent(SCOPES)}` +
-      `&include_granted_scopes=true` +
-      `&prompt=consent`;
-
     setAuthProgress(t.auth_loading);
 
-    // 監聽 appUrlOpen 事件
-    const { App } = await import("@capacitor/app");
+    // 使用原生 Capacitor Plugin 呼叫 Android Credential Manager
+    const { Capacitor } = await import("@capacitor/core");
+    const GoogleAuth = (Capacitor as any).Plugins?.GoogleAuth;
 
-    const tokenPromise = new Promise<string>((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        reject(new Error(t.auth_login_failed));
-      }, 120000); // 2 分鐘超時
+    if (!GoogleAuth) {
+      throw new Error("GoogleAuth plugin 未載入");
+    }
 
-      const listenerPromise = App.addListener("appUrlOpen", (data: any) => {
-        const url: string = data.url || "";
+    const result = await GoogleAuth.signIn();
 
-        if (url.includes("access_token=")) {
-          clearTimeout(timeout);
-          const match = url.match(/access_token=([^&]+)/);
-          if (match) {
-            resolve(decodeURIComponent(match[1]));
-          } else {
-            reject(new Error(t.auth_login_failed));
-          }
-        } else if (url.includes("error=")) {
-          clearTimeout(timeout);
-          const match = url.match(/error=([^&]+)/);
-          reject(new Error(match ? decodeURIComponent(match[1]) : t.auth_login_failed));
-        }
-      });
+    if (!result.success) {
+      throw new Error(result.error || t.auth_login_failed);
+    }
+
+    const user = result.user;
+    if (!user || !user.email) {
+      throw new Error(t.auth_login_failed);
+    }
+
+    // 設定使用者資訊
+    setAccessToken(user.idToken || "native-token");
+    setUser({
+      email: user.email,
+      name: user.name || user.email,
+      picture: user.picture || "",
+      sub: "",
     });
-
-    // 開啟系統瀏覽器
-    const { Browser } = await import("@capacitor/browser");
-    await Browser.open({ url: authUrl });
-
-    // 等待 token
-    const token = await tokenPromise;
-    setAccessToken(token);
-
-    // 關閉瀏覽器
-    try { await Browser.close(); } catch {}
-
-    // 取得使用者資訊
-    const ok = await fetchUserInfo(token);
-    if (!ok) throw new Error(t.auth_login_failed);
   };
 
   // 載入 GIS script
