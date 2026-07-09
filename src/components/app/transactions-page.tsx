@@ -309,12 +309,6 @@ export function TxGroupCard({
               </div>
             );
           })}
-          <div className="px-3 py-2 bg-primary/5 flex items-center justify-between">
-            <span className="text-[10px] font-semibold text-foreground">{t.transactions_summary}</span>
-            <span className="text-xs font-bold tabular-nums" style={{ color: "#059669" }}>
-              {formatCurrency(group.totalAmount, currency)}
-            </span>
-          </div>
         </div>
       )}
     </Card>
