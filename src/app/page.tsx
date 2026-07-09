@@ -175,11 +175,8 @@ export default function Page() {
                 )}
               </div>
 
-              {/* Tab bar — 底部 safe-area 適配 */}
-              <div
-                className="bg-card flex items-stretch justify-between px-0.5 pt-2 flex-shrink-0 border-t border-border/40"
-                style={{ paddingBottom: "calc(0.5rem + var(--safe-area-bottom, 0px))" }}
-              >
+              {/* Tab bar */}
+              <div className="bg-card flex items-stretch justify-between px-0.5 pt-2 pb-5 flex-shrink-0 border-t border-border/40">
                 {TABS.map(({ id, label, icon: TabIcon }) => {
                   const active = tab === id;
                   return (

@@ -17,11 +17,10 @@ interface TopBarProps {
 /**
  * 頂部導航欄 — 滾動隱藏/顯示動效
  *
- * 方案：整個 Top Bar 容器用 height 動畫收縮
- * - overflow:hidden 容器包裹內容
- * - 隱藏時 height 從完整高度收縮到 0
- * - 內容用 transform 輔助滑出（GPU合成）
- * - 不留背板、不留空白
+ * 用 max-height + opacity 動畫：
+ * - 顯示時 max-height: 60px, opacity: 1
+ * - 隱藏時 max-height: 0px, opacity: 0
+ * - 250ms ease-in-out，流暢無背板
  */
 export function TopBar({
   logoSrc = "/logo.png",
@@ -73,12 +72,11 @@ export function TopBar({
 
   return (
     <div
-      className="flex-shrink-0 overflow-hidden z-20"
+      className="flex-shrink-0 overflow-hidden"
       style={{
-        // 高度動畫：顯示時 auto（用 max-height 模擬），隱藏時 0
-        maxHeight: visible ? "80px" : "0px",
-        transition: "max-height 200ms cubic-bezier(0.25, 0.1, 0.25, 1)",
-        paddingTop: "var(--safe-area-top, 0px)",
+        maxHeight: visible ? "60px" : "0px",
+        opacity: visible ? 1 : 0,
+        transition: "max-height 250ms cubic-bezier(0.25, 0.1, 0.25, 1), opacity 200ms ease-in-out",
       }}
     >
       <div className="bg-background/95 backdrop-blur-md">

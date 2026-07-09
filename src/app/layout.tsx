@@ -14,7 +14,6 @@ export const metadata: Metadata = {
   description: "全球市集攤商的隨身營業助理 · 3 秒記一筆 · 收攤即結算",
   keywords: ["市集", "記帳", "攤商", "香港", "全球"],
   authors: [{ name: "ArtifexStudio" }],
-  viewport: { width: "device-width", initialScale: 1, viewportFit: "cover" },
 };
 
 export default function RootLayout({
@@ -27,30 +26,7 @@ export default function RootLayout({
     <html lang="zh-Hant" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{
-          __html: `
-            try {
-              var d = JSON.parse(localStorage.getItem('marketledger-preview') || '{}');
-              if (d.state && d.state.darkMode) {
-                document.documentElement.classList.add('dark');
-              }
-            } catch(e) {}
-
-            // Safe Area Fallback for Android
-            // env(safe-area-inset-top) 在某些 Android WebView 回傳 0
-            // 用 JavaScript 檢測並設定 fallback 值
-            function setSafeArea() {
-              var top = getComputedStyle(document.documentElement).getPropertyValue('--safe-area-top').trim();
-              // 如果 env() 回傳 0px 或空值，用固定值 24px（Android status bar 高度）
-              if (!top || top === '0px') {
-                // 檢測是否為 Capacitor Android 環境
-                if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
-                  document.documentElement.style.setProperty('--safe-area-top', '24px');
-                }
-              }
-            }
-            setSafeArea();
-            window.addEventListener('load', setSafeArea);
-          `
+          __html: `try{var d=JSON.parse(localStorage.getItem('marketledger-preview')||'{}');if(d.state&&d.state.darkMode){document.documentElement.classList.add('dark');}}catch(e){}`
         }} />
       </head>
       <body
