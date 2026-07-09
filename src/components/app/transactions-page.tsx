@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { ArrowUpRight, ArrowDownRight, Inbox, ChevronRight, ShoppingBag, Search, X } from "lucide-react";
-import { useT } from "@/lib/i18n";
+import { useT, resolveDemoText } from "@/lib/i18n";
 
 type TimeFilter = "today" | "week" | "month" | "all";
 
@@ -295,11 +295,11 @@ export function TxGroupCard({
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[11px] font-medium text-foreground truncate">
-                    {tx.note?.replace(/ x\d+$/, "") || (txCat && (t as any)[txCat.labelKey]) || txCat?.label || t.cat_sales}
+                    {resolveDemoText(tx.note?.replace(/ x\d+$/, ""), t) || (txCat && (t as any)[txCat.labelKey]) || txCat?.label || t.cat_sales}
                   </p>
                   {tx.note?.includes(" · ") && (
                     <p className="text-[9px] text-accent truncate">
-                      {tx.note.split(" · ").slice(1).join(" · ")}
+                      {resolveDemoText(tx.note.split(" · ").slice(1).join(" · "), t)}
                     </p>
                   )}
                 </div>

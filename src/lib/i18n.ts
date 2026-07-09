@@ -333,6 +333,22 @@ export interface Translations {
   record_grayscale: string;
   record_selected: string;
 
+  // Demo 資料（按語言切換的商品名稱和備註）
+  demo_cookie: string;
+  demo_jewelry: string;
+  demo_jam: string;
+  demo_coffee: string;
+  demo_cookie_note: string;
+  demo_jewelry_note: string;
+  demo_jam_note: string;
+  demo_stock_note: string;
+  demo_packaging_note: string;
+  demo_rent_note: string;
+  demo_unit_pack: string;
+  demo_unit_piece: string;
+  demo_unit_bottle: string;
+  demo_unit_cup: string;
+
   // 市集頁
   markets_weekday_sun: string;
   markets_weekday_mon: string;
@@ -679,6 +695,21 @@ const zhTW: Translations = {
   record_grayscale: "灰階",
   record_selected: "已選",
 
+  demo_cookie: "手作餅乾",
+  demo_jewelry: "手工飾品",
+  demo_jam: "果醬",
+  demo_coffee: "咖啡",
+  demo_cookie_note: "賣手作餅乾",
+  demo_jewelry_note: "賣手工飾品",
+  demo_jam_note: "賣果醬",
+  demo_stock_note: "進貨麵粉、奶油",
+  demo_packaging_note: "包裝盒",
+  demo_rent_note: "PMQ 攤位費",
+  demo_unit_pack: "包",
+  demo_unit_piece: "件",
+  demo_unit_bottle: "瓶",
+  demo_unit_cup: "杯",
+
   markets_weekday_sun: "日",
   markets_weekday_mon: "一",
   markets_weekday_tue: "二",
@@ -975,6 +1006,21 @@ const zhCN: Translations = {
   record_sorting: "拖拽排序中",
   record_grayscale: "灰阶",
   record_selected: "已选",
+
+  demo_cookie: "手工饼干",
+  demo_jewelry: "手工饰品",
+  demo_jam: "果酱",
+  demo_coffee: "咖啡",
+  demo_cookie_note: "卖手工饼干",
+  demo_jewelry_note: "卖手工饰品",
+  demo_jam_note: "卖果酱",
+  demo_stock_note: "进货面粉、奶油",
+  demo_packaging_note: "包装盒",
+  demo_rent_note: "PMQ 摊位费",
+  demo_unit_pack: "包",
+  demo_unit_piece: "件",
+  demo_unit_bottle: "瓶",
+  demo_unit_cup: "杯",
 
   markets_weekday_sun: "日",
   markets_weekday_mon: "一",
@@ -1329,6 +1375,21 @@ const en: Translations = {
   record_grayscale: "Grayscale",
   record_selected: "Selected",
 
+  demo_cookie: "Handmade Cookies",
+  demo_jewelry: "Handmade Jewelry",
+  demo_jam: "Jam",
+  demo_coffee: "Coffee",
+  demo_cookie_note: "Sold cookies",
+  demo_jewelry_note: "Sold jewelry",
+  demo_jam_note: "Sold jam",
+  demo_stock_note: "Stock: flour, butter",
+  demo_packaging_note: "Packaging boxes",
+  demo_rent_note: "PMQ booth fee",
+  demo_unit_pack: "pack",
+  demo_unit_piece: "pc",
+  demo_unit_bottle: "bottle",
+  demo_unit_cup: "cup",
+
   markets_weekday_sun: "Sun",
   markets_weekday_mon: "Mon",
   markets_weekday_tue: "Tue",
@@ -1668,6 +1729,21 @@ const ja: Translations = {
   record_grayscale: "グレースケール",
   record_selected: "選択済み",
 
+  demo_cookie: "手作りクッキー",
+  demo_jewelry: "手作りアクセサリー",
+  demo_jam: "ジャム",
+  demo_coffee: "コーヒー",
+  demo_cookie_note: "クッキー販売",
+  demo_jewelry_note: "アクセサリー販売",
+  demo_jam_note: "ジャム販売",
+  demo_stock_note: "仕入れ：小麦粉、バター",
+  demo_packaging_note: "パッケージ箱",
+  demo_rent_note: "PMQ ブース料金",
+  demo_unit_pack: "袋",
+  demo_unit_piece: "個",
+  demo_unit_bottle: "瓶",
+  demo_unit_cup: "杯",
+
   markets_weekday_sun: "日",
   markets_weekday_mon: "月",
   markets_weekday_tue: "火",
@@ -2006,6 +2082,21 @@ const ko: Translations = {
   record_grayscale: "그레이스케일",
   record_selected: "선택됨",
 
+  demo_cookie: "수제 쿠키",
+  demo_jewelry: "수제 액세서리",
+  demo_jam: "잼",
+  demo_coffee: "커피",
+  demo_cookie_note: "쿠키 판매",
+  demo_jewelry_note: "액세서리 판매",
+  demo_jam_note: "잼 판매",
+  demo_stock_note: "매입: 밀가루, 버터",
+  demo_packaging_note: "포장 상자",
+  demo_rent_note: "PMQ 부스 비용",
+  demo_unit_pack: "봉지",
+  demo_unit_piece: "개",
+  demo_unit_bottle: "병",
+  demo_unit_cup: "잔",
+
   markets_weekday_sun: "일",
   markets_weekday_mon: "월",
   markets_weekday_tue: "화",
@@ -2052,4 +2143,25 @@ import { useAppStore } from "@/lib/store";
 export function useT(): Translations {
   const language = useAppStore((s) => s.language);
   return TRANSLATIONS[language] || TRANSLATIONS["zh-TW"];
+}
+
+/**
+ * 型別安全的 i18n label 解析 helper
+ * 用於動態存取 t[key]，避免 (t as any)[key] 繞過型別檢查
+ * 若 key 不存在則回傳 key 本身作為 fallback
+ */
+export function getLabel(t: Translations, key: string): string {
+  return (t as any)[key] || key;
+}
+
+/**
+ * 解析 demo 資料的 i18n key
+ * 若字串是 demo_xxx 開頭，用當前語言解析；否則原樣回傳
+ */
+export function resolveDemoText(text: string | undefined, t: Translations): string {
+  if (!text) return "";
+  if (text.startsWith("demo_") || text.startsWith("cat_") || text.startsWith("pay_") || text.startsWith("paycat_")) {
+    return getLabel(t, text);
+  }
+  return text;
 }

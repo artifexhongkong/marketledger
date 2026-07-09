@@ -600,24 +600,26 @@ export const useAppStore = create<AppStore>()(
         const { demoSeeded, transactions, currency } = get();
         if (demoSeeded || transactions.length > 0) return;
         const now = Date.now();
+        // Demo 資料使用 i18n key（demo_xxx），顯示時由元件解析為當前語言
         const samples: Omit<Transaction, "id" | "createdAt">[] = [
-          { type: "income", amount: 2500, currency, category: "sales", paymentMethod: "cash", note: "賣手作餅乾", marketId: "pmq" },
-          { type: "income", amount: 1800, currency, category: "sales", paymentMethod: "payme", note: "賣手工飾品", marketId: "pmq" },
-          { type: "income", amount: 950, currency, category: "sales", paymentMethod: "fps", note: "賣果醬", marketId: "pmq" },
-          { type: "expense", amount: 800, currency, category: "stock", paymentMethod: "cash", note: "進貨麵粉、奶油", marketId: "pmq" },
-          { type: "expense", amount: 350, currency, category: "packaging", paymentMethod: "fps", note: "包裝盒", marketId: "pmq" },
-          { type: "expense", amount: 200, currency, category: "rent", paymentMethod: "cash", note: "PMQ 攤位費", marketId: "pmq" },
+          { type: "income", amount: 2500, currency, category: "sales", paymentMethod: "cash", note: "demo_cookie_note", marketId: "pmq" },
+          { type: "income", amount: 1800, currency, category: "sales", paymentMethod: "payme", note: "demo_jewelry_note", marketId: "pmq" },
+          { type: "income", amount: 950, currency, category: "sales", paymentMethod: "fps", note: "demo_jam_note", marketId: "pmq" },
+          { type: "expense", amount: 800, currency, category: "stock", paymentMethod: "cash", note: "demo_stock_note", marketId: "pmq" },
+          { type: "expense", amount: 350, currency, category: "packaging", paymentMethod: "fps", note: "demo_packaging_note", marketId: "pmq" },
+          { type: "expense", amount: 200, currency, category: "rent", paymentMethod: "cash", note: "demo_rent_note", marketId: "pmq" },
         ];
         const txs: Transaction[] = samples.map((s, i) => ({
           ...s,
           id: `tx_demo_${i}`,
           createdAt: now - (samples.length - i) * 60_000,
         }));
+        // 商品名稱和單位也使用 i18n key
         const demoProducts: Product[] = [
-          { id: "prod_demo_1", name: "手作餅乾", price: 80, unit: "包", categoryId: "sales" },
-          { id: "prod_demo_2", name: "手工飾品", price: 150, unit: "件", categoryId: "sales" },
-          { id: "prod_demo_3", name: "果醬", price: 95, unit: "瓶", categoryId: "sales" },
-          { id: "prod_demo_4", name: "咖啡", price: 35, unit: "杯", categoryId: "sales" },
+          { id: "prod_demo_1", name: "demo_cookie", price: 80, unit: "demo_unit_pack", categoryId: "sales" },
+          { id: "prod_demo_2", name: "demo_jewelry", price: 150, unit: "demo_unit_piece", categoryId: "sales" },
+          { id: "prod_demo_3", name: "demo_jam", price: 95, unit: "demo_unit_bottle", categoryId: "sales" },
+          { id: "prod_demo_4", name: "demo_coffee", price: 35, unit: "demo_unit_cup", categoryId: "sales" },
         ];
         set({ transactions: txs, products: demoProducts, demoSeeded: true });
       },
