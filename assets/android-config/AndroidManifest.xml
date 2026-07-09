@@ -22,12 +22,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- Google OAuth 回調 — http://localhost redirect -->
+            <!-- Google OAuth 回調 — 反向域名 scheme（Android Client ID 自動支援） -->
             <intent-filter android:autoVerify="false">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="http" android:host="localhost" />
+                <data android:scheme="com.googleusercontent.apps.724810310371-75kg6tq0seqcb6aofuk8su1jtf8mhgee" />
             </intent-filter>
 
         </activity>

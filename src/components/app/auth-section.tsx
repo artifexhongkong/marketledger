@@ -9,7 +9,8 @@ import { Cloud, CloudOff, LogOut, Database, Upload, Download, AlertCircle, Chevr
 import { useT } from "@/lib/i18n";
 import { MembershipCard } from "@/components/app/membership-card";
 
-const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "";
+const WEB_GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "";
+const ANDROID_GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || "";
 const SCOPES = "https://www.googleapis.com/auth/drive.appdata openid email profile";
 
 // 偵測是否在 Capacitor 原生環境
@@ -43,7 +44,7 @@ export function AuthPage({ onBack }: { onBack: () => void }) {
   // ========== Google 登入 ==========
 
   const handleLogin = async () => {
-    if (!GOOGLE_CLIENT_ID) { setError(t.auth_no_client_id); return; }
+    if (!WEB_GOOGLE_CLIENT_ID) { setError(t.auth_no_client_id); return; }
 
     setLoading(true);
     setError(null);
@@ -77,7 +78,7 @@ export function AuthPage({ onBack }: { onBack: () => void }) {
     return new Promise<void>((resolve, reject) => {
       try {
         const tokenClient = (window as any).google.accounts.oauth2.initTokenClient({
-          client_id: GOOGLE_CLIENT_ID,
+          client_id: WEB_GOOGLE_CLIENT_ID,
           scope: SCOPES,
           callback: async (response: any) => {
             if (response.error) {
@@ -98,15 +99,14 @@ export function AuthPage({ onBack }: { onBack: () => void }) {
     });
   };
 
-  // --- Android 原生登入：系統瀏覽器 OAuth + redirect 監聽 ---
+  // --- Android 原生登入：Android Client ID + 系統瀏覽器 OAuth ---
   const nativeGoogleLogin = async () => {
-    // 使用 http://localhost 作為 redirect_uri
-    // Google 登入後會重導到 http://localhost#access_token=xxx
-    // Capacitor WebView 會攔截這個 URL
-    const redirectUri = "http://localhost";
+    // 使用 Android Client ID
+    // redirect_uri 用反向域名格式（Google 自動支援，不需手動設定）
+    const reverseDomain = `com.googleusercontent.apps.${ANDROID_GOOGLE_CLIENT_ID.split(".")[0]}:/oauthredirect`;
     const authUrl = "https://accounts.google.com/o/oauth2/v2/auth?" +
-      `client_id=${GOOGLE_CLIENT_ID}` +
-      `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+      `client_id=${ANDROID_GOOGLE_CLIENT_ID}` +
+      `&redirect_uri=${encodeURIComponent(reverseDomain)}` +
       `&response_type=token` +
       `&scope=${encodeURIComponent(SCOPES)}` +
       `&include_granted_scopes=true` +
@@ -122,11 +122,11 @@ export function AuthPage({ onBack }: { onBack: () => void }) {
         reject(new Error(t.auth_login_failed));
       }, 120000); // 2 分鐘超時
 
-      App.addListener("appUrlOpen", (data: any) => {
+      const listenerPromise = App.addListener("appUrlOpen", (data: any) => {
         const url: string = data.url || "";
-        clearTimeout(timeout);
 
         if (url.includes("access_token=")) {
+          clearTimeout(timeout);
           const match = url.match(/access_token=([^&]+)/);
           if (match) {
             resolve(decodeURIComponent(match[1]));
@@ -134,6 +134,7 @@ export function AuthPage({ onBack }: { onBack: () => void }) {
             reject(new Error(t.auth_login_failed));
           }
         } else if (url.includes("error=")) {
+          clearTimeout(timeout);
           const match = url.match(/error=([^&]+)/);
           reject(new Error(match ? decodeURIComponent(match[1]) : t.auth_login_failed));
         }
