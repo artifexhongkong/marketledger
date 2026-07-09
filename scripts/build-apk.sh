@@ -78,6 +78,14 @@ else
   echo "   No custom icons found, using default"
 fi
 
+# 5c. Copy custom AndroidManifest.xml with OAuth intent-filter
+echo "📋 Copying AndroidManifest.xml..."
+MANIFEST_SOURCE="$PROJECT_DIR/assets/android-config/AndroidManifest.xml"
+if [ -f "$MANIFEST_SOURCE" ]; then
+  cp -f "$MANIFEST_SOURCE" "$ANDROID_DIR/app/src/main/AndroidManifest.xml"
+  echo "   AndroidManifest.xml updated (with OAuth intent-filter)"
+fi
+
 # 6. Configure build.gradle with signingConfig (version auto-synced from version.ts)
 echo "⚙️ Configuring build.gradle..."
 VERSION_TAG=$(grep 'APP_VERSION' "$PROJECT_DIR/src/lib/version.ts" | head -1 | sed 's/.*"\(v[^"]*\)".*/\1/')

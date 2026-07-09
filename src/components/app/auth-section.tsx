@@ -10,6 +10,8 @@ import { useT } from "@/lib/i18n";
 
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "";
 const SCOPES = "https://www.googleapis.com/auth/drive.appdata openid email profile";
+// Android OAuth 回調用的自訂 URL scheme
+const ANDROID_REDIRECT_URI = "com.artifexstudio.marketledger://oauth";
 
 // 偵測是否在 Capacitor Android WebView 環境
 const isCapacitorAndroid = typeof window !== "undefined" && !!(window as any).Capacitor?.isNativePlatform?.();
@@ -32,17 +34,69 @@ export function AuthPage({ onBack }: { onBack: () => void }) {
     document.head.appendChild(script);
   }, []);
 
+  // 處理從 access_token 取得使用者資訊的共用函數
+  const fetchUserInfo = async (token: string) => {
+    try {
+      const res = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const info = await res.json();
+      setUser({ email: info.email, name: info.name, picture: info.picture, sub: info.sub });
+    } catch {
+      setUser({ email: t.auth_logged_in, name: t.auth_google_user, picture: "", sub: "" });
+    }
+  };
+
+  // Android 環境：監聽 appUrlOpen 事件接收 OAuth 回調
+  useEffect(() => {
+    if (!isCapacitorAndroid) return;
+
+    let listener: any;
+    (async () => {
+      try {
+        const { App } = await import("@capacitor/app");
+        listener = await App.addListener("appUrlOpen", async (data: any) => {
+          const url: string = data.url || "";
+          // 解析 URL 中的 access_token
+          if (url.includes("access_token=")) {
+            const tokenMatch = url.match(/access_token=([^&]+)/);
+            if (tokenMatch) {
+              const token = decodeURIComponent(tokenMatch[1]);
+              setAccessToken(token);
+              await fetchUserInfo(token);
+              setLoading(false);
+              // 關閉系統瀏覽器
+              try {
+                const { Browser } = await import("@capacitor/browser");
+                await Browser.close();
+              } catch {}
+            }
+          } else if (url.includes("error=")) {
+            const errorMatch = url.match(/error=([^&]+)/);
+            setError(errorMatch ? decodeURIComponent(errorMatch[1]) : t.auth_login_failed);
+            setLoading(false);
+          }
+        });
+      } catch (e) {
+        // App plugin 載入失敗，靜默處理
+      }
+    })();
+
+    return () => {
+      if (listener?.remove) listener.remove();
+    };
+  }, []);
+
   const handleLogin = async () => {
     if (!GOOGLE_CLIENT_ID) { setError(t.auth_no_client_id); return; }
 
-    // Android WebView 環境：GIS popup 會被擋，改用系統瀏覽器 OAuth 流程
+    // Android WebView 環境：用系統瀏覽器 OAuth + 自訂 URL scheme 回調
     if (isCapacitorAndroid) {
       setLoading(true); setError(null);
       try {
-        const redirectUri = "https://accounts.google.com/oauth/callback";
-        const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+        const authUrl = "https://accounts.google.com/o/oauth2/v2/auth?" +
           `client_id=${GOOGLE_CLIENT_ID}` +
-          `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+          `&redirect_uri=${encodeURIComponent(ANDROID_REDIRECT_URI)}` +
           `&response_type=token` +
           `&scope=${encodeURIComponent(SCOPES)}` +
           `&include_granted_scopes=true` +
@@ -51,11 +105,7 @@ export function AuthPage({ onBack }: { onBack: () => void }) {
         // 用 Capacitor Browser 開啟系統瀏覽器
         const { Browser } = await import("@capacitor/browser");
         await Browser.open({ url: authUrl });
-
-        // 監聽 URL 變化取得 access_token
-        // 注意：這個方案需要自訂 URL scheme 處理，目前先提示用戶
-        setError("Android 版請先在網頁版登入，或使用測試帳號登入。Google 登入功能在 Android 上的完整支援需要額外設定自訂 URL scheme。");
-        setLoading(false);
+        // 等待 appUrlOpen 事件回調（在上面的 useEffect 處理）
       } catch (e) {
         setError(e instanceof Error ? e.message : t.auth_login_failed);
         setLoading(false);
@@ -73,13 +123,7 @@ export function AuthPage({ onBack }: { onBack: () => void }) {
           if (response.error) { setError(response.error_description || t.auth_login_failed); setLoading(false); return; }
           const token = response.access_token;
           setAccessToken(token);
-          try {
-            const res = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", { headers: { Authorization: `Bearer ${token}` } });
-            const info = await res.json();
-            setUser({ email: info.email, name: info.name, picture: info.picture, sub: info.sub });
-          } catch {
-            setUser({ email: t.auth_logged_in, name: t.auth_google_user, picture: "", sub: "" });
-          }
+          await fetchUserInfo(token);
           setLoading(false);
         },
       });
