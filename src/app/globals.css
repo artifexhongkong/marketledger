@@ -137,6 +137,12 @@
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
   }
+
+  /* Safe Area Insets — 適配系統狀態欄和導航欄 */
+  :root {
+    --safe-area-top: env(safe-area-inset-top, 0px);
+    --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  }
   ::-webkit-scrollbar { display: none !important; width: 0 !important; height: 0 !important; }
   * { scrollbar-width: none !important; -ms-overflow-style: none !important; }
 }

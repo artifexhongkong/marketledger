@@ -1,7 +1,7 @@
 // App 版本常數 — 用於檢查 GitHub Release 是否有新版可更新
 // 格式必須跟 GitHub Release tag 一致：vX.Y.Z-xxx
-export const APP_VERSION = "v1.1.3-test";
-export const APP_VERSION_DISPLAY = "v1.1.3 (測試版)";
+export const APP_VERSION = "v1.1.4-test";
+export const APP_VERSION_DISPLAY = "v1.1.4 (測試版)";
 
 // GitHub repo 資訊
 export const GITHUB_REPO = "artifexhongkong/marketledger";

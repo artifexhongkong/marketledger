@@ -188,7 +188,7 @@ export function AuthPage({ onBack }: { onBack: () => void }) {
     return (
       <div className="flex flex-col h-full bg-background">
         {/* Header — 與主App一致的背景色 */}
-        <div className="bg-background/95 backdrop-blur-md flex-shrink-0 border-b border-border/40">
+        <div className="bg-background/95 backdrop-blur-md flex-shrink-0 border-b border-border/40" style={{ paddingTop: "var(--safe-area-top, 0px)" }}>
           <div className="relative flex items-center px-3 h-11">
             <button onClick={onBack} className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors active:scale-95">
               <ArrowLeft className="w-5 h-5" strokeWidth={2} />
@@ -268,7 +268,7 @@ export function AuthPage({ onBack }: { onBack: () => void }) {
   return (
     <div className="flex flex-col h-full bg-background">
       {/* Header — 與主App一致 */}
-      <div className="bg-background/95 backdrop-blur-md flex-shrink-0 border-b border-border/40">
+      <div className="bg-background/95 backdrop-blur-md flex-shrink-0 border-b border-border/40" style={{ paddingTop: "var(--safe-area-top, 0px)" }}>
         <div className="relative flex items-center justify-between px-3 h-11">
           <button onClick={onBack} className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors active:scale-95">
             <ArrowLeft className="w-5 h-5" strokeWidth={2} />

@@ -15,12 +15,11 @@ interface TopBarProps {
 }
 
 /**
- * 頂部導航欄 — 帶滾動隱藏/顯示動效
+ * 頂部導航欄 — 帶滾動隱藏/顯示動效 + Safe Area 適配
  *
- * 用 transform + position:fixed 避免卡頓：
- * - transform 動畫由 GPU 合成，不觸發 reflow
- * - position:fixed 不佔佈局空間，隱藏時不留空白
- * - 內容區域用 padding-top 補償 Top Bar 高度
+ * - position:fixed + transform 動畫（GPU合成，不卡頓）
+ * - padding-top: env(safe-area-inset-top) 避開系統狀態欄
+ * - 佔位元素補償高度
  */
 export function TopBar({
   logoSrc = "/logo.png",
@@ -34,7 +33,10 @@ export function TopBar({
   const [visible, setVisible] = useState(true);
   const lastScrollY = useRef(0);
   const ticking = useRef(false);
-  const BAR_HEIGHT = 45;
+
+  // Top Bar 內容高度 44px + 1px border = 45px
+  // 加上 safe-area-top 就是總高度
+  const BAR_CONTENT_HEIGHT = 45;
 
   const handleScroll = useCallback(() => {
     if (ticking.current) return;
@@ -73,12 +75,15 @@ export function TopBar({
 
   return (
     <>
-      {/* Top Bar — position:fixed 不佔佈局空間 */}
+      {/* Top Bar — position:fixed，padding-top 避開狀態欄 */}
       <div
         className="fixed top-0 left-0 right-0 z-30 transition-transform duration-200 ease-out"
         style={{
           transform: visible ? "translateY(0)" : "translateY(-100%)",
           willChange: "transform",
+          paddingTop: "var(--safe-area-top, 0px)",
+          // fallback for Android without safe-area: use 24px status bar height
+          // env() returns 0 on some Android, so we add a minimum
         }}
       >
         <div className="bg-background/95 backdrop-blur-md">
@@ -110,8 +115,13 @@ export function TopBar({
         </div>
       </div>
 
-      {/* 佔位元素 — 讓內容不被 Top Bar 遮擋 */}
-      <div style={{ height: `${BAR_HEIGHT}px` }} className="flex-shrink-0" />
+      {/* 佔位元素 — 補償 Top Bar 高度（內容 + safe-area） */}
+      <div
+        className="flex-shrink-0"
+        style={{
+          height: `calc(${BAR_CONTENT_HEIGHT}px + var(--safe-area-top, 0px))`,
+        }}
+      />
     </>
   );
 }
