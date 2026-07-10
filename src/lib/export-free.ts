@@ -3,8 +3,8 @@
  *
  * - 只匯出當日交易記錄
  * - 格式：CSV / TSV
- * - 欄位：日期、訂單、商品名稱、數量、分類、金額、備註
- * - 用訂單編號區分每一單的商品
+ * - 欄位：日期、單號、商品名稱、數量、分類、金額、備註
+ * - 單號用 1, 2, 3... 序號（按時間順序，同一 orderId = 同一單）
  * - 日期格式：YYYY-MM-DD
  * - 金額：兩位小數
  * - 按日期降序排列（最新在最上方）
@@ -81,15 +81,6 @@ function getCategoryLabel(category: CategoryId, t: Translations): string {
 }
 
 /**
- * 取得訂單編號（取後 6 碼作為識別）
- */
-function getOrderLabel(tx: Transaction): string {
-  if (!tx.orderId) return "-";
-  // 取 orderId 後 6 碼
-  return tx.orderId.slice(-6).toUpperCase();
-}
-
-/**
  * 跳脫 CSV 欄位
  */
 function escapeCSVField(value: string, separator: string): string {
@@ -101,7 +92,12 @@ function escapeCSVField(value: string, separator: string): string {
 }
 
 /**
- * 產生匯出內容（含訂單分組、數量、總金額）
+ * 產生匯出內容（含單號分組、數量、總金額）
+ *
+ * 單號邏輯：
+ * - 同一個 orderId = 同一單
+ * - 按時間順序編號 1, 2, 3...
+ * - 沒有 orderId 的交易各別為獨立的單
  */
 export function generateExportContent({ transactions, products, format, t }: ExportOptions): {
   content: string;
@@ -111,6 +107,18 @@ export function generateExportContent({ transactions, products, format, t }: Exp
   const todayTx = getTodayTransactions(transactions);
   // 按日期降序排列（最新在最上方）
   const sorted = [...todayTx].sort((a, b) => b.createdAt - a.createdAt);
+
+  // 建立 orderId → 單號映射（按最早出現順序編號）
+  const orderMap = new Map<string, number>();
+  let orderCounter = 1;
+  // 先按時間正序建立映射（讓最早的單是 1）
+  const chronological = [...sorted].sort((a, b) => a.createdAt - b.createdAt);
+  for (const tx of chronological) {
+    const key = tx.orderId || `solo_${tx.id}`; // 沒有 orderId 的用 tx.id 作為獨立 key
+    if (!orderMap.has(key)) {
+      orderMap.set(key, orderCounter++);
+    }
+  }
 
   const separator = format === "csv" ? "," : "\t";
   const headers = [
@@ -127,9 +135,11 @@ export function generateExportContent({ transactions, products, format, t }: Exp
   const headerLine = headers.map((h) => escapeCSVField(h, separator)).join(separator);
 
   const dataLines = sorted.map((tx) => {
+    const key = tx.orderId || `solo_${tx.id}`;
+    const orderNum = orderMap.get(key) || 0;
     const fields = [
       formatDate(tx.createdAt),
-      getOrderLabel(tx),
+      String(orderNum),
       getProductName(tx, products),
       String(tx.qty || 1),
       getCategoryLabel(tx.category, t),
@@ -262,6 +272,7 @@ export async function exportTodayData(
 
 /**
  * 打開已匯出的檔案
+ * 用 Capacitor Filesystem.openFile（Android 會用系統的檔案檢視器打開）
  */
 export async function openExportedFile(path: string, t: Translations): Promise<{ success: boolean; message: string }> {
   try {
@@ -270,18 +281,41 @@ export async function openExportedFile(path: string, t: Translations): Promise<{
       return { success: false, message: t.export_open_web_only };
     }
 
-    const { Filesystem } = await import("@capacitor/filesystem");
-    const uriResult = await Filesystem.getUri({ path: path.replace(/^file:\/\//, ""), directory: "DOCUMENTS" });
+    const { Filesystem, Directory } = await import("@capacitor/filesystem");
 
+    // path 可能是 file:///data/user/0/.../files/marketledger_20260710.csv
+    // 或只是檔名 marketledger_20260710.csv
+    let filename = path;
+    if (path.includes("/")) {
+      filename = path.split("/").pop() || path;
+    }
+
+    // 用 Filesystem.openFile 讓系統用合適的 app 打開
     try {
-      const { Browser } = await import("@capacitor/browser");
-      await Browser.open({ url: uriResult.uri });
+      await Filesystem.openFile({
+        path: filename,
+        directory: Directory.Documents,
+      });
       return { success: true, message: t.export_opening };
-    } catch {
-      window.open(uriResult.uri, "_blank");
-      return { success: true, message: t.export_opening };
+    } catch (e1) {
+      console.error("[Export] openFile 失敗:", e1);
+      // fallback: 用 getUri + Browser
+      try {
+        const uriResult = await Filesystem.getUri({
+          path: filename,
+          directory: Directory.Documents,
+        });
+        console.log("[Export] 檔案 URI:", uriResult.uri);
+        const { Browser } = await import("@capacitor/browser");
+        await Browser.open({ url: uriResult.uri });
+        return { success: true, message: t.export_opening };
+      } catch (e2) {
+        console.error("[Export] getUri+Browser 也失敗:", e2);
+        return { success: false, message: t.export_open_failed + ": " + (e2 as Error).message };
+      }
     }
   } catch (e) {
+    console.error("[Export] openExportedFile 例外:", e);
     return { success: false, message: t.export_open_failed + ": " + e };
   }
 }

@@ -391,18 +391,6 @@ export function SettingsPage() {
           <div className="pt-2 space-y-3">
             <p className="text-[10px] text-muted-foreground px-1">{t.export_free_desc}</p>
 
-            {/* 今日統計 */}
-            <div className="grid grid-cols-2 gap-2 px-1">
-              <div className="bg-muted/40 rounded-lg px-3 py-2">
-                <p className="text-[10px] text-muted-foreground">{t.export_count_label}</p>
-                <p className="text-sm font-bold text-foreground">{todayCount}</p>
-              </div>
-              <div className="bg-muted/40 rounded-lg px-3 py-2">
-                <p className="text-[10px] text-muted-foreground">{t.export_total_label}</p>
-                <p className="text-sm font-bold text-foreground">{todayTotal.toFixed(2)}</p>
-              </div>
-            </div>
-
             {/* Google 登入狀態提示 */}
             {!isGoogleLoggedIn && (
               <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
@@ -452,21 +440,11 @@ export function SettingsPage() {
             )}
 
             {/* 匯出後顯示檔案位置 + 打開檔案按鈕 */}
-            {exportedPath && exportedInfo && (
+            {exportedPath && (
               <div className="space-y-2">
-                <div className="bg-muted/40 rounded-lg px-3 py-2 space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] text-muted-foreground">{t.export_count_label}</span>
-                    <span className="text-xs font-medium text-foreground">{exportedInfo.count}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] text-muted-foreground">{t.export_total_label}</span>
-                    <span className="text-xs font-medium text-foreground">{exportedInfo.total.toFixed(2)}</span>
-                  </div>
-                  <div className="border-t border-border/40 pt-1 mt-1">
-                    <p className="text-[10px] text-muted-foreground">{t.export_location}</p>
-                    <p className="text-[10px] text-foreground break-all">{exportedPath}</p>
-                  </div>
+                <div className="bg-muted/40 rounded-lg px-3 py-2">
+                  <p className="text-[10px] text-muted-foreground">{t.export_location}</p>
+                  <p className="text-[10px] text-foreground break-all">{exportedPath}</p>
                 </div>
                 <button
                   onClick={handleOpenFile}
