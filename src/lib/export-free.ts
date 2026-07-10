@@ -188,34 +188,57 @@ export async function exportToFilesystem(
   content: string,
   filename: string
 ): Promise<{ success: boolean; message: string; path?: string }> {
+  // 先檢查是否在原生環境
+  let isNative = false;
+  try {
+    const { Capacitor } = await import("@capacitor/core");
+    isNative = Capacitor.isNativePlatform();
+    console.log("[Export] isNativePlatform:", isNative);
+    console.log("[Export] platform:", Capacitor.getPlatform());
+  } catch (e) {
+    console.error("[Export] 無法載入 Capacitor:", e);
+  }
+
+  if (!isNative) {
+    console.log("[Export] 非原生環境，走 web 下載");
+    return exportToWeb(content, filename);
+  }
+
+  // 原生環境 — 用 Filesystem
   try {
     const { Filesystem, Directory, Encoding } = await import("@capacitor/filesystem");
-    const { Capacitor } = await import("@capacitor/core");
 
-    if (!Capacitor.isNativePlatform()) {
-      return exportToWeb(content, filename);
-    }
+    console.log("[Export] 寫入檔案:", filename);
 
     // 寫入檔案
-    await Filesystem.writeFile({
+    const writeResult = await Filesystem.writeFile({
       path: filename,
       data: content,
       directory: Directory.Documents,
       encoding: Encoding.UTF8,
       recursive: true,
     });
+    console.log("[Export] writeFile 結果:", JSON.stringify(writeResult));
 
-    // 用 getUri 取得完整檔案路徑（writeFile 回傳的 uri 可能不完整）
-    let fullPath = filename;
+    // 用 getUri 取得完整檔案路徑
+    let fullPath = writeResult.uri || filename;
     try {
       const uriResult = await Filesystem.getUri({
         path: filename,
         directory: Directory.Documents,
       });
+      console.log("[Export] getUri 結果:", uriResult.uri);
       fullPath = uriResult.uri;
     } catch (e) {
-      console.warn("[Export] getUri 失敗，使用檔名:", e);
+      console.warn("[Export] getUri 失敗:", e);
     }
+
+    // 如果 fullPath 只是檔名（沒有 /），加上提示路徑
+    if (!fullPath.includes("/")) {
+      fullPath = `Documents/${fullPath}`;
+    }
+
+    console.log("[Export] 最終路徑:", fullPath);
 
     return {
       success: true,
@@ -224,6 +247,7 @@ export async function exportToFilesystem(
     };
   } catch (e) {
     console.error("[Export] Filesystem 匯出失敗:", e);
+    // fallback 到 web 下載
     return exportToWeb(content, filename);
   }
 }
@@ -275,7 +299,9 @@ export async function exportTodayData(
 
   return {
     success: result.success,
-    message: result.success ? t.export_success : result.message,
+    message: result.success
+      ? (result.path ? `${t.export_success}\n${t.export_location}: ${result.path}` : t.export_success)
+      : result.message,
     path: result.path,
     filename,
     count,
