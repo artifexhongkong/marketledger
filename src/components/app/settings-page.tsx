@@ -32,6 +32,7 @@ export function SettingsPage() {
   const {
     currency, setCurrency,
     transactions, clearAll,
+    products,
     hapticEnabled, hapticStrength,
     setHapticEnabled, setHapticStrength,
     darkMode, setDarkMode,
@@ -42,8 +43,11 @@ export function SettingsPage() {
   const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [showFreeExportMenu, setShowFreeExportMenu] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
+  const [freeExportStatus, setFreeExportStatus] = useState<string | null>(null);
+  const [freeExporting, setFreeExporting] = useState(false);
 
   // 版本檢查狀態
   const [versionStatus, setVersionStatus] = useState<VersionStatus>("idle");
@@ -123,6 +127,31 @@ export function SettingsPage() {
     URL.revokeObjectURL(url);
     setShowExportMenu(false);
   };
+
+  // ── 免費會員匯出（當日 CSV/TSV）──
+  const handleFreeExport = async (format: "csv" | "tsv") => {
+    haptic("tap");
+    setFreeExporting(true);
+    setFreeExportStatus(null);
+    try {
+      const { exportTodayData } = await import("@/lib/export-free");
+      const result = await exportTodayData(transactions, products, format, t);
+      setFreeExportStatus(result.message);
+      haptic(result.success ? "success" : "error");
+    } catch (e) {
+      setFreeExportStatus(t.export_failed + ": " + e);
+      haptic("error");
+    } finally {
+      setFreeExporting(false);
+      // 3 秒後清除狀態
+      setTimeout(() => setFreeExportStatus(null), 3000);
+    }
+  };
+
+  // 計算今日交易數
+  const todayCount = transactions.filter((tx) =>
+    new Date(tx.createdAt).toDateString() === new Date().toDateString()
+  ).length;
 
   const handleClear = () => {
     clearAll();
@@ -314,6 +343,58 @@ export function SettingsPage() {
 
       {/* 資料管理群組 */}
       <SettingsGroup title={t.settings_data_management}>
+        {/* 免費會員匯出（當日 CSV/TSV） */}
+        <SettingsRow
+          icon={Download}
+          iconBg="bg-blue-100"
+          iconColor="text-blue-600"
+          label={t.export_free_title}
+          value={`${t.export_free_today} ${todayCount} ${t.export_records}`}
+          onClick={() => setShowFreeExportMenu(!showFreeExportMenu)}
+          expanded={showFreeExportMenu}
+        >
+          <div className="pt-2 space-y-2">
+            <p className="text-[10px] text-muted-foreground px-1">{t.export_free_desc}</p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => handleFreeExport("csv")}
+                disabled={freeExporting}
+                className="flex flex-col items-center gap-1 py-3 rounded-lg border-2 border-border bg-card hover:border-blue-400 transition disabled:opacity-50"
+              >
+                {freeExporting ? (
+                  <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
+                ) : (
+                  <FileSpreadsheet className="w-5 h-5 text-blue-600" />
+                )}
+                <span className="text-xs font-medium text-foreground">{t.export_free_csv}</span>
+                <span className="text-[10px] text-muted-foreground">{t.export_free_only}</span>
+              </button>
+              <button
+                onClick={() => handleFreeExport("tsv")}
+                disabled={freeExporting}
+                className="flex flex-col items-center gap-1 py-3 rounded-lg border-2 border-border bg-card hover:border-blue-400 transition disabled:opacity-50"
+              >
+                {freeExporting ? (
+                  <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
+                ) : (
+                  <FileJson className="w-5 h-5 text-blue-600" />
+                )}
+                <span className="text-xs font-medium text-foreground">{t.export_free_tsv}</span>
+                <span className="text-[10px] text-muted-foreground">{t.export_free_only}</span>
+              </button>
+            </div>
+            {freeExportStatus && (
+              <div className={`text-[11px] px-2 py-1.5 rounded-md ${
+                freeExportStatus.includes(t.export_success) || freeExportStatus.includes("成功") || freeExportStatus.includes("success") || freeExportStatus.includes("성공") || freeExportStatus.includes("成功")
+                  ? "bg-emerald-50 text-emerald-700"
+                  : "bg-rose-50 text-rose-700"
+              }`}>
+                {freeExportStatus}
+              </div>
+            )}
+          </div>
+        </SettingsRow>
+
         <SettingsRow
           icon={Download}
           iconBg="bg-emerald-100"

@@ -250,6 +250,22 @@ export interface Translations {
   settings_open_browser: string;
   settings_version_info: string;
   settings_export_count: string;
+  // 免費會員匯出（當日 CSV/TSV）
+  export_free_title: string;
+  export_free_desc: string;
+  export_free_today: string;
+  export_free_csv: string;
+  export_free_tsv: string;
+  export_header_date: string;
+  export_header_product: string;
+  export_header_category: string;
+  export_header_amount: string;
+  export_header_note: string;
+  export_no_data: string;
+  export_success: string;
+  export_records: string;
+  export_failed: string;
+  export_free_only: string;
   settings_about: string;
   settings_developer: string;
   settings_tech_stack: string;
@@ -647,6 +663,22 @@ const zhTW: Translations = {
   settings_open_browser: "已開啟瀏覽器下載",
   settings_version_info: "版本資訊",
   settings_export_count: "筆交易",
+  // 免費會員匯出（當日 CSV/TSV）
+  export_free_title: "匯出當日記錄",
+  export_free_desc: "免費版可匯出當日銷售記錄",
+  export_free_today: "今日",
+  export_free_csv: "CSV",
+  export_free_tsv: "TSV",
+  export_header_date: "日期",
+  export_header_product: "商品名稱",
+  export_header_category: "分類",
+  export_header_amount: "金額",
+  export_header_note: "備註",
+  export_no_data: "今日沒有交易記錄",
+  export_success: "匯出成功",
+  export_records: "筆記錄",
+  export_failed: "匯出失敗",
+  export_free_only: "免費版限當日",
   settings_about: "關於",
   settings_developer: "開發者",
   settings_tech_stack: "技術棧",
@@ -1006,6 +1038,22 @@ const zhCN: Translations = {
   settings_open_browser: "已开启浏览器下载",
   settings_version_info: "版本信息",
   settings_export_count: "笔交易",
+  // 免费会员汇出（当日 CSV/TSV）
+  export_free_title: "汇出当日记录",
+  export_free_desc: "免费版可汇出当日销售记录",
+  export_free_today: "今日",
+  export_free_csv: "CSV",
+  export_free_tsv: "TSV",
+  export_header_date: "日期",
+  export_header_product: "商品名称",
+  export_header_category: "分类",
+  export_header_amount: "金额",
+  export_header_note: "备注",
+  export_no_data: "今日没有交易记录",
+  export_success: "汇出成功",
+  export_records: "笔记录",
+  export_failed: "汇出失败",
+  export_free_only: "免费版限当日",
   settings_about: "关于",
   settings_developer: "开发者",
   settings_tech_stack: "技术栈",
@@ -1384,6 +1432,22 @@ const en: Translations = {
   settings_open_browser: "Opened browser to download",
   settings_version_info: "Version Info",
   settings_export_count: "transactions",
+  // Free member export (today CSV/TSV)
+  export_free_title: "Export Today's Records",
+  export_free_desc: "Free version can export today's sales records",
+  export_free_today: "Today",
+  export_free_csv: "CSV",
+  export_free_tsv: "TSV",
+  export_header_date: "Date",
+  export_header_product: "Product",
+  export_header_category: "Category",
+  export_header_amount: "Amount",
+  export_header_note: "Note",
+  export_no_data: "No transactions today",
+  export_success: "Export successful",
+  export_records: "records",
+  export_failed: "Export failed",
+  export_free_only: "Free version: today only",
   settings_about: "About",
   settings_developer: "Developer",
   settings_tech_stack: "Tech Stack",
@@ -1764,6 +1828,22 @@ const ja: Translations = {
   settings_open_browser: "ブラウザでダウンロードを開きました",
   settings_version_info: "バージョン情報",
   settings_export_count: "件",
+  // 無料会員エクスポート（当日 CSV/TSV）
+  export_free_title: "当日の記録をエクスポート",
+  export_free_desc: "無料版は当日の販売記録をエクスポートできます",
+  export_free_today: "今日",
+  export_free_csv: "CSV",
+  export_free_tsv: "TSV",
+  export_header_date: "日付",
+  export_header_product: "商品名",
+  export_header_category: "カテゴリ",
+  export_header_amount: "金額",
+  export_header_note: "備考",
+  export_no_data: "今日の取引記録はありません",
+  export_success: "エクスポート成功",
+  export_records: "件の記録",
+  export_failed: "エクスポート失敗",
+  export_free_only: "無料版は当日のみ",
   settings_about: "について",
   settings_developer: "開発者",
   settings_tech_stack: "技術スタック",
@@ -2143,6 +2223,22 @@ const ko: Translations = {
   settings_open_browser: "브라우저에서 다운로드를 열었습니다",
   settings_version_info: "버전 정보",
   settings_export_count: "건",
+  // 무료 회원 내보내기 (당일 CSV/TSV)
+  export_free_title: "오늘 기록 내보내기",
+  export_free_desc: "무료 버전은 오늘의 판매 기록을 내보낼 수 있습니다",
+  export_free_today: "오늘",
+  export_free_csv: "CSV",
+  export_free_tsv: "TSV",
+  export_header_date: "날짜",
+  export_header_product: "상품명",
+  export_header_category: "카테고리",
+  export_header_amount: "금액",
+  export_header_note: "메모",
+  export_no_data: "오늘 거래 기록이 없습니다",
+  export_success: "내보내기 성공",
+  export_records: "건의 기록",
+  export_failed: "내보내기 실패",
+  export_free_only: "무료 버전: 당일만",
   settings_about: "정보",
   settings_developer: "개발자",
   settings_tech_stack: "기술 스택",
