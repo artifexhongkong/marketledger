@@ -7,7 +7,8 @@
  * - 日期格式：YYYY-MM-DD
  * - 金額：兩位小數
  * - 按日期降序排列（最新在最上方）
- * - 儲存到 Downloads 目錄（用 Capacitor Filesystem）
+ * - 最後加總數量和總金額
+ * - 儲存到 Documents 目錄（用 Capacitor Filesystem）
  * - 加入 UTF-8 BOM 避免 Excel 開啟亂碼
  */
 
@@ -22,6 +23,15 @@ interface ExportOptions {
   products: Product[];
   format: ExportFormat;
   t: Translations;
+}
+
+export interface ExportResult {
+  success: boolean;
+  message: string;
+  path?: string;
+  filename?: string;
+  count?: number;
+  totalAmount?: number;
 }
 
 /**
@@ -65,17 +75,15 @@ function getProductName(tx: Transaction, products: Product[]): string {
 function getCategoryLabel(category: CategoryId, t: Translations): string {
   const info = getCategoryInfo(category);
   if (!info) return "";
-  // 用 labelKey 從 i18n 取得翻譯
   const labelKey = info.labelKey as keyof Translations;
   return (t[labelKey] as string) || info.label;
 }
 
 /**
- * 跳脫 CSV 欄位（包含逗號、引號、換行要用引號包住）
+ * 跳脫 CSV 欄位
  */
 function escapeCSVField(value: string, separator: string): string {
   if (!value) return "";
-  // 如果包含 separator、引號、或換行，用引號包住並跳脫內部引號
   if (value.includes(separator) || value.includes('"') || value.includes("\n") || value.includes("\r")) {
     return `"${value.replace(/"/g, '""')}"`;
   }
@@ -83,12 +91,14 @@ function escapeCSVField(value: string, separator: string): string {
 }
 
 /**
- * 產生匯出內容
+ * 產生匯出內容（含數量和總金額）
  */
-export function generateExportContent({ transactions, products, format, t }: ExportOptions): string {
+export function generateExportContent({ transactions, products, format, t }: ExportOptions): {
+  content: string;
+  count: number;
+  totalAmount: number;
+} {
   const todayTx = getTodayTransactions(transactions);
-
-  // 按日期降序排列（最新在最上方）
   const sorted = [...todayTx].sort((a, b) => b.createdAt - a.createdAt);
 
   const separator = format === "csv" ? "," : "\t";
@@ -100,13 +110,9 @@ export function generateExportContent({ transactions, products, format, t }: Exp
     t.export_header_note,
   ];
 
-  // UTF-8 BOM（避免 Excel 開啟亂碼）
   const BOM = "\uFEFF";
-
-  // 表頭
   const headerLine = headers.map((h) => escapeCSVField(h, separator)).join(separator);
 
-  // 資料行
   const dataLines = sorted.map((tx) => {
     const fields = [
       formatDate(tx.createdAt),
@@ -118,7 +124,22 @@ export function generateExportContent({ transactions, products, format, t }: Exp
     return fields.map((f) => escapeCSVField(f, separator)).join(separator);
   });
 
-  return BOM + headerLine + "\n" + dataLines.join("\n");
+  // 計算總金額和數量
+  const totalAmount = sorted.reduce((sum, tx) => sum + tx.amount, 0);
+  const count = sorted.length;
+
+  // 加入合計行
+  const summaryLine = [
+    t.export_summary_date || "",
+    t.export_summary_count + ": " + count,
+    "",
+    t.export_summary_total + ": " + formatAmount(totalAmount),
+    "",
+  ].map((f) => escapeCSVField(f, separator)).join(separator);
+
+  const content = BOM + headerLine + "\n" + dataLines.join("\n") + "\n" + summaryLine;
+
+  return { content, count, totalAmount };
 }
 
 /**
@@ -133,24 +154,20 @@ export function getExportFilename(format: ExportFormat): string {
 }
 
 /**
- * 匯出到 Downloads 目錄（用 Capacitor Filesystem）
- * 返回成功/失敗訊息
+ * 匯出到 Documents 目錄
  */
 export async function exportToFilesystem(
   content: string,
   filename: string
 ): Promise<{ success: boolean; message: string; path?: string }> {
   try {
-    // 動態載入 Capacitor Filesystem
     const { Filesystem, Directory, Encoding } = await import("@capacitor/filesystem");
     const { Capacitor } = await import("@capacitor/core");
 
     if (!Capacitor.isNativePlatform()) {
-      // 網頁環境 — 用 Blob 下載
       return exportToWeb(content, filename);
     }
 
-    // 原生環境 — 用 Filesystem 寫入 Downloads
     const result = await Filesystem.writeFile({
       path: filename,
       data: content,
@@ -161,20 +178,25 @@ export async function exportToFilesystem(
 
     return {
       success: true,
-      message: `已匯出到: ${result.uri}`,
+      message: t_export_saved_to + result.uri,
       path: result.uri,
     };
   } catch (e) {
     console.error("[Export] Filesystem 匯出失敗:", e);
-    // fallback 到 web 下載
     return exportToWeb(content, filename);
   }
 }
 
+// 暫存 i18n（避免循環依賴）
+let t_export_saved_to = "已匯出到: ";
+export function setExportI18n(savedTo: string) {
+  t_export_saved_to = savedTo;
+}
+
 /**
- * 網頁環境下載（Blob）
+ * 網頁環境下載
  */
-async function exportToWeb(content: string, filename: string): Promise<{ success: boolean; message: string }> {
+async function exportToWeb(content: string, filename: string): Promise<{ success: boolean; message: string; path?: string }> {
   try {
     const blob = new Blob([content], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -183,7 +205,7 @@ async function exportToWeb(content: string, filename: string): Promise<{ success
     a.download = filename;
     a.click();
     URL.revokeObjectURL(url);
-    return { success: true, message: `已下載: ${filename}` };
+    return { success: true, message: `已下載: ${filename}`, path: filename };
   } catch (e) {
     return { success: false, message: `匯出失敗: ${e}` };
   }
@@ -197,21 +219,57 @@ export async function exportTodayData(
   products: Product[],
   format: ExportFormat,
   t: Translations
-): Promise<{ success: boolean; message: string }> {
+): Promise<ExportResult> {
   const todayTx = getTodayTransactions(transactions);
 
   if (todayTx.length === 0) {
     return { success: false, message: t.export_no_data };
   }
 
-  const content = generateExportContent({ transactions, products, format, t });
+  // 設定 i18n
+  setExportI18n(t.export_saved_to);
+
+  const { content, count, totalAmount } = generateExportContent({ transactions, products, format, t });
   const filename = getExportFilename(format);
   const result = await exportToFilesystem(content, filename);
 
   return {
     success: result.success,
     message: result.success
-      ? `${t.export_success} (${todayTx.length} ${t.export_records})`
+      ? `${t.export_success}`
       : result.message,
+    path: result.path,
+    filename,
+    count,
+    totalAmount,
   };
+}
+
+/**
+ * 打開已匯出的檔案（用 Capacitor Filesystem + Browser/OpenDocument）
+ */
+export async function openExportedFile(path: string, t: Translations): Promise<{ success: boolean; message: string }> {
+  try {
+    const { Capacitor } = await import("@capacitor/core");
+    if (!Capacitor.isNativePlatform()) {
+      return { success: false, message: t.export_open_web_only };
+    }
+
+    // 用 Filesystem.getUri 取得檔案的真實 URI
+    const { Filesystem } = await import("@capacitor/filesystem");
+    const uriResult = await Filesystem.getUri({ path: path.replace(/^file:\/\//, ""), directory: "DOCUMENTS" });
+
+    // 用 Browser plugin 或 intent 打開
+    try {
+      const { Browser } = await import("@capacitor/browser");
+      await Browser.open({ url: uriResult.uri });
+      return { success: true, message: t.export_opening };
+    } catch {
+      // fallback: 用 window.open
+      window.open(uriResult.uri, "_blank");
+      return { success: true, message: t.export_opening };
+    }
+  } catch (e) {
+    return { success: false, message: t.export_open_failed + ": " + e };
+  }
 }

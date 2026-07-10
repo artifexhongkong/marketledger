@@ -129,22 +129,49 @@ export function SettingsPage() {
   };
 
   // ── 免費會員匯出（當日 CSV/TSV）──
+  const [exportedPath, setExportedPath] = useState<string | null>(null);
+  const [exportedInfo, setExportedInfo] = useState<{ count: number; total: number; format: string } | null>(null);
+
   const handleFreeExport = async (format: "csv" | "tsv") => {
     haptic("tap");
     setFreeExporting(true);
     setFreeExportStatus(null);
+    setExportedPath(null);
+    setExportedInfo(null);
     try {
       const { exportTodayData } = await import("@/lib/export-free");
       const result = await exportTodayData(transactions, products, format, t);
-      setFreeExportStatus(result.message);
+      if (result.success) {
+        setExportedPath(result.path || null);
+        setExportedInfo({
+          count: result.count || 0,
+          total: result.totalAmount || 0,
+          format,
+        });
+        setFreeExportStatus(t.export_success);
+      } else {
+        setFreeExportStatus(result.message);
+      }
       haptic(result.success ? "success" : "error");
     } catch (e) {
       setFreeExportStatus(t.export_failed + ": " + e);
       haptic("error");
     } finally {
       setFreeExporting(false);
-      // 3 秒後清除狀態
+    }
+  };
+
+  // 打開已匯出的檔案
+  const handleOpenFile = async () => {
+    if (!exportedPath) return;
+    haptic("tap");
+    try {
+      const { openExportedFile } = await import("@/lib/export-free");
+      const result = await openExportedFile(exportedPath, t);
+      setFreeExportStatus(result.message);
       setTimeout(() => setFreeExportStatus(null), 3000);
+    } catch (e) {
+      setFreeExportStatus(t.export_open_failed + ": " + e);
     }
   };
 
@@ -152,6 +179,14 @@ export function SettingsPage() {
   const todayCount = transactions.filter((tx) =>
     new Date(tx.createdAt).toDateString() === new Date().toDateString()
   ).length;
+
+  // 今日總金額
+  const todayTotal = transactions
+    .filter((tx) => new Date(tx.createdAt).toDateString() === new Date().toDateString())
+    .reduce((sum, tx) => sum + tx.amount, 0);
+
+  // 是否已登入 Google
+  const isGoogleLoggedIn = !!user;
 
   const handleClear = () => {
     clearAll();
@@ -343,7 +378,7 @@ export function SettingsPage() {
 
       {/* 資料管理群組 */}
       <SettingsGroup title={t.settings_data_management}>
-        {/* 免費會員匯出（當日 CSV/TSV） */}
+        {/* 免費會員匯出（當日 CSV/TSV）— 只在免費會員或未登入 Google 顯示 */}
         <SettingsRow
           icon={Download}
           iconBg="bg-blue-100"
@@ -353,12 +388,33 @@ export function SettingsPage() {
           onClick={() => setShowFreeExportMenu(!showFreeExportMenu)}
           expanded={showFreeExportMenu}
         >
-          <div className="pt-2 space-y-2">
+          <div className="pt-2 space-y-3">
             <p className="text-[10px] text-muted-foreground px-1">{t.export_free_desc}</p>
+
+            {/* 今日統計 */}
+            <div className="grid grid-cols-2 gap-2 px-1">
+              <div className="bg-muted/40 rounded-lg px-3 py-2">
+                <p className="text-[10px] text-muted-foreground">{t.export_count_label}</p>
+                <p className="text-sm font-bold text-foreground">{todayCount}</p>
+              </div>
+              <div className="bg-muted/40 rounded-lg px-3 py-2">
+                <p className="text-[10px] text-muted-foreground">{t.export_total_label}</p>
+                <p className="text-sm font-bold text-foreground">{todayTotal.toFixed(2)}</p>
+              </div>
+            </div>
+
+            {/* Google 登入狀態提示 */}
+            {!isGoogleLoggedIn && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                <p className="text-[10px] text-amber-700">{t.export_ad_hint}</p>
+              </div>
+            )}
+
+            {/* CSV / TSV 按鈕 */}
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => handleFreeExport("csv")}
-                disabled={freeExporting}
+                disabled={freeExporting || todayCount === 0}
                 className="flex flex-col items-center gap-1 py-3 rounded-lg border-2 border-border bg-card hover:border-blue-400 transition disabled:opacity-50"
               >
                 {freeExporting ? (
@@ -371,7 +427,7 @@ export function SettingsPage() {
               </button>
               <button
                 onClick={() => handleFreeExport("tsv")}
-                disabled={freeExporting}
+                disabled={freeExporting || todayCount === 0}
                 className="flex flex-col items-center gap-1 py-3 rounded-lg border-2 border-border bg-card hover:border-blue-400 transition disabled:opacity-50"
               >
                 {freeExporting ? (
@@ -383,44 +439,44 @@ export function SettingsPage() {
                 <span className="text-[10px] text-muted-foreground">{t.export_free_only}</span>
               </button>
             </div>
+
+            {/* 匯出結果 */}
             {freeExportStatus && (
               <div className={`text-[11px] px-2 py-1.5 rounded-md ${
-                freeExportStatus.includes(t.export_success) || freeExportStatus.includes("成功") || freeExportStatus.includes("success") || freeExportStatus.includes("성공") || freeExportStatus.includes("成功")
+                freeExportStatus === t.export_success
                   ? "bg-emerald-50 text-emerald-700"
                   : "bg-rose-50 text-rose-700"
               }`}>
                 {freeExportStatus}
               </div>
             )}
-          </div>
-        </SettingsRow>
 
-        <SettingsRow
-          icon={Download}
-          iconBg="bg-emerald-100"
-          iconColor="text-emerald-600"
-          label={t.settings_export}
-          value={`${transactions.length} ${t.settings_export_count}`}
-          onClick={() => setShowExportMenu(!showExportMenu)}
-          expanded={showExportMenu}
-        >
-          <div className="grid grid-cols-2 gap-2 pt-2">
-            <button
-              onClick={() => exportData("csv")}
-              className="flex flex-col items-center gap-1 py-3 rounded-lg border-2 border-border bg-card hover:border-emerald-400 transition"
-            >
-              <FileSpreadsheet className="w-5 h-5 text-emerald-600" />
-              <span className="text-xs font-medium text-foreground">CSV</span>
-              <span className="text-[10px] text-muted-foreground">{t.settings_export_excel}</span>
-            </button>
-            <button
-              onClick={() => exportData("json")}
-              className="flex flex-col items-center gap-1 py-3 rounded-lg border-2 border-border bg-card hover:border-emerald-400 transition"
-            >
-              <FileJson className="w-5 h-5 text-emerald-600" />
-              <span className="text-xs font-medium text-foreground">JSON</span>
-              <span className="text-[10px] text-muted-foreground">{t.settings_export_backup}</span>
-            </button>
+            {/* 匯出後顯示檔案位置 + 打開檔案按鈕 */}
+            {exportedPath && exportedInfo && (
+              <div className="space-y-2">
+                <div className="bg-muted/40 rounded-lg px-3 py-2 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-muted-foreground">{t.export_count_label}</span>
+                    <span className="text-xs font-medium text-foreground">{exportedInfo.count}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-muted-foreground">{t.export_total_label}</span>
+                    <span className="text-xs font-medium text-foreground">{exportedInfo.total.toFixed(2)}</span>
+                  </div>
+                  <div className="border-t border-border/40 pt-1 mt-1">
+                    <p className="text-[10px] text-muted-foreground">{t.export_location}</p>
+                    <p className="text-[10px] text-foreground break-all">{exportedPath}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleOpenFile}
+                  className="w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium transition"
+                >
+                  <FileSpreadsheet className="w-4 h-4" />
+                  {t.export_open_file}
+                </button>
+              </div>
+            )}
           </div>
         </SettingsRow>
 

@@ -266,6 +266,19 @@ export interface Translations {
   export_records: string;
   export_failed: string;
   export_free_only: string;
+  export_summary_count: string;
+  export_summary_total: string;
+  export_summary_date: string;
+  export_saved_to: string;
+  export_open_file: string;
+  export_opening: string;
+  export_open_failed: string;
+  export_open_web_only: string;
+  export_count_label: string;
+  export_total_label: string;
+  export_login_required: string;
+  export_ad_hint: string;
+  export_location: string;
   settings_about: string;
   settings_developer: string;
   settings_tech_stack: string;
@@ -679,6 +692,19 @@ const zhTW: Translations = {
   export_records: "筆記錄",
   export_failed: "匯出失敗",
   export_free_only: "免費版限當日",
+  export_summary_count: "數量",
+  export_summary_total: "總金額",
+  export_summary_date: "",
+  export_saved_to: "已匯出到：",
+  export_open_file: "打開檔案",
+  export_opening: "正在打開檔案...",
+  export_open_failed: "打開檔案失敗",
+  export_open_web_only: "僅支援 App 内打開",
+  export_count_label: "數量",
+  export_total_label: "總金額",
+  export_login_required: "請先登入 Google 帳號",
+  export_ad_hint: "未登入 Google 帳號，未來將加入觀看廣告匯出功能",
+  export_location: "檔案位置",
   settings_about: "關於",
   settings_developer: "開發者",
   settings_tech_stack: "技術棧",
@@ -1054,6 +1080,19 @@ const zhCN: Translations = {
   export_records: "笔记录",
   export_failed: "汇出失败",
   export_free_only: "免费版限当日",
+  export_summary_count: "数量",
+  export_summary_total: "总金额",
+  export_summary_date: "",
+  export_saved_to: "已汇出到：",
+  export_open_file: "打开文件",
+  export_opening: "正在打开文件...",
+  export_open_failed: "打开文件失败",
+  export_open_web_only: "仅支援 App 内打开",
+  export_count_label: "数量",
+  export_total_label: "总金额",
+  export_login_required: "请先登入 Google 帐号",
+  export_ad_hint: "未登入 Google 帐号，未来将加入观看广告汇出功能",
+  export_location: "文件位置",
   settings_about: "关于",
   settings_developer: "开发者",
   settings_tech_stack: "技术栈",
@@ -1448,6 +1487,19 @@ const en: Translations = {
   export_records: "records",
   export_failed: "Export failed",
   export_free_only: "Free version: today only",
+  export_summary_count: "Count",
+  export_summary_total: "Total",
+  export_summary_date: "",
+  export_saved_to: "Exported to: ",
+  export_open_file: "Open File",
+  export_opening: "Opening file...",
+  export_open_failed: "Failed to open file",
+  export_open_web_only: "Only available in app",
+  export_count_label: "Count",
+  export_total_label: "Total",
+  export_login_required: "Please sign in with Google first",
+  export_ad_hint: "Not signed in with Google. Ad-supported export coming soon.",
+  export_location: "File location",
   settings_about: "About",
   settings_developer: "Developer",
   settings_tech_stack: "Tech Stack",
@@ -1844,6 +1896,19 @@ const ja: Translations = {
   export_records: "件の記録",
   export_failed: "エクスポート失敗",
   export_free_only: "無料版は当日のみ",
+  export_summary_count: "数量",
+  export_summary_total: "合計金額",
+  export_summary_date: "",
+  export_saved_to: "エクスポート先：",
+  export_open_file: "ファイルを開く",
+  export_opening: "ファイルを開いています...",
+  export_open_failed: "ファイルを開けませんでした",
+  export_open_web_only: "アプリ内でのみ開けます",
+  export_count_label: "数量",
+  export_total_label: "合計金額",
+  export_login_required: "先に Google アカウントでログインしてください",
+  export_ad_hint: "Google アカウント未ログイン。今後広告視聴によるエクスポート機能を追加予定",
+  export_location: "ファイル場所",
   settings_about: "について",
   settings_developer: "開発者",
   settings_tech_stack: "技術スタック",
@@ -2239,6 +2304,19 @@ const ko: Translations = {
   export_records: "건의 기록",
   export_failed: "내보내기 실패",
   export_free_only: "무료 버전: 당일만",
+  export_summary_count: "수량",
+  export_summary_total: "총금액",
+  export_summary_date: "",
+  export_saved_to: "내보내기 위치: ",
+  export_open_file: "파일 열기",
+  export_opening: "파일을 여는 중...",
+  export_open_failed: "파일을 열 수 없습니다",
+  export_open_web_only: "앱 내에서만 열 수 있습니다",
+  export_count_label: "수량",
+  export_total_label: "총금액",
+  export_login_required: "먼저 Google 계정으로 로그인하세요",
+  export_ad_hint: "Google 계정 미로그인. 향후 광고 시청 내보내기 기능 추가 예정",
+  export_location: "파일 위치",
   settings_about: "정보",
   settings_developer: "개발자",
   settings_tech_stack: "기술 스택",
