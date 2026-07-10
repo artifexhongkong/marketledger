@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { Home, PencilLine, ClipboardList, Settings as SettingsIcon, MapPin, BarChart3 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { useAuthStore } from "@/lib/auth-store";
@@ -15,6 +15,7 @@ import { AuthPage } from "@/components/app/auth-section";
 import { LoginScreen } from "@/components/app/login-screen";
 import { CurrencySetup } from "@/components/app/currency-setup";
 import { LanguageSetup } from "@/components/app/language-setup";
+import { BackButtonHandler } from "@/components/app/back-button-handler";
 
 type TabId = "home" | "record" | "transactions" | "markets" | "stats" | "settings" | "account";
 
@@ -62,156 +63,138 @@ export default function Page() {
     return () => window.removeEventListener("navigate-tab", handler as EventListener);
   }, []);
 
-  // ── Android 返回鍵處理 ──
-  // 所有頁面都建立虛擬歷史，攔截返回鍵避免直接退出 App
-  useEffect(() => {
-    if (!hydrated) return;
-
-    // 建立一個虛擬歷史項目，讓返回鍵有東西可以「back」
-    window.history.pushState({ appInternal: true }, "");
-
-    const handlePopState = () => {
-      // 判斷當前狀態，決定返回鍵的行為
-      const currentTab = tab;
-      const isMainApp = testAuthed && languageInitialized && currencyInitialized;
-
-      if (!isMainApp) {
-        // 登入/語言/貨幣設定頁 — 攔截返回鍵，不退出 App
-        // 重新 push 虛擬歷史，讓下次返回鍵還能攔截
-        window.history.pushState({ appInternal: true }, "");
-        return;
-      }
-
-      // 主 App 畫面
-      if (currentTab === "account") {
-        // 帳號頁 → 回到設定頁
-        window.history.pushState({ appInternal: true }, "");
-        setTab("settings");
-      } else if (currentTab !== "home") {
-        // 其他頁 → 回到首頁
-        window.history.pushState({ appInternal: true }, "");
-        setTab("home");
-      }
-      // 已在首頁 → 不再 push 歷史，讓下次返回鍵退出 App
-    };
-
-    window.addEventListener("popstate", handlePopState);
-
-    return () => {
-      window.removeEventListener("popstate", handlePopState);
-    };
-  }, [hydrated, testAuthed, languageInitialized, currencyInitialized, tab]);
-
   const showAccount = tab === "account";
 
   // 切換 Tab 時重置滾動位置
-  const handleTabChange = (id: TabId) => {
+  const handleTabChange = useCallback((id: TabId) => {
     if (tab === "record" && id !== "record") {
       useAppStore.getState().clearOrder();
     }
     setTab(id);
-    // 重置滾動到頂部
     if (scrollRef.current) {
       scrollRef.current.scrollTo({ top: 0, behavior: "smooth" });
     }
-  };
+  }, [tab]);
+
+  // 給 BackButtonHandler 用的 tab 切換函數（簡化版，不重置滾動）
+  const handleBackTabChange = useCallback((newTab: "home" | "settings" | "account") => {
+    setTab(newTab);
+  }, []);
+
+  // 判斷是否在主 App 畫面（已登入 + 已設定語言和貨幣）
+  const isMainApp = hydrated && testAuthed && languageInitialized && currencyInitialized;
+
+  // 用於 BackButtonHandler 的 tab 值（只有在主畫面時才有意義）
+  const currentTabForBack = isMainApp ? tab : "login";
 
   if (hydrated && !testAuthed) {
     return (
-      <main className="min-h-screen bg-slate-200 flex items-center justify-center overflow-hidden">
-        <div className="relative w-full h-screen md:w-[390px] md:h-[780px] md:max-h-[calc(100vh-4rem)] md:rounded-[2.5rem] md:bg-slate-900 md:p-3 md:shadow-2xl md:shadow-slate-900/30"
-          style={{ maxHeight: "100dvh" }}>
-          <div className="hidden md:block absolute top-3 left-1/2 -translate-x-1/2 w-32 h-7 bg-slate-900 rounded-b-2xl z-30" />
-          <div className="w-full h-full bg-background md:rounded-[2rem] overflow-hidden flex flex-col relative">
-            <LoginScreen />
+      <>
+        <BackButtonHandler tab={currentTabForBack} isMainApp={isMainApp} onTabChange={handleBackTabChange} />
+        <main className="min-h-screen bg-slate-200 flex items-center justify-center overflow-hidden">
+          <div className="relative w-full h-screen md:w-[390px] md:h-[780px] md:max-h-[calc(100vh-4rem)] md:rounded-[2.5rem] md:bg-slate-900 md:p-3 md:shadow-2xl md:shadow-slate-900/30"
+            style={{ maxHeight: "100dvh" }}>
+            <div className="hidden md:block absolute top-3 left-1/2 -translate-x-1/2 w-32 h-7 bg-slate-900 rounded-b-2xl z-30" />
+            <div className="w-full h-full bg-background md:rounded-[2rem] overflow-hidden flex flex-col relative">
+              <LoginScreen />
+            </div>
           </div>
-        </div>
-      </main>
+        </main>
+      </>
     );
   }
 
   if (hydrated && testAuthed && !languageInitialized) {
     return (
-      <main className="min-h-screen bg-slate-200 flex items-center justify-center overflow-hidden">
-        <div className="relative w-full h-screen md:w-[390px] md:h-[780px] md:max-h-[calc(100vh-4rem)] md:rounded-[2.5rem] md:bg-slate-900 md:p-3 md:shadow-2xl md:shadow-slate-900/30"
-          style={{ maxHeight: "100dvh" }}>
-          <div className="hidden md:block absolute top-3 left-1/2 -translate-x-1/2 w-32 h-7 bg-slate-900 rounded-b-2xl z-30" />
-          <div className="w-full h-full bg-background md:rounded-[2rem] overflow-hidden flex flex-col relative">
-            <LanguageSetup />
+      <>
+        <BackButtonHandler tab={currentTabForBack} isMainApp={isMainApp} onTabChange={handleBackTabChange} />
+        <main className="min-h-screen bg-slate-200 flex items-center justify-center overflow-hidden">
+          <div className="relative w-full h-screen md:w-[390px] md:h-[780px] md:max-h-[calc(100vh-4rem)] md:rounded-[2.5rem] md:bg-slate-900 md:p-3 md:shadow-2xl md:shadow-slate-900/30"
+            style={{ maxHeight: "100dvh" }}>
+            <div className="hidden md:block absolute top-3 left-1/2 -translate-x-1/2 w-32 h-7 bg-slate-900 rounded-b-2xl z-30" />
+            <div className="w-full h-full bg-background md:rounded-[2rem] overflow-hidden flex flex-col relative">
+              <LanguageSetup />
+            </div>
           </div>
-        </div>
-      </main>
+        </main>
+      </>
     );
   }
 
   if (hydrated && testAuthed && !currencyInitialized) {
     return (
-      <main className="min-h-screen bg-slate-200 flex items-center justify-center overflow-hidden">
-        <div className="relative w-full h-screen md:w-[390px] md:h-[780px] md:max-h-[calc(100vh-4rem)] md:rounded-[2.5rem] md:bg-slate-900 md:p-3 md:shadow-2xl md:shadow-slate-900/30"
-          style={{ maxHeight: "100dvh" }}>
-          <div className="hidden md:block absolute top-3 left-1/2 -translate-x-1/2 w-32 h-7 bg-slate-900 rounded-b-2xl z-30" />
-          <div className="w-full h-full bg-background md:rounded-[2rem] overflow-hidden flex flex-col relative">
-            <CurrencySetup />
+      <>
+        <BackButtonHandler tab={currentTabForBack} isMainApp={isMainApp} onTabChange={handleBackTabChange} />
+        <main className="min-h-screen bg-slate-200 flex items-center justify-center overflow-hidden">
+          <div className="relative w-full h-screen md:w-[390px] md:h-[780px] md:max-h-[calc(100vh-4rem)] md:rounded-[2.5rem] md:bg-slate-900 md:p-3 md:shadow-2xl md:shadow-slate-900/30"
+            style={{ maxHeight: "100dvh" }}>
+            <div className="hidden md:block absolute top-3 left-1/2 -translate-x-1/2 w-32 h-7 bg-slate-900 rounded-b-2xl z-30" />
+            <div className="w-full h-full bg-background md:rounded-[2rem] overflow-hidden flex flex-col relative">
+              <CurrencySetup />
+            </div>
           </div>
-        </div>
-      </main>
+        </main>
+      </>
     );
   }
 
   return (
-    <main className="min-h-screen bg-slate-200 flex items-center justify-center overflow-hidden">
-      <div className="relative w-full h-screen md:w-[390px] md:h-[780px] md:max-h-[calc(100vh-4rem)] md:rounded-[2.5rem] md:bg-slate-900 md:p-3 md:shadow-2xl md:shadow-slate-900/30"
-        style={{ maxHeight: "100dvh" }}>
-        <div className="hidden md:block absolute top-3 left-1/2 -translate-x-1/2 w-32 h-7 bg-slate-900 rounded-b-2xl z-30" />
+    <>
+      <BackButtonHandler tab={currentTabForBack} isMainApp={isMainApp} onTabChange={handleBackTabChange} />
+      <main className="min-h-screen bg-slate-200 flex items-center justify-center overflow-hidden">
+        <div className="relative w-full h-screen md:w-[390px] md:h-[780px] md:max-h-[calc(100vh-4rem)] md:rounded-[2.5rem] md:bg-slate-900 md:p-3 md:shadow-2xl md:shadow-slate-900/30"
+          style={{ maxHeight: "100dvh" }}>
+          <div className="hidden md:block absolute top-3 left-1/2 -translate-x-1/2 w-32 h-7 bg-slate-900 rounded-b-2xl z-30" />
 
-        <div className="w-full h-full bg-background md:rounded-[2rem] overflow-hidden flex flex-col relative">
-          {/* 帳號頁面 — 獨立全螢幕 */}
-          {showAccount ? (
-            <AuthPage onBack={() => setTab("settings")} />
-          ) : (
-            <>
-              {/* Content area — 無頂部 bar，內容直接從頂部開始 */}
-              <div
-                ref={scrollRef}
-                className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide"
-                style={{ WebkitOverflowScrolling: "touch", overscrollBehavior: "contain", touchAction: "pan-y" }}
-              >
-                {!hydrated ? (
-                  <div className="flex items-center justify-center h-full text-sm text-muted-foreground">{t.loading}</div>
-                ) : (
-                  <>
-                    {tab === "home" && <HomePage />}
-                    {tab === "record" && <RecordPage />}
-                    {tab === "transactions" && <TransactionsPage />}
-                    {tab === "markets" && <MarketsPage />}
-                    {tab === "stats" && <StatsPage />}
-                    {tab === "settings" && <SettingsPage />}
-                  </>
-                )}
-              </div>
+          <div className="w-full h-full bg-background md:rounded-[2rem] overflow-hidden flex flex-col relative">
+            {/* 帳號頁面 — 獨立全螢幕 */}
+            {showAccount ? (
+              <AuthPage onBack={() => setTab("settings")} />
+            ) : (
+              <>
+                {/* Content area — 無頂部 bar，內容直接從頂部開始 */}
+                <div
+                  ref={scrollRef}
+                  className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide"
+                  style={{ WebkitOverflowScrolling: "touch", overscrollBehavior: "contain", touchAction: "pan-y" }}
+                >
+                  {!hydrated ? (
+                    <div className="flex items-center justify-center h-full text-sm text-muted-foreground">{t.loading}</div>
+                  ) : (
+                    <>
+                      {tab === "home" && <HomePage />}
+                      {tab === "record" && <RecordPage />}
+                      {tab === "transactions" && <TransactionsPage />}
+                      {tab === "markets" && <MarketsPage />}
+                      {tab === "stats" && <StatsPage />}
+                      {tab === "settings" && <SettingsPage />}
+                    </>
+                  )}
+                </div>
 
-              {/* Tab bar */}
-              <div className="bg-card flex items-stretch justify-between px-0.5 pt-2 pb-5 flex-shrink-0 border-t border-border/40">
-                {TABS.map(({ id, label, icon: TabIcon }) => {
-                  const active = tab === id;
-                  return (
-                    <button key={id} onClick={() => handleTabChange(id)}
-                      className="flex-1 flex flex-col items-center justify-center gap-1 py-1 transition min-w-0">
-                      <TabIcon
-                        className={`w-5 h-5 transition-all ${active ? "text-accent scale-110" : "text-muted-foreground"}`}
-                        strokeWidth={active ? 2.5 : 2}
-                      />
-                      <span className={`text-[9px] transition truncate ${active ? "text-accent font-semibold" : "text-muted-foreground"}`}>
-                        {label}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </>
-          )}
+                {/* Tab bar */}
+                <div className="bg-card flex items-stretch justify-between px-0.5 pt-2 pb-5 flex-shrink-0 border-t border-border/40">
+                  {TABS.map(({ id, label, icon: TabIcon }) => {
+                    const active = tab === id;
+                    return (
+                      <button key={id} onClick={() => handleTabChange(id)}
+                        className="flex-1 flex flex-col items-center justify-center gap-1 py-1 transition min-w-0">
+                        <TabIcon
+                          className={`w-5 h-5 transition-all ${active ? "text-accent scale-110" : "text-muted-foreground"}`}
+                          strokeWidth={active ? 2.5 : 2}
+                        />
+                        <span className={`text-[9px] transition truncate ${active ? "text-accent font-semibold" : "text-muted-foreground"}`}>
+                          {label}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </div>
         </div>
-      </div>
-    </main>
+      </main>
+    </>
   );
 }
