@@ -63,34 +63,36 @@ export default function Page() {
   }, []);
 
   // ── Android 返回鍵處理 ──
-  // 監聽 popstate（Capacitor WebView 返回鍵會觸發 history.back）
-  // 用 history.pushState 建立「虛擬歷史」，讓返回鍵不會直接退出 App
+  // 所有頁面都建立虛擬歷史，攔截返回鍵避免直接退出 App
   useEffect(() => {
-    // 只在已登入的主畫面處理（登入/語言/貨幣設定頁不攔截）
-    if (!hydrated || !testAuthed || !languageInitialized || !currencyInitialized) return;
+    if (!hydrated) return;
 
     // 建立一個虛擬歷史項目，讓返回鍵有東西可以「back」
-    const state = { appInternal: true, tab };
-    window.history.pushState(state, "");
+    window.history.pushState({ appInternal: true }, "");
 
-    const handlePopState = (e: PopStateEvent) => {
-      // 用 useState 的最新值需要透過 ref 或函數式更新
-      setTab((currentTab) => {
-        // 如果在帳號頁 → 回到設定頁
-        if (currentTab === "account") {
-          // 重新 push 一個虛擬歷史，讓下次返回鍵還能攔截
-          window.history.pushState({ appInternal: true, tab: "settings" }, "");
-          return "settings";
-        }
-        // 如果不在首頁 → 回到首頁
-        if (currentTab !== "home") {
-          window.history.pushState({ appInternal: true, tab: "home" }, "");
-          return "home";
-        }
-        // 已在首頁 → 再按一次返回鍵就退出 App
-        // 不再 push 歷史，讓下次 popstate 時 Capacitor 退出 App
-        return currentTab;
-      });
+    const handlePopState = () => {
+      // 判斷當前狀態，決定返回鍵的行為
+      const currentTab = tab;
+      const isMainApp = testAuthed && languageInitialized && currencyInitialized;
+
+      if (!isMainApp) {
+        // 登入/語言/貨幣設定頁 — 攔截返回鍵，不退出 App
+        // 重新 push 虛擬歷史，讓下次返回鍵還能攔截
+        window.history.pushState({ appInternal: true }, "");
+        return;
+      }
+
+      // 主 App 畫面
+      if (currentTab === "account") {
+        // 帳號頁 → 回到設定頁
+        window.history.pushState({ appInternal: true }, "");
+        setTab("settings");
+      } else if (currentTab !== "home") {
+        // 其他頁 → 回到首頁
+        window.history.pushState({ appInternal: true }, "");
+        setTab("home");
+      }
+      // 已在首頁 → 不再 push 歷史，讓下次返回鍵退出 App
     };
 
     window.addEventListener("popstate", handlePopState);
