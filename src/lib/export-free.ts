@@ -272,9 +272,19 @@ export async function exportTodayData(
 
 /**
  * 打開已匯出的檔案
- * 用 Capacitor Filesystem.openFile（Android 會用系統的檔案檢視器打開）
+ *
+ * 使用 @capacitor-community/file-opener（專門用來打開本地檔案的 Capacitor 插件）
+ * 解決 Android FileUriExposedException 問題
+ *
+ * @param path 檔案路徑（可以是 file:// URI 或檔名）
+ * @param format 檔案格式（csv/tsv）— 用來設定 MIME type
+ * @param t i18n 翻譯
  */
-export async function openExportedFile(path: string, t: Translations): Promise<{ success: boolean; message: string }> {
+export async function openExportedFile(
+  path: string,
+  t: Translations,
+  format?: "csv" | "tsv"
+): Promise<{ success: boolean; message: string }> {
   try {
     const { Capacitor } = await import("@capacitor/core");
     if (!Capacitor.isNativePlatform()) {
@@ -283,35 +293,57 @@ export async function openExportedFile(path: string, t: Translations): Promise<{
 
     const { Filesystem, Directory } = await import("@capacitor/filesystem");
 
-    // path 可能是 file:///data/user/0/.../files/marketledger_20260710.csv
-    // 或只是檔名 marketledger_20260710.csv
+    // 從 path 取得檔名
     let filename = path;
     if (path.includes("/")) {
       filename = path.split("/").pop() || path;
     }
 
-    // 用 Filesystem.openFile 讓系統用合適的 app 打開
+    // 判斷格式（從 path 或 format 參數）
+    const fileFormat: "csv" | "tsv" = format || (filename.endsWith(".tsv") ? "tsv" : "csv");
+
+    // MIME type 對應
+    const mimeType = fileFormat === "csv" ? "text/csv" : "text/tab-separated-values";
+
+    // 用 Filesystem.getUri 取得檔案的真實 URI
+    const uriResult = await Filesystem.getUri({
+      path: filename,
+      directory: Directory.Documents,
+    });
+
+    console.log("[Export] 檔案 URI:", uriResult.uri);
+    console.log("[Export] MIME type:", mimeType);
+
+    // 用 @capacitor-community/file-opener 打開檔案
     try {
-      await Filesystem.openFile({
-        path: filename,
-        directory: Directory.Documents,
+      const { FileOpener } = await import("@capacitor-community/file-opener");
+      await FileOpener.openFile({
+        path: uriResult.uri,
+        contentType: mimeType,
       });
       return { success: true, message: t.export_opening };
     } catch (e1) {
-      console.error("[Export] openFile 失敗:", e1);
-      // fallback: 用 getUri + Browser
+      console.error("[Export] FileOpener 失敗:", e1);
+      const errMsg = (e1 as Error).message || String(e1);
+
+      // 常見錯誤：沒有可開啟此檔案的 app
+      if (errMsg.includes("No app") || errMsg.includes("no app") || errMsg.includes("ACTIVITY_NOT_FOUND")) {
+        return {
+          success: false,
+          message: t.export_no_app || "沒有可開啟此檔案的應用程式，請安裝 Excel 或檔案檢視器",
+        };
+      }
+
+      // fallback: 用 Filesystem.openFile（內建插件）
       try {
-        const uriResult = await Filesystem.getUri({
+        await Filesystem.openFile({
           path: filename,
           directory: Directory.Documents,
         });
-        console.log("[Export] 檔案 URI:", uriResult.uri);
-        const { Browser } = await import("@capacitor/browser");
-        await Browser.open({ url: uriResult.uri });
         return { success: true, message: t.export_opening };
       } catch (e2) {
-        console.error("[Export] getUri+Browser 也失敗:", e2);
-        return { success: false, message: t.export_open_failed + ": " + (e2 as Error).message };
+        console.error("[Export] Filesystem.openFile 也失敗:", e2);
+        return { success: false, message: t.export_open_failed + ": " + errMsg };
       }
     }
   } catch (e) {

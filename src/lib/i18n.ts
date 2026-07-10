@@ -275,6 +275,7 @@ export interface Translations {
   export_open_file: string;
   export_opening: string;
   export_open_failed: string;
+  export_no_app: string;
   export_open_web_only: string;
   export_count_label: string;
   export_total_label: string;
@@ -703,6 +704,7 @@ const zhTW: Translations = {
   export_open_file: "打開檔案",
   export_opening: "正在打開檔案...",
   export_open_failed: "打開檔案失敗",
+  export_no_app: "沒有可開啟此檔案的應用程式，請安裝 Excel 或檔案檢視器",
   export_open_web_only: "僅支援 App 内打開",
   export_count_label: "數量",
   export_total_label: "總金額",
@@ -1093,6 +1095,7 @@ const zhCN: Translations = {
   export_open_file: "打开文件",
   export_opening: "正在打开文件...",
   export_open_failed: "打开文件失败",
+  export_no_app: "没有可开启此文件的应用程序，请安装 Excel 或文件检视器",
   export_open_web_only: "仅支援 App 内打开",
   export_count_label: "数量",
   export_total_label: "总金额",
@@ -1502,6 +1505,7 @@ const en: Translations = {
   export_open_file: "Open File",
   export_opening: "Opening file...",
   export_open_failed: "Failed to open file",
+  export_no_app: "No app available to open this file. Please install Excel or a file viewer.",
   export_open_web_only: "Only available in app",
   export_count_label: "Count",
   export_total_label: "Total",
@@ -1913,6 +1917,7 @@ const ja: Translations = {
   export_open_file: "ファイルを開く",
   export_opening: "ファイルを開いています...",
   export_open_failed: "ファイルを開けませんでした",
+  export_no_app: "このファイルを開けるアプリがありません。Excel やファイルビューアーをインストールしてください。",
   export_open_web_only: "アプリ内でのみ開けます",
   export_count_label: "数量",
   export_total_label: "合計金額",
@@ -2323,6 +2328,7 @@ const ko: Translations = {
   export_open_file: "파일 열기",
   export_opening: "파일을 여는 중...",
   export_open_failed: "파일을 열 수 없습니다",
+  export_no_app: "이 파일을 열 수 있는 앱이 없습니다. Excel이나 파일 뷰어를 설치해 주세요.",
   export_open_web_only: "앱 내에서만 열 수 있습니다",
   export_count_label: "수량",
   export_total_label: "총금액",

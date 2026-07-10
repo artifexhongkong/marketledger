@@ -167,7 +167,9 @@ export function SettingsPage() {
     haptic("tap");
     try {
       const { openExportedFile } = await import("@/lib/export-free");
-      const result = await openExportedFile(exportedPath, t);
+      // 傳入 format 讓 openExportedFile 設定正確的 MIME type
+      const format = exportedPath.endsWith(".tsv") ? "tsv" : "csv";
+      const result = await openExportedFile(exportedPath, t, format);
       setFreeExportStatus(result.message);
       setTimeout(() => setFreeExportStatus(null), 3000);
     } catch (e) {
