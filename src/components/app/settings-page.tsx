@@ -10,7 +10,7 @@ import {
   Globe, Download, Trash2, Info, Coins,
   ChevronRight, FileSpreadsheet, FileJson,
   RefreshCw, DownloadCloud, LogOut, CheckCircle2, AlertCircle, Loader2,
-  Vibrate, Moon,
+  Vibrate, Moon, User,
   type LucideIcon,
 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
@@ -37,7 +37,7 @@ export function SettingsPage() {
     darkMode, setDarkMode,
     language, setLanguage,
   } = useAppStore();
-  const { testUsername, testLogout } = useAuthStore();
+  const { testUsername, testLogout, user } = useAuthStore();
 
   const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
@@ -158,6 +158,22 @@ export function SettingsPage() {
             {t.settings_logout}
           </button>
         </div>
+      </SettingsGroup>
+
+      {/* Google 帳號 */}
+      <SettingsGroup title={t.settings_google_account}>
+        <SettingsRow
+          icon={User}
+          iconBg="bg-blue-100"
+          iconColor="text-blue-600"
+          label={t.settings_google_account}
+          value={user ? user.email : ""}
+          onClick={() => {
+            haptic("tap");
+            window.dispatchEvent(new CustomEvent("navigate-tab", { detail: "account" }));
+          }}
+          isLast
+        />
       </SettingsGroup>
 
       {/* 偏好設定群組 */}

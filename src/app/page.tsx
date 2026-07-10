@@ -15,21 +15,10 @@ import { AuthPage } from "@/components/app/auth-section";
 import { LoginScreen } from "@/components/app/login-screen";
 import { CurrencySetup } from "@/components/app/currency-setup";
 import { LanguageSetup } from "@/components/app/language-setup";
-import { TopBar } from "@/components/app/top-bar";
 
 type TabId = "home" | "record" | "transactions" | "markets" | "stats" | "settings" | "account";
 
 const TAB_IDS: TabId[] = ["home", "record", "markets", "transactions", "stats", "settings"];
-
-// Tab 對應的標題和圖示
-const TAB_META: Record<string, { titleKey: keyof ReturnType<typeof useT>; icon: typeof Home }> = {
-  home: { titleKey: "tab_home", icon: Home },
-  record: { titleKey: "tab_record", icon: PencilLine },
-  markets: { titleKey: "tab_markets", icon: MapPin },
-  transactions: { titleKey: "tab_transactions", icon: ClipboardList },
-  stats: { titleKey: "tab_stats", icon: BarChart3 },
-  settings: { titleKey: "tab_settings", icon: SettingsIcon },
-};
 
 export default function Page() {
   const [tab, setTab] = useState<TabId>("home");
@@ -42,7 +31,7 @@ export default function Page() {
   const currencyInitialized = useAppStore((s) => s.currencyInitialized);
   const languageInitialized = useAppStore((s) => s.languageInitialized);
   const darkMode = useAppStore((s) => s.darkMode);
-  const { testAuthed, user } = useAuthStore();
+  const { testAuthed } = useAuthStore();
   const t = useT();
 
   const TABS: { id: TabId; label: string; icon: typeof Home }[] = [
@@ -86,11 +75,6 @@ export default function Page() {
       scrollRef.current.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
-
-  // 取得當前 Tab 的標題和圖示
-  const currentMeta = TAB_META[tab];
-  const currentTitle = currentMeta ? t[currentMeta.titleKey] : t.tab_home;
-  const CurrentIcon = currentMeta?.icon;
 
   if (hydrated && !testAuthed) {
     return (
@@ -143,19 +127,10 @@ export default function Page() {
         <div className="w-full h-full bg-background md:rounded-[2rem] overflow-hidden flex flex-col relative">
           {/* 帳號頁面 — 獨立全螢幕 */}
           {showAccount ? (
-            <AuthPage onBack={() => setTab("home")} />
+            <AuthPage onBack={() => setTab("settings")} />
           ) : (
             <>
-              {/* 新版頂部導航欄 — 滾動隱藏/顯示 */}
-              <TopBar
-                title={currentTitle}
-                icon={CurrentIcon}
-                userPicture={user?.picture}
-                onAccountClick={() => setTab("account")}
-                scrollContainerRef={scrollRef}
-              />
-
-              {/* Content area */}
+              {/* Content area — 無頂部 bar，內容直接從頂部開始 */}
               <div
                 ref={scrollRef}
                 className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide"

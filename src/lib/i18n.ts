@@ -204,6 +204,7 @@ export interface Translations {
   // 設定頁
   settings_title: string;
   settings_test_account: string;
+  settings_google_account: string;
   settings_logged_in: string;
   settings_logout: string;
   settings_preferences: string;
@@ -600,6 +601,7 @@ const zhTW: Translations = {
 
   settings_title: "設定",
   settings_test_account: "測試帳號",
+  settings_google_account: "Google 帳號",
   settings_logged_in: "已登入測試帳號",
   settings_logout: "登出",
   settings_preferences: "偏好設定",
@@ -958,6 +960,7 @@ const zhCN: Translations = {
 
   settings_title: "设定",
   settings_test_account: "测试帐号",
+  settings_google_account: "Google 帐号",
   settings_logged_in: "已登入测试帐号",
   settings_logout: "登出",
   settings_preferences: "偏好设定",
@@ -1335,6 +1338,7 @@ const en: Translations = {
 
   settings_title: "Settings",
   settings_test_account: "Test Account",
+  settings_google_account: "Google Account",
   settings_logged_in: "Logged in as test account",
   settings_logout: "Logout",
   settings_preferences: "Preferences",
@@ -1714,6 +1718,7 @@ const ja: Translations = {
 
   settings_title: "設定",
   settings_test_account: "テストアカウント",
+  settings_google_account: "Google アカウント",
   settings_logged_in: "テストアカウントでログイン中",
   settings_logout: "ログアウト",
   settings_preferences: "基本設定",
@@ -2092,6 +2097,7 @@ const ko: Translations = {
 
   settings_title: "설정",
   settings_test_account: "테스트 계정",
+  settings_google_account: "Google 계정",
   settings_logged_in: "테스트 계정으로 로그인됨",
   settings_logout: "로그아웃",
   settings_preferences: "환경설정",
