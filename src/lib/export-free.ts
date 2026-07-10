@@ -196,7 +196,8 @@ export async function exportToFilesystem(
       return exportToWeb(content, filename);
     }
 
-    const result = await Filesystem.writeFile({
+    // 寫入檔案
+    await Filesystem.writeFile({
       path: filename,
       data: content,
       directory: Directory.Documents,
@@ -204,10 +205,22 @@ export async function exportToFilesystem(
       recursive: true,
     });
 
+    // 用 getUri 取得完整檔案路徑（writeFile 回傳的 uri 可能不完整）
+    let fullPath = filename;
+    try {
+      const uriResult = await Filesystem.getUri({
+        path: filename,
+        directory: Directory.Documents,
+      });
+      fullPath = uriResult.uri;
+    } catch (e) {
+      console.warn("[Export] getUri 失敗，使用檔名:", e);
+    }
+
     return {
       success: true,
-      message: t_export_saved_to + result.uri,
-      path: result.uri,
+      message: t_export_saved_to + fullPath,
+      path: fullPath,
     };
   } catch (e) {
     console.error("[Export] Filesystem 匯出失敗:", e);
