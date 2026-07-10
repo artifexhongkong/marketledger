@@ -38,6 +38,7 @@ export interface Transaction {
   note?: string;
   marketId?: string;
   orderId?: string; // 同一單的交易共用同一個 orderId（用於分組顯示）
+  qty?: number; // 數量（預設 1）
   createdAt: number;
 }
 
@@ -412,15 +413,15 @@ export const useAppStore = create<AppStore>()(
         set((s) => {
           const item = s.currentOrder.find((i) => i.orderItemId === orderItemId);
           if (!item || qty < 1) return {};
-          // 更新訂單項目數量 + 對應交易的金額和備註
-          const noteSuffix = item.note ? ` · ${item.note}` : "";
+          // 更新訂單項目數量 + 對應交易的金額和數量
+          // note 只保留用戶輸入的備註，不包含商品名稱
           return {
             currentOrder: s.currentOrder.map((i) =>
               i.orderItemId === orderItemId ? { ...i, qty } : i
             ),
             transactions: s.transactions.map((t) =>
               t.id === item.txId
-                ? { ...t, amount: item.price * qty, note: qty > 1 ? `${item.name} x${qty}${noteSuffix}` : `${item.name}${noteSuffix}` }
+                ? { ...t, amount: item.price * qty, qty: qty }
                 : t
             ),
           };
@@ -431,14 +432,14 @@ export const useAppStore = create<AppStore>()(
           const item = s.currentOrder.find((i) => i.orderItemId === orderItemId);
           if (!item) return {};
           // 更新訂單項目備註 + 對應交易的 note
-          const noteSuffix = note.trim() ? ` · ${note.trim()}` : "";
+          // note 只保留用戶輸入的備註，不包含商品名稱
           return {
             currentOrder: s.currentOrder.map((i) =>
               i.orderItemId === orderItemId ? { ...i, note: note.trim() || undefined } : i
             ),
             transactions: s.transactions.map((t) =>
               t.id === item.txId
-                ? { ...t, note: item.qty > 1 ? `${item.name} x${item.qty}${noteSuffix}` : `${item.name}${noteSuffix}` }
+                ? { ...t, note: note.trim() || undefined }
                 : t
             ),
           };

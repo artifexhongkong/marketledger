@@ -3,7 +3,8 @@
  *
  * - 只匯出當日交易記錄
  * - 格式：CSV / TSV
- * - 欄位：日期、商品名稱、分類、金額、備註
+ * - 欄位：日期、訂單、商品名稱、數量、分類、金額、備註
+ * - 用訂單編號區分每一單的商品
  * - 日期格式：YYYY-MM-DD
  * - 金額：兩位小數
  * - 按日期降序排列（最新在最上方）
@@ -80,6 +81,15 @@ function getCategoryLabel(category: CategoryId, t: Translations): string {
 }
 
 /**
+ * 取得訂單編號（取後 6 碼作為識別）
+ */
+function getOrderLabel(tx: Transaction): string {
+  if (!tx.orderId) return "-";
+  // 取 orderId 後 6 碼
+  return tx.orderId.slice(-6).toUpperCase();
+}
+
+/**
  * 跳脫 CSV 欄位
  */
 function escapeCSVField(value: string, separator: string): string {
@@ -91,7 +101,7 @@ function escapeCSVField(value: string, separator: string): string {
 }
 
 /**
- * 產生匯出內容（含數量和總金額）
+ * 產生匯出內容（含訂單分組、數量、總金額）
  */
 export function generateExportContent({ transactions, products, format, t }: ExportOptions): {
   content: string;
@@ -99,12 +109,15 @@ export function generateExportContent({ transactions, products, format, t }: Exp
   totalAmount: number;
 } {
   const todayTx = getTodayTransactions(transactions);
+  // 按日期降序排列（最新在最上方）
   const sorted = [...todayTx].sort((a, b) => b.createdAt - a.createdAt);
 
   const separator = format === "csv" ? "," : "\t";
   const headers = [
     t.export_header_date,
+    t.export_header_order,
     t.export_header_product,
+    t.export_header_qty,
     t.export_header_category,
     t.export_header_amount,
     t.export_header_note,
@@ -116,22 +129,27 @@ export function generateExportContent({ transactions, products, format, t }: Exp
   const dataLines = sorted.map((tx) => {
     const fields = [
       formatDate(tx.createdAt),
+      getOrderLabel(tx),
       getProductName(tx, products),
+      String(tx.qty || 1),
       getCategoryLabel(tx.category, t),
       formatAmount(tx.amount),
-      tx.note || "",
+      tx.note || "", // 備註只用用戶輸入的，空就留白
     ];
     return fields.map((f) => escapeCSVField(f, separator)).join(separator);
   });
 
-  // 計算總金額和數量
+  // 計算總數量和總金額
+  const totalQty = sorted.reduce((sum, tx) => sum + (tx.qty || 1), 0);
   const totalAmount = sorted.reduce((sum, tx) => sum + tx.amount, 0);
   const count = sorted.length;
 
   // 加入合計行
   const summaryLine = [
-    t.export_summary_date || "",
-    t.export_summary_count + ": " + count,
+    "",
+    t.export_summary_count + ": " + totalQty,
+    "",
+    "",
     "",
     t.export_summary_total + ": " + formatAmount(totalAmount),
     "",
@@ -226,7 +244,6 @@ export async function exportTodayData(
     return { success: false, message: t.export_no_data };
   }
 
-  // 設定 i18n
   setExportI18n(t.export_saved_to);
 
   const { content, count, totalAmount } = generateExportContent({ transactions, products, format, t });
@@ -235,9 +252,7 @@ export async function exportTodayData(
 
   return {
     success: result.success,
-    message: result.success
-      ? `${t.export_success}`
-      : result.message,
+    message: result.success ? t.export_success : result.message,
     path: result.path,
     filename,
     count,
@@ -246,7 +261,7 @@ export async function exportTodayData(
 }
 
 /**
- * 打開已匯出的檔案（用 Capacitor Filesystem + Browser/OpenDocument）
+ * 打開已匯出的檔案
  */
 export async function openExportedFile(path: string, t: Translations): Promise<{ success: boolean; message: string }> {
   try {
@@ -255,17 +270,14 @@ export async function openExportedFile(path: string, t: Translations): Promise<{
       return { success: false, message: t.export_open_web_only };
     }
 
-    // 用 Filesystem.getUri 取得檔案的真實 URI
     const { Filesystem } = await import("@capacitor/filesystem");
     const uriResult = await Filesystem.getUri({ path: path.replace(/^file:\/\//, ""), directory: "DOCUMENTS" });
 
-    // 用 Browser plugin 或 intent 打開
     try {
       const { Browser } = await import("@capacitor/browser");
       await Browser.open({ url: uriResult.uri });
       return { success: true, message: t.export_opening };
     } catch {
-      // fallback: 用 window.open
       window.open(uriResult.uri, "_blank");
       return { success: true, message: t.export_opening };
     }

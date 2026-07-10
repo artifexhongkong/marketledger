@@ -88,9 +88,9 @@ function RecordView() {
       category: "sales",
       paymentMethod: payment,
       productId: p.id,
-      note: p.name,
       marketId: currentMarketId || undefined,
       orderId,
+      qty: 1,
     });
 
     // 單筆記錄也震動（success 回饋）
@@ -141,6 +141,7 @@ function RecordView() {
       paymentMethod: payment,
       note: note.trim() || undefined,
       marketId: currentMarketId || undefined,
+      qty: 1,
     });
     setAmount("");
     setNote("");
@@ -842,14 +843,14 @@ function ProductButton({
     const txId = addTransaction({
       type: "income", amount: totalAmount, currency: currency,
       category: "sales", paymentMethod: payment, productId: product.id,
-      note: qty > 1 ? `${resolveDemoText(product.name, t)} x${qty}` : resolveDemoText(product.name, t),
       marketId: currentMarketId || undefined,
       orderId,
+      qty,
     });
     // 每次記錄都震動（單筆用 success，多筆用 tap）
     haptic(qty > 1 ? "tap" : "success");
     onConfirm(product.id);
-    onRecord(txId, qty > 1 ? `${resolveDemoText(product.name, t)} x${qty}` : resolveDemoText(product.name, t), totalAmount, qty);
+    onRecord(txId, resolveDemoText(product.name, t), totalAmount, qty);
   };
 
   const reset = () => {

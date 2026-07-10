@@ -261,6 +261,8 @@ export interface Translations {
   export_header_category: string;
   export_header_amount: string;
   export_header_note: string;
+  export_header_order: string;
+  export_header_qty: string;
   export_no_data: string;
   export_success: string;
   export_records: string;
@@ -687,6 +689,8 @@ const zhTW: Translations = {
   export_header_category: "分類",
   export_header_amount: "金額",
   export_header_note: "備註",
+  export_header_order: "訂單",
+  export_header_qty: "數量",
   export_no_data: "今日沒有交易記錄",
   export_success: "匯出成功",
   export_records: "筆記錄",
@@ -1075,6 +1079,8 @@ const zhCN: Translations = {
   export_header_category: "分类",
   export_header_amount: "金额",
   export_header_note: "备注",
+  export_header_order: "订单",
+  export_header_qty: "数量",
   export_no_data: "今日没有交易记录",
   export_success: "汇出成功",
   export_records: "笔记录",
@@ -1482,6 +1488,8 @@ const en: Translations = {
   export_header_category: "Category",
   export_header_amount: "Amount",
   export_header_note: "Note",
+  export_header_order: "Order",
+  export_header_qty: "Qty",
   export_no_data: "No transactions today",
   export_success: "Export successful",
   export_records: "records",
@@ -1891,6 +1899,8 @@ const ja: Translations = {
   export_header_category: "カテゴリ",
   export_header_amount: "金額",
   export_header_note: "備考",
+  export_header_order: "注文",
+  export_header_qty: "数量",
   export_no_data: "今日の取引記録はありません",
   export_success: "エクスポート成功",
   export_records: "件の記録",
@@ -2299,6 +2309,8 @@ const ko: Translations = {
   export_header_category: "카테고리",
   export_header_amount: "금액",
   export_header_note: "메모",
+  export_header_order: "주문",
+  export_header_qty: "수량",
   export_no_data: "오늘 거래 기록이 없습니다",
   export_success: "내보내기 성공",
   export_records: "건의 기록",
