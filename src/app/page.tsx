@@ -62,6 +62,44 @@ export default function Page() {
     return () => window.removeEventListener("navigate-tab", handler as EventListener);
   }, []);
 
+  // ── Android 返回鍵處理 ──
+  // 監聽 popstate（Capacitor WebView 返回鍵會觸發 history.back）
+  // 用 history.pushState 建立「虛擬歷史」，讓返回鍵不會直接退出 App
+  useEffect(() => {
+    // 只在已登入的主畫面處理（登入/語言/貨幣設定頁不攔截）
+    if (!hydrated || !testAuthed || !languageInitialized || !currencyInitialized) return;
+
+    // 建立一個虛擬歷史項目，讓返回鍵有東西可以「back」
+    const state = { appInternal: true, tab };
+    window.history.pushState(state, "");
+
+    const handlePopState = (e: PopStateEvent) => {
+      // 用 useState 的最新值需要透過 ref 或函數式更新
+      setTab((currentTab) => {
+        // 如果在帳號頁 → 回到設定頁
+        if (currentTab === "account") {
+          // 重新 push 一個虛擬歷史，讓下次返回鍵還能攔截
+          window.history.pushState({ appInternal: true, tab: "settings" }, "");
+          return "settings";
+        }
+        // 如果不在首頁 → 回到首頁
+        if (currentTab !== "home") {
+          window.history.pushState({ appInternal: true, tab: "home" }, "");
+          return "home";
+        }
+        // 已在首頁 → 再按一次返回鍵就退出 App
+        // 不再 push 歷史，讓下次 popstate 時 Capacitor 退出 App
+        return currentTab;
+      });
+    };
+
+    window.addEventListener("popstate", handlePopState);
+
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, [hydrated, testAuthed, languageInitialized, currencyInitialized, tab]);
+
   const showAccount = tab === "account";
 
   // 切換 Tab 時重置滾動位置
