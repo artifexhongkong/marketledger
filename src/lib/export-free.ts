@@ -315,10 +315,11 @@ export async function openExportedFile(
     console.log("[Export] MIME type:", mimeType);
 
     // 用 @capacitor-community/file-opener 打開檔案
+    // 正確 API：FileOpener.open({ filePath, contentType })
     try {
       const { FileOpener } = await import("@capacitor-community/file-opener");
-      await FileOpener.openFile({
-        path: uriResult.uri,
+      await FileOpener.open({
+        filePath: uriResult.uri,
         contentType: mimeType,
       });
       return { success: true, message: t.export_opening };
@@ -327,7 +328,7 @@ export async function openExportedFile(
       const errMsg = (e1 as Error).message || String(e1);
 
       // 常見錯誤：沒有可開啟此檔案的 app
-      if (errMsg.includes("No app") || errMsg.includes("no app") || errMsg.includes("ACTIVITY_NOT_FOUND")) {
+      if (errMsg.includes("No app") || errMsg.includes("no app") || errMsg.includes("ACTIVITY_NOT_FOUND") || errMsg.includes("No application")) {
         return {
           success: false,
           message: t.export_no_app || "沒有可開啟此檔案的應用程式，請安裝 Excel 或檔案檢視器",
