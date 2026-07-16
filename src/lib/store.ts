@@ -317,6 +317,7 @@ interface AppStore {
   addProduct: (p: Omit<Product, "id">) => void;
   updateProduct: (id: string, data: Partial<Omit<Product, "id">>) => void;
   deleteProduct: (id: string) => void;
+  reorderProducts: (fromIndex: number, toIndex: number) => void;
   addCustomPaymentMethod: (m: Omit<CustomPaymentMethod, "id">) => void;
   deleteCustomPaymentMethod: (id: string) => void;
   setVisiblePayments: (payments: string[]) => void;
@@ -381,8 +382,8 @@ export const useAppStore = create<AppStore>()(
       // 當前訂單操作
       addOrderItem: (txId, product, qty) =>
         set((s) => ({
+          // 新商品加在最上方（unshift）
           currentOrder: [
-            ...s.currentOrder,
             {
               orderItemId: `oi_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
               txId,
@@ -393,6 +394,7 @@ export const useAppStore = create<AppStore>()(
               color: product.color,
               createdAt: Date.now(),
             },
+            ...s.currentOrder,
           ],
         })),
 
@@ -485,6 +487,14 @@ export const useAppStore = create<AppStore>()(
 
       deleteProduct: (id) =>
         set((s) => ({ products: s.products.filter((p) => p.id !== id) })),
+
+      reorderProducts: (fromIndex: number, toIndex: number) =>
+        set((s) => {
+          const arr = [...s.products];
+          const [item] = arr.splice(fromIndex, 1);
+          arr.splice(toIndex, 0, item);
+          return { products: arr };
+        }),
 
       addCustomPaymentMethod: (m) =>
         set((s) => ({

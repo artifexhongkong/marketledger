@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Store, X, ChevronDown, Undo2, Check, RotateCcw, SlidersHorizontal, LayoutGrid, List, Trash2, Pencil } from "lucide-react";
+import { Plus, Store, X, ChevronDown, Undo2, Check, RotateCcw, SlidersHorizontal, LayoutGrid, List, Trash2, Pencil, ArrowUpDown } from "lucide-react";
 import type { TransactionType, CategoryId, PaymentMethod, Product, CurrencyCode } from "@/lib/store";
 import { TOP_PAYMENTS, PRODUCT_COLORS, EXTENDED_COLORS, COLOR_FAMILIES, GRAYSCALE, PAYMENT_ICONS, PAYMENT_COLORS, type ToastState } from "@/components/app/record-constants";
 import { AddPaymentModal } from "@/components/app/add-payment-modal";
@@ -1064,7 +1064,9 @@ function ProductButton({
       )}
       {s.mode === "idle" && !confirming && (
         <>
-          <p className="text-xs font-medium text-foreground leading-tight line-clamp-2">{resolveDemoText(product.name, t)}</p>
+          <p className="text-xs font-medium text-foreground leading-tight line-clamp-2 min-h-[28px]">
+            {resolveDemoText(product.name, t) || <span className="text-muted-foreground/40">—</span>}
+          </p>
           <p className="text-sm font-bold text-primary tabular-nums mt-1 leading-none">
             {formatCurrency(product.price, currency)}
           </p>
@@ -1076,7 +1078,7 @@ function ProductButton({
 
 function ProductsView() {
   const t = useT();
-  const { products, currency, addProduct, updateProduct, deleteProduct } = useAppStore();
+  const { products, currency, addProduct, updateProduct, deleteProduct, reorderProducts } = useAppStore();
   const [showForm, setShowForm] = useState(false);
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [name, setName] = useState("");
@@ -1097,6 +1099,27 @@ function ProductsView() {
   // 用 ref 追蹤多選模式狀態，避免 onClick 時 state 還沒更新
   const multiSelectModeRef = useRef(false);
   const longPressTargetRef = useRef<string | null>(null);
+  // 拖拽排序模式
+  const [sortMode, setSortMode] = useState(false);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
+  const handleDragStart = (index: number) => { if (sortMode) setDragIndex(index); };
+  const handleDragOver = (e: React.DragEvent, index: number) => { if (sortMode) { e.preventDefault(); setDragOverIndex(index); } };
+  const handleDragEnd = () => { setDragIndex(null); setDragOverIndex(null); };
+  const handleDrop = (index: number) => {
+    if (sortMode && dragIndex !== null && dragIndex !== index) reorderProducts(dragIndex, index);
+    setDragIndex(null); setDragOverIndex(null);
+  };
+  const handleDragOverLive = (e: React.DragEvent, index: number) => {
+    if (!sortMode || dragIndex === null || dragIndex === index) return;
+    e.preventDefault();
+    if (dragOverIndex !== index) {
+      setDragOverIndex(index);
+      reorderProducts(dragIndex, index);
+      setDragIndex(index);
+    }
+  };
 
   useEffect(() => {
     multiSelectModeRef.current = multiSelectMode;
@@ -1115,15 +1138,15 @@ function ProductsView() {
 
   const handleAdd = () => {
     const p = parseFloat(price);
-    if (!name.trim()) return alert(t.products_name_required);
+    // 名稱可空白，只需價格
     if (!p || p <= 0) return alert(t.products_price_required);
     if (editingProductId) {
       // 編輯模式
-      updateProduct(editingProductId, { name: name.trim(), price: p, unit: unit.trim() || t.products_unit_default, color: color || undefined });
+      updateProduct(editingProductId, { name: name.trim() || "", price: p, unit: unit.trim() || t.products_unit_default, color: color || undefined });
       setEditingProductId(null);
     } else {
-      // 新增模式
-      addProduct({ name: name.trim(), price: p, unit: unit.trim() || t.products_unit_default, categoryId: "sales", color: color || undefined });
+      // 新增模式 — 名稱可空白
+      addProduct({ name: name.trim() || "", price: p, unit: unit.trim() || t.products_unit_default, categoryId: "sales", color: color || undefined });
     }
     setName(""); setPrice(""); setUnit(t.products_unit_default); setColor(""); setShowColorPalette(false); setShowForm(false);
   };
@@ -1372,57 +1395,85 @@ function ProductsView() {
         </Card>
       ) : (
         <>
-          {/* 顯示模式切換 + 商品數量 */}
+          {/* 顯示模式切換 + 商品數量 + 排序按鈕 */}
           <div className="flex items-center justify-between">
             <span className="text-xs text-muted-foreground font-medium">
               {t.products_count.replace("{n}", String(products.length))}
             </span>
-            <div className="flex items-center gap-1 bg-muted p-1 rounded-lg">
+            <div className="flex items-center gap-1">
+              {/* 排序模式切換按鈕 */}
               <button
-                onClick={() => setViewMode("grid")}
-                className={`p-1.5 rounded-md transition ${
-                  viewMode === "grid" ? "bg-card shadow-sm text-primary" : "text-muted-foreground"
+                onClick={() => { setSortMode(!sortMode); if (sortMode) { setDragIndex(null); setDragOverIndex(null); } }}
+                className={`p-1.5 rounded-md transition mr-1 ${
+                  sortMode ? "bg-accent text-white" : "bg-muted text-muted-foreground"
                 }`}
-                aria-label={t.products_view_grid}
-                title={t.products_view_grid}
+                aria-label={t.record_sort_hint}
+                title={t.record_sort_hint}
               >
-                <LayoutGrid className="w-4 h-4" />
+                <ArrowUpDown className="w-4 h-4" />
               </button>
-              <button
-                onClick={() => setViewMode("list")}
-                className={`p-1.5 rounded-md transition ${
-                  viewMode === "list" ? "bg-card shadow-sm text-primary" : "text-muted-foreground"
-                }`}
-                aria-label={t.products_view_list}
-                title={t.products_view_list}
-              >
-                <List className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-1 bg-muted p-1 rounded-lg">
+                <button
+                  onClick={() => setViewMode("grid")}
+                  className={`p-1.5 rounded-md transition ${
+                    viewMode === "grid" ? "bg-card shadow-sm text-primary" : "text-muted-foreground"
+                  }`}
+                  aria-label={t.products_view_grid}
+                  title={t.products_view_grid}
+                >
+                  <LayoutGrid className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setViewMode("list")}
+                  className={`p-1.5 rounded-md transition ${
+                    viewMode === "list" ? "bg-card shadow-sm text-primary" : "text-muted-foreground"
+                  }`}
+                  aria-label={t.products_view_list}
+                  title={t.products_view_list}
+                >
+                  <List className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           </div>
+
+          {/* 排序提示 */}
+          {sortMode && (
+            <div className="bg-accent/10 rounded-lg px-3 py-2 text-xs text-accent flex items-center gap-1.5">
+              <span className="text-sm">↕️</span>
+              <span>{t.record_sorting}</span>
+            </div>
+          )}
 
           {/* 格子模式 — 一屏可見多個商品 */}
           {viewMode === "grid" ? (
             <div className="grid grid-cols-3 gap-2">
-              {products.map((p) => {
+              {products.map((p, index) => {
                 const isSelected = selectedIds.has(p.id);
                 const isLongPressing = longPressTarget === p.id;
                 return (
                   <div
                     key={p.id}
                     data-product-id={p.id}
-                    onMouseDown={() => handleProductLongPress(p.id)}
+                    draggable={sortMode}
+                    onDragStart={() => handleDragStart(index)}
+                    onDragOver={(e) => handleDragOverLive(e, index)}
+                    onDragEnd={handleDragEnd}
+                    onDrop={() => handleDrop(index)}
+                    onMouseDown={() => !sortMode && handleProductLongPress(p.id)}
                     onMouseUp={handleProductPressEnd}
                     onMouseLeave={handleProductPressEnd}
-                    onTouchStart={() => handleProductLongPress(p.id)}
+                    onTouchStart={() => !sortMode && handleProductLongPress(p.id)}
                     onTouchEnd={handleProductPressEnd}
-                    onClick={() => handleProductClick(p.id)}
+                    onClick={() => !sortMode && handleProductClick(p.id)}
                     style={{ backgroundColor: (!isSelected && !isLongPressing && p.color) ? p.color : undefined }}
                     className={`relative bg-card border-2 rounded-xl p-2.5 cursor-pointer transition-all select-none ${
                       isSelected || isLongPressing
                         ? "border-rose-500 bg-rose-50 shake-once"
                         : "border-border hover:border-primary/40"
-                    } ${multiSelectMode && isSelected ? "ring-2 ring-rose-300" : ""}`}
+                    } ${multiSelectMode && isSelected ? "ring-2 ring-rose-300" : ""} ${
+                      dragIndex === index ? "opacity-30 scale-90" : ""
+                    } ${sortMode ? "cursor-move" : ""}`}
                   >
                     {/* 選中標記 */}
                     {(isSelected || isLongPressing) && (
@@ -1431,7 +1482,7 @@ function ProductsView() {
                       </div>
                     )}
                     {/* 編輯按鈕 — 非多選模式時顯示 */}
-                    {!multiSelectMode && !isSelected && !isLongPressing && (
+                    {!multiSelectMode && !isSelected && !isLongPressing && !sortMode && (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -1461,24 +1512,31 @@ function ProductsView() {
           ) : (
             /* 列表模式 — 詳細資訊 */
             <div className="space-y-2">
-              {products.map((p) => {
+              {products.map((p, index) => {
                 const isSelected = selectedIds.has(p.id);
                 const isLongPressing = longPressTarget === p.id;
                 return (
                   <div
                     key={p.id}
                     data-product-id={p.id}
-                    onMouseDown={() => handleProductLongPress(p.id)}
+                    draggable={sortMode}
+                    onDragStart={() => handleDragStart(index)}
+                    onDragOver={(e) => handleDragOverLive(e, index)}
+                    onDragEnd={handleDragEnd}
+                    onDrop={() => handleDrop(index)}
+                    onMouseDown={() => !sortMode && handleProductLongPress(p.id)}
                     onMouseUp={handleProductPressEnd}
                     onMouseLeave={handleProductPressEnd}
-                    onTouchStart={() => handleProductLongPress(p.id)}
+                    onTouchStart={() => !sortMode && handleProductLongPress(p.id)}
                     onTouchEnd={handleProductPressEnd}
-                    onClick={() => handleProductClick(p.id)}
+                    onClick={() => !sortMode && handleProductClick(p.id)}
                     className={`bg-card border-2 rounded-xl p-3.5 flex items-center justify-between cursor-pointer transition-all select-none ${
                       isSelected || isLongPressing
                         ? "border-rose-500 bg-rose-50 shake-once"
                         : "border-border hover:border-primary/40"
-                    } ${multiSelectMode && isSelected ? "ring-2 ring-rose-300" : ""}`}
+                    } ${multiSelectMode && isSelected ? "ring-2 ring-rose-300" : ""} ${
+                      dragIndex === index ? "opacity-30 scale-90" : ""
+                    } ${sortMode ? "cursor-move" : ""}`}
                   >
                     <div className="flex-1 min-w-0 flex items-center gap-3">
                       {/* 選中標記 */}
