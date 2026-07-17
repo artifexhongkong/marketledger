@@ -1496,20 +1496,18 @@ function ProductsView() {
                 <LayoutGrid className="w-4 h-4" />
               </button>
               <button
-                  onClick={() => setViewMode("list")}
-                  className={`p-1.5 rounded-md transition ${
-                    viewMode === "list" ? "bg-card shadow-sm text-primary" : "text-muted-foreground"
-                  }`}
-                  aria-label={t.products_view_list}
-                  title={t.products_view_list}
-                >
-                  <List className="w-4 h-4" />
-                </button>
-              </div>
+                onClick={() => setViewMode("list")}
+                className={`p-1.5 rounded-md transition ${
+                  viewMode === "list" ? "bg-card shadow-sm text-primary" : "text-muted-foreground"
+                }`}
+                aria-label={t.products_view_list}
+                title={t.products_view_list}
+              >
+                <List className="w-4 h-4" />
+              </button>
             </div>
           </div>
 
-          {/* 排序模式：頂部顯示垃圾桶 + 提示 */}
           {/* 排序模式：垃圾桶固定在頂端浮現（不影響排版） */}
           {sortMode && (
             <>
