@@ -301,6 +301,7 @@ interface AppStore {
   setLanguage: (lang: string) => void;
   setLanguageInitialized: (v: boolean) => void;
   addTransaction: (t: Omit<Transaction, "id" | "createdAt">) => string;
+  updateTransaction: (id: string, data: Partial<Omit<Transaction, "id" | "createdAt">>) => void;
   deleteTransaction: (id: string) => void;
   clearAll: () => void;
   // 當前訂單操作
@@ -376,6 +377,11 @@ export const useAppStore = create<AppStore>()(
 
       deleteTransaction: (id) =>
         set((s) => ({ transactions: s.transactions.filter((t) => t.id !== id) })),
+
+      updateTransaction: (id, data) =>
+        set((s) => ({
+          transactions: s.transactions.map((t) => (t.id === id ? { ...t, ...data } : t)),
+        })),
 
       clearAll: () => set({ transactions: [], currentOrder: [] }),
 

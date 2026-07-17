@@ -44,7 +44,8 @@ export function AuthPage({ onBack }: { onBack: () => void }) {
   // ========== Google 登入 ==========
 
   const handleLogin = async () => {
-    if (!WEB_GOOGLE_CLIENT_ID) { setError(t.auth_no_client_id); return; }
+    // Native 環境不需要 WEB_GOOGLE_CLIENT_ID（用 GoogleAuthPlugin 的 WEB_CLIENT_ID）
+    if (!isNative && !WEB_GOOGLE_CLIENT_ID) { setError(t.auth_no_client_id); return; }
 
     setLoading(true);
     setError(null);

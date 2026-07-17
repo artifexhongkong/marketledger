@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Store, X, ChevronDown, Undo2, Check, RotateCcw, SlidersHorizontal, LayoutGrid, List, Trash2, Pencil, ArrowUpDown } from "lucide-react";
+import { Plus, Store, X, ChevronDown, Undo2, Check, RotateCcw, SlidersHorizontal, LayoutGrid, List, Trash2, Pencil, ArrowUpDown, FileText } from "lucide-react";
 import type { TransactionType, CategoryId, PaymentMethod, Product, CurrencyCode } from "@/lib/store";
 import { TOP_PAYMENTS, PRODUCT_COLORS, EXTENDED_COLORS, COLOR_FAMILIES, GRAYSCALE, PAYMENT_ICONS, PAYMENT_COLORS, type ToastState } from "@/components/app/record-constants";
 import { AddPaymentModal } from "@/components/app/add-payment-modal";
@@ -43,7 +43,7 @@ export function RecordPage() {
 
 function RecordView() {
   const t = useT();
-  const { currency, products, currentMarketId, markets, addTransaction, setCurrentMarket, deleteTransaction, customPaymentMethods, currentOrder, addOrderItem, removeOrderItem, updateOrderItemQty, updateOrderItemNote, clearOrder, generateOrderId } = useAppStore();
+  const { currency, products, currentMarketId, markets, addTransaction, setCurrentMarket, deleteTransaction, updateTransaction, customPaymentMethods, currentOrder, addOrderItem, removeOrderItem, updateOrderItemQty, updateOrderItemNote, clearOrder, generateOrderId } = useAppStore();
   const [payment, setPayment] = useState<PaymentMethod>("cash");
 
   // 取得支付方式標籤（支援自訂，使用 i18n）
@@ -70,6 +70,10 @@ function RecordView() {
   const [editingOrderItem, setEditingOrderItem] = useState<string | null>(null);
   const [editQtyValue, setEditQtyValue] = useState("");
   const [editNoteValue, setEditNoteValue] = useState("");
+  const [editDiscountValue, setEditDiscountValue] = useState("");
+  const [editDiscountType, setEditDiscountType] = useState<"amount" | "percent">("amount");
+  const [orderNote, setOrderNote] = useState("");
+  const [showOrderNote, setShowOrderNote] = useState(false);
 
   const currentMarket = markets.find((m) => m.id === currentMarketId);
 
@@ -236,23 +240,51 @@ function RecordView() {
             {/* 訂單清單 — 顯示這一單已點的商品 + 合計 */}
             {currentOrder.length > 0 && (
               <div className="mt-2 bg-card border border-border rounded-xl overflow-hidden">
-                {/* 清單標題 + 新一單按鈕 */}
+                {/* 清單標題 + 整單備註(2項以上) + 新一單按鈕 */}
                 <div className="flex items-center justify-between px-3 py-2 bg-muted/40 border-b border-border">
                   <div className="flex items-center gap-1.5">
                     <span className="text-[11px] font-semibold text-foreground">{t.record_order_details}</span>
                     <span className="text-[10px] text-muted-foreground">({currentOrder.length} 項)</span>
                   </div>
-                  <button
-                    onClick={() => {
-                        clearOrder();
-                        haptic("tap");
-                    }}
-                    className="flex items-center gap-1 text-[10px] text-accent hover:text-foreground px-2 py-1 rounded-md hover:bg-accent/10 transition"
-                  >
-                    <RotateCcw className="w-3 h-3" />
-                    {t.record_new_order}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {/* 整單備註 — 2個商品以上才顯示 */}
+                    {currentOrder.length >= 2 && (
+                      <button
+                        onClick={() => setShowOrderNote(!showOrderNote)}
+                        className={`flex items-center gap-1 text-[10px] px-2 py-1 rounded-md transition ${
+                          showOrderNote || orderNote ? "text-accent bg-accent/10" : "text-muted-foreground hover:text-accent hover:bg-accent/10"
+                        }`}
+                      >
+                        <FileText className="w-3 h-3" />
+                        {t.record_order_note || "整單備註"}
+                      </button>
+                    )}
+                    <button
+                      onClick={() => {
+                          clearOrder();
+                          setOrderNote("");
+                          setShowOrderNote(false);
+                          haptic("tap");
+                      }}
+                      className="flex items-center gap-1 text-[10px] text-accent hover:text-foreground px-2 py-1 rounded-md hover:bg-accent/10 transition"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      {t.record_new_order}
+                    </button>
+                  </div>
                 </div>
+                {/* 整單備註輸入區 */}
+                {showOrderNote && currentOrder.length >= 2 && (
+                  <div className="px-3 py-2 border-b border-border bg-muted/20">
+                    <Input
+                      value={orderNote}
+                      onChange={(e) => setOrderNote(e.target.value)}
+                      placeholder={t.record_order_note_placeholder || "整單備註（例如：外帶、VIP客人…）"}
+                      className="bg-background text-xs h-8"
+                      maxLength={100}
+                    />
+                  </div>
+                )}
                 {/* 訂單項目列表 */}
                 <div className="divide-y divide-border max-h-[200px] overflow-y-auto">
                   {currentOrder.map((item) => (
@@ -337,11 +369,10 @@ function RecordView() {
                             inputMode="numeric"
                             value={editQtyValue}
                             onChange={(e) => setEditQtyValue(e.target.value.replace(/[^0-9]/g, ""))}
-                            autoFocus
                             className="bg-background text-center text-lg font-bold h-10"
                           />
                         </div>
-                        {/* 備註 */}
+                        {/* 備註 — autoFocus 在這裡（用戶最常填寫） */}
                         <div>
                           <label className="text-[11px] text-muted-foreground mb-1 block">{t.record_note_optional}</label>
                           <Textarea
@@ -350,7 +381,30 @@ function RecordView() {
                             placeholder="例如：客人要求、客製化、不加蔥…"
                             className="bg-background text-xs min-h-[50px] resize-none"
                             maxLength={100}
+                            autoFocus
                           />
+                        </div>
+                        {/* 打折 */}
+                        <div>
+                          <label className="text-[11px] text-muted-foreground mb-1 block">{t.record_discount || "打折"}</label>
+                          <div className="flex gap-2">
+                            <Input
+                              type="text"
+                              inputMode="decimal"
+                              value={editDiscountValue}
+                              onChange={(e) => setEditDiscountValue(e.target.value.replace(/[^0-9.]/g, ""))}
+                              placeholder={t.record_discount_placeholder || "輸入折扣金額"}
+                              className="bg-background text-xs h-9 flex-1"
+                            />
+                            <select
+                              value={editDiscountType}
+                              onChange={(e) => setEditDiscountType(e.target.value as "amount" | "percent")}
+                              className="bg-background text-xs h-9 rounded-md border border-input px-2"
+                            >
+                              <option value="amount">{currency}</option>
+                              <option value="percent">%</option>
+                            </select>
+                          </div>
                         </div>
                         <p className="text-[11px] text-muted-foreground text-center">
                           {t.subtotal}：{formatCurrency(item.price * qty, currency)}
@@ -360,6 +414,19 @@ function RecordView() {
                             if (qty > 0) {
                               updateOrderItemQty(editingOrderItem, qty);
                               updateOrderItemNote(editingOrderItem, editNoteValue);
+                              // 處理打折
+                              const discountVal = parseFloat(editDiscountValue);
+                              if (discountVal > 0) {
+                                let finalAmount = item.price * qty;
+                                if (editDiscountType === "percent") {
+                                  finalAmount = finalAmount * (1 - discountVal / 100);
+                                } else {
+                                  finalAmount = finalAmount - discountVal;
+                                }
+                                if (finalAmount > 0) {
+                                  updateTransaction(item.txId, { amount: finalAmount });
+                                }
+                              }
                               haptic("tap");
                             }
                             setEditingOrderItem(null);
@@ -1168,16 +1235,15 @@ function ProductsView() {
     setName(""); setPrice(""); setUnit(t.products_unit_default); setColor(""); setShowColorPalette(false); setShowForm(false);
   };
 
-  // 長按商品 → 進入多選模式 + 選中該商品
+  // 長按商品 → 進入拖拽排序模式（像 Android 桌面那樣）
   const handleProductLongPress = (productId: string) => {
+    if (sortMode) return; // 已在排序模式就不觸發
     longPressTimerRef.current = setTimeout(() => {
-      // 立即更新 ref，避免 onClick 時 state 還沒更新
-      multiSelectModeRef.current = true;
-      longPressTargetRef.current = productId;
-      setMultiSelectMode(true);
+      // 進入排序模式
+      setSortMode(true);
       setLongPressTarget(productId);
-      setSelectedIds(new Set([productId]));
-      // 0.6 秒後清除 longPressTarget（動畫過渡完成），但保留多選模式
+      haptic("tap");
+      // 0.6 秒後清除 longPressTarget
       setTimeout(() => {
         setLongPressTarget(null);
         longPressTargetRef.current = null;
@@ -1193,22 +1259,26 @@ function ProductsView() {
   };
 
   // 點擊商品：
-  // - 非多選模式 → 不做事
-  // - 多選模式 → 切換選中狀態
-  // - 但若剛結束長按（longPressTarget 還在），忽略這次 click 避免取消選中
+  // - 排序模式 → 不做事（用拖拽）
+  // - 非排序模式 → 記帳
   const handleProductClick = (productId: string) => {
-    // 用 ref 取最新狀態
-    if (!multiSelectModeRef.current) return;
+    if (sortMode) return;
     if (longPressTargetRef.current) return; // 長按剛結束，忽略
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(productId)) {
-        next.delete(productId);
-      } else {
-        next.add(productId);
+    // 在排序模式下不處理點擊
+  };
+
+  // 拖拽到垃圾桶刪除
+  const [dragOverTrash, setDragOverTrash] = useState(false);
+  const handleTrashDrop = () => {
+    if (dragIndex !== null) {
+      const productToDelete = products[dragIndex];
+      if (productToDelete) {
+        deleteProduct(productToDelete.id);
+        haptic("warning");
       }
-      return next;
-    });
+    }
+    setDragIndex(null);
+    setDragOverTrash(false);
   };
 
   // 取消多選模式
@@ -1437,12 +1507,38 @@ function ProductsView() {
             </div>
           </div>
 
-          {/* 排序提示 */}
+          {/* 排序模式：頂部顯示垃圾桶 + 提示 */}
           {sortMode && (
-            <div className="bg-accent/10 rounded-lg px-3 py-2 text-xs text-accent flex items-center gap-1.5">
-              <span className="text-sm">↕️</span>
-              <span>{t.record_sorting}</span>
-            </div>
+            <>
+              <div className="bg-accent/10 rounded-lg px-3 py-2 text-xs text-accent flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm">↕️</span>
+                  <span>{t.record_sorting}</span>
+                </div>
+                <button
+                  onClick={() => { setSortMode(false); setDragIndex(null); setDragOverIndex(null); }}
+                  className="text-xs text-accent hover:text-accent/80 font-medium"
+                >
+                  {t.cancel}
+                </button>
+              </div>
+              {/* 垃圾桶 — 拖拽到此刪除 */}
+              <div
+                onDragOver={(e) => { e.preventDefault(); setDragOverTrash(true); }}
+                onDragLeave={() => setDragOverTrash(false)}
+                onDrop={handleTrashDrop}
+                className={`rounded-xl border-2 border-dashed p-4 flex flex-col items-center justify-center gap-1 transition-all ${
+                  dragOverTrash
+                    ? "border-rose-500 bg-rose-50 scale-105"
+                    : "border-rose-300 bg-rose-50/30"
+                }`}
+              >
+                <Trash2 className={`w-7 h-7 transition-all ${dragOverTrash ? "text-rose-600 scale-110" : "text-rose-400"}`} />
+                <span className="text-[10px] text-rose-500 font-medium">
+                  {dragOverTrash ? (t.products_drop_to_delete || "放開刪除") : (t.products_drag_to_delete || "拖拽到此刪除")}
+                </span>
+              </div>
+            </>
           )}
 
           {/* 格子模式 — 一屏可見多個商品 */}

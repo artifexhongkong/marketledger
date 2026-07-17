@@ -6,7 +6,8 @@ import { groupTransactions, getOrderSummary, type TxGroup } from "@/lib/tx-group
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { ArrowUpRight, ArrowDownRight, Inbox, ChevronRight, ShoppingBag, Search, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ArrowUpRight, ArrowDownRight, Inbox, ChevronRight, ShoppingBag, Search, X, Pencil, Trash2 } from "lucide-react";
 import { useT, resolveDemoText } from "@/lib/i18n";
 
 type TimeFilter = "today" | "week" | "month" | "all";
@@ -210,41 +211,104 @@ export function TxGroupCard({
 }) {
   const t = useT();
   const customPaymentMethods = useAppStore((s) => s.customPaymentMethods);
+  const deleteTransaction = useAppStore((s) => s.deleteTransaction);
+  const updateTransaction = useAppStore((s) => s.updateTransaction);
+  const [editingTxId, setEditingTxId] = useState<string | null>(null);
+  const [editNote, setEditNote] = useState("");
+  const [editAmount, setEditAmount] = useState("");
   const firstTx = group.txs[0];
   const cat = getCategoryInfo(firstTx.category);
   const pay = firstTx.paymentMethod ? getPaymentMethodInfo(firstTx.paymentMethod, useAppStore.getState().customPaymentMethods) : null;
   const isIncome = firstTx.type === "income";
   const summary = getOrderSummary(group);
 
+  const handleEditTx = (txId: string, currentNote: string, currentAmount: number) => {
+    setEditingTxId(txId);
+    setEditNote(currentNote || "");
+    setEditAmount(String(currentAmount));
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingTxId) return;
+    const amt = parseFloat(editAmount);
+    updateTransaction(editingTxId, {
+      note: editNote.trim() || undefined,
+      amount: amt > 0 ? amt : undefined,
+    });
+    setEditingTxId(null);
+  };
+
+  const handleDeleteTx = (txId: string) => {
+    if (confirm(t.transactions_delete_confirm || "確定刪除？")) {
+      deleteTransaction(txId);
+    }
+  };
+
   if (group.type === "single") {
+    const isEditing = editingTxId === firstTx.id;
     return (
       <Card className={`${compact ? "p-2.5" : "p-3"} animate-[fadeIn_0.2s_ease-out]`}>
-        <div className="flex items-center gap-2.5">
-          <div
-            className={`${compact ? "w-8 h-8" : "w-9 h-9"} rounded-full flex items-center justify-center text-sm flex-shrink-0`}
-            style={{ backgroundColor: (cat?.color || "#6B7280") + "15" }}
-          >
-            {cat?.icon || "📝"}
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1.5">
-              <p className="text-xs font-medium text-foreground truncate">{(cat && (t as any)[cat.labelKey]) || cat?.label || firstTx.category}</p>
-              {pay && (
-                <span className="text-[9px] text-muted-foreground bg-muted px-1 rounded">{pay.labelKey && !String(firstTx.paymentMethod).startsWith("custom_") ? (t as any)[pay.labelKey] || pay.label : pay.label}</span>
-              )}
+        {isEditing ? (
+          <div className="space-y-2">
+            <Input
+              placeholder={t.record_amount}
+              value={editAmount}
+              onChange={(e) => setEditAmount(e.target.value)}
+              inputMode="decimal"
+              className="h-8 text-xs"
+            />
+            <Input
+              placeholder={t.record_note_optional}
+              value={editNote}
+              onChange={(e) => setEditNote(e.target.value)}
+              className="h-8 text-xs"
+              autoFocus
+            />
+            <div className="flex gap-2">
+              <Button onClick={handleSaveEdit} size="sm" className="h-7 text-xs flex-1">{t.save}</Button>
+              <Button onClick={() => setEditingTxId(null)} variant="outline" size="sm" className="h-7 text-xs">{t.cancel}</Button>
             </div>
-            <p className="text-[10px] text-muted-foreground truncate mt-0.5">
-              {summary}{firstTx.note && firstTx.note !== summary && ` · ${formatDateTime(firstTx.createdAt, t.date_today)}`}
-              {!firstTx.note && formatDateTime(firstTx.createdAt, t.date_today)}
-            </p>
           </div>
-          <span
-            className={`text-sm font-bold tabular-nums flex-shrink-0 ${compact ? "text-xs" : ""}`}
-            style={{ color: isIncome ? "#059669" : "#E11D48" }}
-          >
-            {isIncome ? "+" : "−"}{formatCurrency(firstTx.amount, currency)}
-          </span>
-        </div>
+        ) : (
+          <div className="flex items-center gap-2.5">
+            <div
+              className={`${compact ? "w-8 h-8" : "w-9 h-9"} rounded-full flex items-center justify-center text-sm flex-shrink-0`}
+              style={{ backgroundColor: (cat?.color || "#6B7280") + "15" }}
+            >
+              {cat?.icon || "📝"}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5">
+                <p className="text-xs font-medium text-foreground truncate">{(cat && (t as any)[cat.labelKey]) || cat?.label || firstTx.category}</p>
+                {pay && (
+                  <span className="text-[9px] text-muted-foreground bg-muted px-1 rounded">{pay.labelKey && !String(firstTx.paymentMethod).startsWith("custom_") ? (t as any)[pay.labelKey] || pay.label : pay.label}</span>
+                )}
+              </div>
+              <p className="text-[10px] text-muted-foreground truncate mt-0.5">
+                {summary}{firstTx.note && firstTx.note !== summary && ` · ${formatDateTime(firstTx.createdAt, t.date_today)}`}
+                {!firstTx.note && formatDateTime(firstTx.createdAt, t.date_today)}
+              </p>
+            </div>
+            <span
+              className={`text-sm font-bold tabular-nums flex-shrink-0 ${compact ? "text-xs" : ""}`}
+              style={{ color: isIncome ? "#059669" : "#E11D48" }}
+            >
+              {isIncome ? "+" : "−"}{formatCurrency(firstTx.amount, currency)}
+            </span>
+            <button
+              onClick={() => handleEditTx(firstTx.id, firstTx.note || "", firstTx.amount)}
+              className="p-1 text-muted-foreground hover:text-accent transition flex-shrink-0"
+            >
+              <Pencil className="w-3 h-3" />
+            </button>
+            <button
+              onClick={() => handleDeleteTx(firstTx.id)}
+              className="p-1 text-muted-foreground hover:text-rose-500 transition flex-shrink-0"
+            >
+              <Trash2 className="w-3 h-3" />
+            </button>
+          </div>
+        )}
       </Card>
     );
   }
@@ -285,27 +349,68 @@ export function TxGroupCard({
         <div className="border-t border-border divide-y divide-border bg-muted/20">
           {group.txs.map((tx) => {
             const txCat = getCategoryInfo(tx.category);
+            const isEditing = editingTxId === tx.id;
             return (
-              <div key={tx.id} className="flex items-center gap-2 px-3 py-2">
-                <div
-                  className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] flex-shrink-0"
-                  style={{ backgroundColor: (txCat?.color || "#6B7280") + "15" }}
-                >
-                  {txCat?.icon || "📝"}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[11px] font-medium text-foreground truncate">
-                    {resolveDemoText(tx.note?.replace(/ x\d+$/, ""), t) || (txCat && (t as any)[txCat.labelKey]) || txCat?.label || t.cat_sales}
-                  </p>
-                  {tx.note?.includes(" · ") && (
-                    <p className="text-[9px] text-accent truncate">
-                      {resolveDemoText(tx.note.split(" · ").slice(1).join(" · "), t)}
-                    </p>
-                  )}
-                </div>
-                <span className="text-[11px] font-semibold tabular-nums flex-shrink-0" style={{ color: "#059669" }}>
-                  +{formatCurrency(tx.amount, currency)}
-                </span>
+              <div key={tx.id} className="px-3 py-2">
+                {isEditing ? (
+                  <div className="space-y-2">
+                    <Input
+                      placeholder={t.record_amount}
+                      value={editAmount}
+                      onChange={(e) => setEditAmount(e.target.value)}
+                      inputMode="decimal"
+                      className="h-8 text-xs"
+                    />
+                    <Input
+                      placeholder={t.record_note_optional}
+                      value={editNote}
+                      onChange={(e) => setEditNote(e.target.value)}
+                      className="h-8 text-xs"
+                      autoFocus
+                    />
+                    <div className="flex gap-2">
+                      <Button onClick={handleSaveEdit} size="sm" className="h-7 text-xs flex-1">{t.save}</Button>
+                      <Button onClick={() => setEditingTxId(null)} variant="outline" size="sm" className="h-7 text-xs">{t.cancel}</Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] flex-shrink-0"
+                      style={{ backgroundColor: (txCat?.color || "#6B7280") + "15" }}
+                    >
+                      {txCat?.icon || "📝"}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[11px] font-medium text-foreground truncate">
+                        {resolveDemoText(tx.note?.replace(/ x\d+$/, ""), t) || (txCat && (t as any)[txCat.labelKey]) || txCat?.label || t.cat_sales}
+                      </p>
+                      {tx.note?.includes(" · ") && (
+                        <p className="text-[9px] text-accent truncate">
+                          {resolveDemoText(tx.note.split(" · ").slice(1).join(" · "), t)}
+                        </p>
+                      )}
+                      {tx.qty && tx.qty > 1 && (
+                        <p className="text-[9px] text-muted-foreground">×{tx.qty}</p>
+                      )}
+                    </div>
+                    <span className="text-[11px] font-semibold tabular-nums flex-shrink-0" style={{ color: "#059669" }}>
+                      +{formatCurrency(tx.amount, currency)}
+                    </span>
+                    <button
+                      onClick={() => handleEditTx(tx.id, tx.note || "", tx.amount)}
+                      className="p-1 text-muted-foreground hover:text-accent transition"
+                    >
+                      <Pencil className="w-3 h-3" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteTx(tx.id)}
+                      className="p-1 text-muted-foreground hover:text-rose-500 transition"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
               </div>
             );
           })}
