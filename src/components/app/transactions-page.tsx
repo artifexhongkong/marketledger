@@ -233,6 +233,26 @@ export function TxGroupCard({
   const summary = getOrderSummary(group);
 
   const [editPaymentMethod, setEditPaymentMethod] = useState<string>("cash");
+  // 整單打折
+  const [orderDiscountVal, setOrderDiscountVal] = useState("");
+  const [orderDiscountType, setOrderDiscountType] = useState<"amount" | "percent">("amount");
+
+  // 套用整單打折 — 按比例分配折扣到每筆交易
+  const handleApplyDiscount = () => {
+    const disc = parseFloat(orderDiscountVal);
+    if (!disc || disc <= 0) return;
+    const subtotal = group.txs.reduce((s, tx) => s + tx.amount, 0);
+    if (subtotal <= 0) return;
+    const finalTotal = orderDiscountType === "percent"
+      ? Math.max(0, subtotal * (1 - disc / 100))
+      : Math.max(0, subtotal - disc);
+    // 按比例分配折扣到每筆交易
+    const ratio = finalTotal / subtotal;
+    group.txs.forEach((tx) => {
+      const newAmount = Math.round(tx.amount * ratio * 100) / 100;
+      updateTransaction(tx.id, { amount: newAmount });
+    });
+  };
 
   const handleEditTx = (txId: string, currentNote: string, currentAmount: number, currentPayment?: string) => {
     setEditingTxId(txId);
@@ -453,6 +473,49 @@ export function TxGroupCard({
               </div>
             );
           })}
+          {/* 整單打折 — 只在多筆訂單時顯示 */}
+          {group.txs.length >= 2 && (
+            <div className="px-3 py-2 bg-muted/30 border-t border-border">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-muted-foreground flex-shrink-0">{t.record_discount || "折扣"}</span>
+                <Input
+                  type="text"
+                  inputMode="decimal"
+                  value={orderDiscountVal}
+                  onChange={(e) => setOrderDiscountVal(e.target.value.replace(/[^0-9.]/g, ""))}
+                  placeholder="0"
+                  className="h-7 text-xs flex-1"
+                />
+                <select
+                  value={orderDiscountType}
+                  onChange={(e) => setOrderDiscountType(e.target.value as "amount" | "percent")}
+                  className="h-7 text-xs rounded-md border border-input px-1"
+                >
+                  <option value="amount">{currency}</option>
+                  <option value="percent">%</option>
+                </select>
+                <button
+                  onClick={handleApplyDiscount}
+                  className="px-2 py-1 bg-accent text-white text-[10px] rounded-md hover:bg-accent/80 transition"
+                >
+                  {t.save}
+                </button>
+              </div>
+              {/* 顯示折扣後總價 */}
+              {orderDiscountVal && parseFloat(orderDiscountVal) > 0 && (() => {
+                const subtotal = group.txs.reduce((s, tx) => s + tx.amount, 0);
+                const disc = parseFloat(orderDiscountVal);
+                const finalTotal = orderDiscountType === "percent"
+                  ? Math.max(0, subtotal * (1 - disc / 100))
+                  : Math.max(0, subtotal - disc);
+                return (
+                  <div className="text-[10px] text-rose-600 mt-1">
+                    {t.subtotal}: {formatCurrency(subtotal, currency)} → {t.total}: {formatCurrency(finalTotal, currency)}
+                  </div>
+                );
+              })()}
+            </div>
+          )}
         </div>
       )}
     </Card>

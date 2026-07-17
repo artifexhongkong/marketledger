@@ -72,6 +72,21 @@ function RecordView() {
   const [editDiscountType, setEditDiscountType] = useState<"amount" | "percent">("amount");
   const [orderNote, setOrderNote] = useState("");
   const [showOrderNote, setShowOrderNote] = useState(false);
+  // 整單打折
+  const [orderDiscountValue, setOrderDiscountValue] = useState("");
+  const [orderDiscountType, setOrderDiscountType] = useState<"amount" | "percent">("amount");
+
+  // 計算整單原價
+  const orderSubtotal = currentOrder.reduce((sum, item) => sum + item.price * item.qty, 0);
+  // 計算整單折扣後總價
+  const orderTotal = (() => {
+    const discount = parseFloat(orderDiscountValue) || 0;
+    if (discount <= 0) return orderSubtotal;
+    if (orderDiscountType === "percent") {
+      return Math.max(0, orderSubtotal * (1 - discount / 100));
+    }
+    return Math.max(0, orderSubtotal - discount);
+  })();
 
   const currentMarket = markets.find((m) => m.id === currentMarketId);
 
@@ -245,16 +260,16 @@ function RecordView() {
                     <span className="text-[10px] text-muted-foreground">({currentOrder.length} 項)</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    {/* 整單備註 — 2個商品以上才顯示 */}
+                    {/* 備註與折扣 — 2個商品以上才顯示 */}
                     {currentOrder.length >= 2 && (
                       <button
                         onClick={() => setShowOrderNote(!showOrderNote)}
                         className={`flex items-center gap-1 text-[10px] px-2 py-1 rounded-md transition ${
-                          showOrderNote || orderNote ? "text-accent bg-accent/10" : "text-muted-foreground hover:text-accent hover:bg-accent/10"
+                          showOrderNote || orderNote || orderDiscountValue ? "text-accent bg-accent/10" : "text-muted-foreground hover:text-accent hover:bg-accent/10"
                         }`}
                       >
                         <FileText className="w-3 h-3" />
-                        {t.record_order_note || "整單備註"}
+                        {t.record_order_note_discount || "備註與折扣"}
                       </button>
                     )}
                     <button
@@ -262,6 +277,7 @@ function RecordView() {
                           clearOrder();
                           setOrderNote("");
                           setShowOrderNote(false);
+                          setOrderDiscountValue("");
                           haptic("tap");
                       }}
                       className="flex items-center gap-1 text-[10px] text-accent hover:text-foreground px-2 py-1 rounded-md hover:bg-accent/10 transition"
@@ -271,16 +287,43 @@ function RecordView() {
                     </button>
                   </div>
                 </div>
-                {/* 整單備註輸入區 */}
+                {/* 備註與折扣輸入區 */}
                 {showOrderNote && currentOrder.length >= 2 && (
-                  <div className="px-3 py-2 border-b border-border bg-muted/20">
+                  <div className="px-3 py-2 border-b border-border bg-muted/20 space-y-2">
+                    {/* 整單備註 */}
                     <Input
                       value={orderNote}
                       onChange={(e) => setOrderNote(e.target.value)}
-                      placeholder={t.record_order_note_placeholder || "整單備註（例如：外帶、VIP客人…）"}
+                      placeholder={t.record_order_note_placeholder || "備註（例如：外帶、VIP客人…）"}
                       className="bg-background text-xs h-8"
                       maxLength={100}
                     />
+                    {/* 整單打折 */}
+                    <div className="flex gap-2 items-center">
+                      <span className="text-[10px] text-muted-foreground flex-shrink-0">{t.record_discount || "折扣"}</span>
+                      <Input
+                        type="text"
+                        inputMode="decimal"
+                        value={orderDiscountValue}
+                        onChange={(e) => setOrderDiscountValue(e.target.value.replace(/[^0-9.]/g, ""))}
+                        placeholder="0"
+                        className="bg-background text-xs h-8 flex-1"
+                      />
+                      <select
+                        value={orderDiscountType}
+                        onChange={(e) => setOrderDiscountType(e.target.value as "amount" | "percent")}
+                        className="bg-background text-xs h-8 rounded-md border border-input px-1"
+                      >
+                        <option value="amount">{currency}</option>
+                        <option value="percent">%</option>
+                      </select>
+                    </div>
+                    {/* 折扣摘要 */}
+                    {orderDiscountValue && parseFloat(orderDiscountValue) > 0 && (
+                      <div className="text-[10px] text-rose-600">
+                        {t.subtotal}: {formatCurrency(orderSubtotal, currency)} → {t.total}: {formatCurrency(orderTotal, currency)}
+                      </div>
+                    )}
                   </div>
                 )}
                 {/* 訂單項目列表 */}
@@ -331,11 +374,16 @@ function RecordView() {
                     </div>
                   ))}
                 </div>
-                {/* 合計 */}
+                {/* 合計 — 含折扣 */}
                 <div className="px-3 py-2 bg-primary/5 border-t border-border flex items-center justify-between">
-                  <span className="text-[11px] font-semibold text-foreground">{t.total}</span>
+                  <div className="flex flex-col">
+                    <span className="text-[11px] font-semibold text-foreground">{t.total}</span>
+                    {orderDiscountValue && parseFloat(orderDiscountValue) > 0 && (
+                      <span className="text-[9px] text-muted-foreground line-through">{formatCurrency(orderSubtotal, currency)}</span>
+                    )}
+                  </div>
                   <span className="text-base font-bold tabular-nums text-primary">
-                    {formatCurrency(currentOrder.reduce((sum, item) => sum + item.price * item.qty, 0), currency)}
+                    {formatCurrency(orderTotal, currency)}
                   </span>
                 </div>
               </div>
@@ -398,28 +446,7 @@ function RecordView() {
                             ))}
                           </select>
                         </div>
-                        {/* 打折 */}
-                        <div>
-                          <label className="text-[11px] text-muted-foreground mb-1 block">{t.record_discount || "打折"}</label>
-                          <div className="flex gap-2">
-                            <Input
-                              type="text"
-                              inputMode="decimal"
-                              value={editDiscountValue}
-                              onChange={(e) => setEditDiscountValue(e.target.value.replace(/[^0-9.]/g, ""))}
-                              placeholder={t.record_discount_placeholder || "輸入折扣金額"}
-                              className="bg-background text-xs h-9 flex-1"
-                            />
-                            <select
-                              value={editDiscountType}
-                              onChange={(e) => setEditDiscountType(e.target.value as "amount" | "percent")}
-                              className="bg-background text-xs h-9 rounded-md border border-input px-2"
-                            >
-                              <option value="amount">{currency}</option>
-                              <option value="percent">%</option>
-                            </select>
-                          </div>
-                        </div>
+                        {/* 移除單一商品打折 — 打折已移至整單「備註與折扣」 */}
                         <p className="text-[11px] text-muted-foreground text-center">
                           {t.subtotal}：{formatCurrency(item.price * qty, currency)}
                         </p>
@@ -428,19 +455,6 @@ function RecordView() {
                             if (qty > 0) {
                               updateOrderItemQty(editingOrderItem, qty);
                               updateOrderItemNote(editingOrderItem, editNoteValue);
-                              // 處理打折
-                              const discountVal = parseFloat(editDiscountValue);
-                              if (discountVal > 0) {
-                                let finalAmount = item.price * qty;
-                                if (editDiscountType === "percent") {
-                                  finalAmount = finalAmount * (1 - discountVal / 100);
-                                } else {
-                                  finalAmount = finalAmount - discountVal;
-                                }
-                                if (finalAmount > 0) {
-                                  updateTransaction(item.txId, { amount: finalAmount });
-                                }
-                              }
                               haptic("tap");
                             }
                             setEditingOrderItem(null);

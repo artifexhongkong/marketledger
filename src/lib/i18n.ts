@@ -60,6 +60,8 @@ export interface Translations {
   record_note_optional: string;
   record_complete: string;
   record_order_details: string;
+  record_order_note_discount: string;
+  record_discount: string;
   record_new_order: string;
   record_qty: string;
   record_enter_qty: string;
@@ -496,6 +498,8 @@ const zhTW: Translations = {
   record_note_optional: "備註（選填）",
   record_complete: "✓ 完成記帳",
   record_order_details: "本單明細",
+  record_order_note_discount: "備註與折扣",
+  record_discount: "折扣",
   record_new_order: "新一單",
   record_qty: "輸入數量",
   record_modify_item: "修改項目",
@@ -891,6 +895,8 @@ const zhCN: Translations = {
   record_note_optional: "备注（选填）",
   record_complete: "✓ 完成记账",
   record_order_details: "本单明细",
+  record_order_note_discount: "备注与折扣",
+  record_discount: "折扣",
   record_new_order: "新一单",
   record_qty: "输入数量",
   record_modify_item: "修改项目",
@@ -1297,6 +1303,8 @@ const en: Translations = {
   record_note_optional: "Note (optional)",
   record_complete: "✓ Complete",
   record_order_details: "Order Details",
+  record_order_note_discount: "Note & Discount",
+  record_discount: "Discount",
   record_new_order: "New Order",
   record_qty: "Enter quantity",
   record_modify_item: "Modify Item",
@@ -1709,6 +1717,8 @@ const ja: Translations = {
   record_note_optional: "メモ（任意）",
   record_complete: "✓ 記帳完了",
   record_order_details: "注文詳細",
+  record_order_note_discount: "メモと割引",
+  record_discount: "割引",
   record_new_order: "新規注文",
   record_qty: "数量入力",
   record_modify_item: "項目編集",
@@ -2120,6 +2130,8 @@ const ko: Translations = {
   record_note_optional: "메모 (선택)",
   record_complete: "✓ 기장 완료",
   record_order_details: "주문 내역",
+  record_order_note_discount: "메모와 할인",
+  record_discount: "할인",
   record_new_order: "새 주문",
   record_qty: "수량 입력",
   record_modify_item: "항목 수정",
