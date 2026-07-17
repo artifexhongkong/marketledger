@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useAppStore, getDailySummary, formatCurrency, formatDateTime, getCategoryInfo, getPaymentMethodInfo, CATEGORIES, type CurrencyCode } from "@/lib/store";
+import { useAppStore, getDailySummary, formatCurrency, formatDateTime, getCategoryInfo, getPaymentMethodInfo, CATEGORIES, PAYMENT_METHODS, type CurrencyCode } from "@/lib/store";
 import { groupTransactions, getOrderSummary, type TxGroup } from "@/lib/tx-group";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -213,6 +213,16 @@ export function TxGroupCard({
   const customPaymentMethods = useAppStore((s) => s.customPaymentMethods);
   const deleteTransaction = useAppStore((s) => s.deleteTransaction);
   const updateTransaction = useAppStore((s) => s.updateTransaction);
+  const products = useAppStore((s) => s.products);
+
+  // 用 productId 查商品名稱
+  const getProductName = (tx: any): string => {
+    if (tx.productId) {
+      const product = products.find((p) => p.id === tx.productId);
+      if (product) return resolveDemoText(product.name, t) || product.name;
+    }
+    return "";
+  };
   const [editingTxId, setEditingTxId] = useState<string | null>(null);
   const [editNote, setEditNote] = useState("");
   const [editAmount, setEditAmount] = useState("");
@@ -222,10 +232,13 @@ export function TxGroupCard({
   const isIncome = firstTx.type === "income";
   const summary = getOrderSummary(group);
 
-  const handleEditTx = (txId: string, currentNote: string, currentAmount: number) => {
+  const [editPaymentMethod, setEditPaymentMethod] = useState<string>("cash");
+
+  const handleEditTx = (txId: string, currentNote: string, currentAmount: number, currentPayment?: string) => {
     setEditingTxId(txId);
     setEditNote(currentNote || "");
     setEditAmount(String(currentAmount));
+    setEditPaymentMethod(currentPayment || "cash");
   };
 
   const handleSaveEdit = () => {
@@ -234,6 +247,7 @@ export function TxGroupCard({
     updateTransaction(editingTxId, {
       note: editNote.trim() || undefined,
       amount: amt > 0 ? amt : undefined,
+      paymentMethod: editPaymentMethod as any,
     });
     setEditingTxId(null);
   };
@@ -264,6 +278,19 @@ export function TxGroupCard({
               className="h-8 text-xs"
               autoFocus
             />
+            {/* 付款方式 */}
+            <select
+              value={editPaymentMethod}
+              onChange={(e) => setEditPaymentMethod(e.target.value)}
+              className="w-full h-8 text-xs rounded-md border border-input bg-background px-2"
+            >
+              {Object.entries(PAYMENT_METHODS).map(([key, info]) => (
+                <option key={key} value={key}>{(t as any)[info.labelKey] || info.label}</option>
+              ))}
+              {customPaymentMethods.map((m) => (
+                <option key={m.id} value={m.id}>{m.label}</option>
+              ))}
+            </select>
             <div className="flex gap-2">
               <Button onClick={handleSaveEdit} size="sm" className="h-7 text-xs flex-1">{t.save}</Button>
               <Button onClick={() => setEditingTxId(null)} variant="outline" size="sm" className="h-7 text-xs">{t.cancel}</Button>
@@ -279,14 +306,15 @@ export function TxGroupCard({
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
-                <p className="text-xs font-medium text-foreground truncate">{(cat && (t as any)[cat.labelKey]) || cat?.label || firstTx.category}</p>
+                <p className="text-xs font-medium text-foreground truncate">
+                  {getProductName(firstTx) || (cat && (t as any)[cat.labelKey]) || cat?.label || firstTx.category}
+                </p>
                 {pay && (
                   <span className="text-[9px] text-muted-foreground bg-muted px-1 rounded">{pay.labelKey && !String(firstTx.paymentMethod).startsWith("custom_") ? (t as any)[pay.labelKey] || pay.label : pay.label}</span>
                 )}
               </div>
               <p className="text-[10px] text-muted-foreground truncate mt-0.5">
-                {summary}{firstTx.note && firstTx.note !== summary && ` · ${formatDateTime(firstTx.createdAt, t.date_today)}`}
-                {!firstTx.note && formatDateTime(firstTx.createdAt, t.date_today)}
+                {firstTx.note && `${firstTx.note} · `}{formatDateTime(firstTx.createdAt, t.date_today)}
               </p>
             </div>
             <span
@@ -296,7 +324,7 @@ export function TxGroupCard({
               {isIncome ? "+" : "−"}{formatCurrency(firstTx.amount, currency)}
             </span>
             <button
-              onClick={() => handleEditTx(firstTx.id, firstTx.note || "", firstTx.amount)}
+              onClick={() => handleEditTx(firstTx.id, firstTx.note || "", firstTx.amount, firstTx.paymentMethod)}
               className="p-1 text-muted-foreground hover:text-accent transition flex-shrink-0"
             >
               <Pencil className="w-3 h-3" />
@@ -368,6 +396,19 @@ export function TxGroupCard({
                       className="h-8 text-xs"
                       autoFocus
                     />
+                    {/* 付款方式 */}
+                    <select
+                      value={editPaymentMethod}
+                      onChange={(e) => setEditPaymentMethod(e.target.value)}
+                      className="w-full h-8 text-xs rounded-md border border-input bg-background px-2"
+                    >
+                      {Object.entries(PAYMENT_METHODS).map(([key, info]) => (
+                        <option key={key} value={key}>{(t as any)[info.labelKey] || info.label}</option>
+                      ))}
+                      {customPaymentMethods.map((m) => (
+                        <option key={m.id} value={m.id}>{m.label}</option>
+                      ))}
+                    </select>
                     <div className="flex gap-2">
                       <Button onClick={handleSaveEdit} size="sm" className="h-7 text-xs flex-1">{t.save}</Button>
                       <Button onClick={() => setEditingTxId(null)} variant="outline" size="sm" className="h-7 text-xs">{t.cancel}</Button>
@@ -383,12 +424,10 @@ export function TxGroupCard({
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-[11px] font-medium text-foreground truncate">
-                        {resolveDemoText(tx.note?.replace(/ x\d+$/, ""), t) || (txCat && (t as any)[txCat.labelKey]) || txCat?.label || t.cat_sales}
+                        {getProductName(tx) || (txCat && (t as any)[txCat.labelKey]) || txCat?.label || t.cat_sales}
                       </p>
-                      {tx.note?.includes(" · ") && (
-                        <p className="text-[9px] text-accent truncate">
-                          {resolveDemoText(tx.note.split(" · ").slice(1).join(" · "), t)}
-                        </p>
+                      {tx.note && (
+                        <p className="text-[9px] text-accent truncate">{tx.note}</p>
                       )}
                       {tx.qty && tx.qty > 1 && (
                         <p className="text-[9px] text-muted-foreground">×{tx.qty}</p>
@@ -398,7 +437,7 @@ export function TxGroupCard({
                       +{formatCurrency(tx.amount, currency)}
                     </span>
                     <button
-                      onClick={() => handleEditTx(tx.id, tx.note || "", tx.amount)}
+                      onClick={() => handleEditTx(tx.id, tx.note || "", tx.amount, tx.paymentMethod)}
                       className="p-1 text-muted-foreground hover:text-accent transition"
                     >
                       <Pencil className="w-3 h-3" />

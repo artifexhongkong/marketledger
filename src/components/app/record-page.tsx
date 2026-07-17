@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Store, X, ChevronDown, Undo2, Check, RotateCcw, SlidersHorizontal, LayoutGrid, List, Trash2, Pencil, ArrowUpDown, FileText } from "lucide-react";
+import { Plus, Store, X, ChevronDown, Undo2, Check, RotateCcw, SlidersHorizontal, LayoutGrid, List, Trash2, FileText } from "lucide-react";
 import type { TransactionType, CategoryId, PaymentMethod, Product, CurrencyCode } from "@/lib/store";
 import { TOP_PAYMENTS, PRODUCT_COLORS, EXTENDED_COLORS, COLOR_FAMILIES, GRAYSCALE, PAYMENT_ICONS, PAYMENT_COLORS, type ToastState } from "@/components/app/record-constants";
 import { AddPaymentModal } from "@/components/app/add-payment-modal";
@@ -18,9 +18,7 @@ export function RecordPage() {
   const [mode, setMode] = useState<"record" | "products">("record");
   return (
     <div className="pb-4 flex flex-col h-full">
-      <h1 className="text-xl font-bold pt-4 px-4 text-foreground">{t.record_title}</h1>
-
-      {/* Mode toggle — segmented control */}
+      {/* Mode toggle — segmented control（移除標題，直接從 toggle 開始） */}
       <div className="mx-4 mt-2 flex bg-muted rounded-lg p-0.5">
         <button onClick={() => setMode("record")}
           className={`flex-1 py-1.5 text-xs font-medium rounded-md transition ${mode === "record" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}>
@@ -383,6 +381,22 @@ function RecordView() {
                             maxLength={100}
                             autoFocus
                           />
+                        </div>
+                        {/* 付款方式 */}
+                        <div>
+                          <label className="text-[11px] text-muted-foreground mb-1 block">{t.record_payment_method}</label>
+                          <select
+                            value={payment}
+                            onChange={(e) => setPayment(e.target.value as PaymentMethod)}
+                            className="w-full bg-background text-xs h-9 rounded-md border border-input px-2"
+                          >
+                            {Object.entries(PAYMENT_METHODS).map(([key, info]) => (
+                              <option key={key} value={key}>{(t as any)[info.labelKey] || info.label}</option>
+                            ))}
+                            {customPaymentMethods.map((m) => (
+                              <option key={m.id} value={m.id}>{m.label}</option>
+                            ))}
+                          </select>
                         </div>
                         {/* 打折 */}
                         <div>
@@ -1465,35 +1479,23 @@ function ProductsView() {
         </Card>
       ) : (
         <>
-          {/* 顯示模式切換 + 商品數量 + 排序按鈕 */}
+          {/* 顯示模式切換 + 商品數量（移除排序按鈕，用長按拖拽） */}
           <div className="flex items-center justify-between">
             <span className="text-xs text-muted-foreground font-medium">
               {t.products_count.replace("{n}", String(products.length))}
             </span>
-            <div className="flex items-center gap-1">
-              {/* 排序模式切換按鈕 */}
+            <div className="flex items-center gap-1 bg-muted p-1 rounded-lg">
               <button
-                onClick={() => { setSortMode(!sortMode); if (sortMode) { setDragIndex(null); setDragOverIndex(null); } }}
-                className={`p-1.5 rounded-md transition mr-1 ${
-                  sortMode ? "bg-accent text-white" : "bg-muted text-muted-foreground"
+                onClick={() => setViewMode("grid")}
+                className={`p-1.5 rounded-md transition ${
+                  viewMode === "grid" ? "bg-card shadow-sm text-primary" : "text-muted-foreground"
                 }`}
-                aria-label={t.record_sort_hint}
-                title={t.record_sort_hint}
+                aria-label={t.products_view_grid}
+                title={t.products_view_grid}
               >
-                <ArrowUpDown className="w-4 h-4" />
+                <LayoutGrid className="w-4 h-4" />
               </button>
-              <div className="flex items-center gap-1 bg-muted p-1 rounded-lg">
-                <button
-                  onClick={() => setViewMode("grid")}
-                  className={`p-1.5 rounded-md transition ${
-                    viewMode === "grid" ? "bg-card shadow-sm text-primary" : "text-muted-foreground"
-                  }`}
-                  aria-label={t.products_view_grid}
-                  title={t.products_view_grid}
-                >
-                  <LayoutGrid className="w-4 h-4" />
-                </button>
-                <button
+              <button
                   onClick={() => setViewMode("list")}
                   className={`p-1.5 rounded-md transition ${
                     viewMode === "list" ? "bg-card shadow-sm text-primary" : "text-muted-foreground"
@@ -1508,8 +1510,10 @@ function ProductsView() {
           </div>
 
           {/* 排序模式：頂部顯示垃圾桶 + 提示 */}
+          {/* 排序模式：垃圾桶固定在頂端浮現（不影響排版） */}
           {sortMode && (
             <>
+              {/* 提示條 */}
               <div className="bg-accent/10 rounded-lg px-3 py-2 text-xs text-accent flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
                   <span className="text-sm">↕️</span>
@@ -1522,20 +1526,20 @@ function ProductsView() {
                   {t.cancel}
                 </button>
               </div>
-              {/* 垃圾桶 — 拖拽到此刪除 */}
+              {/* 垃圾桶 — 固定在頂端浮現，不影響排版 */}
               <div
                 onDragOver={(e) => { e.preventDefault(); setDragOverTrash(true); }}
                 onDragLeave={() => setDragOverTrash(false)}
                 onDrop={handleTrashDrop}
-                className={`rounded-xl border-2 border-dashed p-4 flex flex-col items-center justify-center gap-1 transition-all ${
+                className={`fixed top-20 left-1/2 -translate-x-1/2 z-50 rounded-full border-2 shadow-lg flex flex-col items-center justify-center transition-all ${
                   dragOverTrash
-                    ? "border-rose-500 bg-rose-50 scale-105"
-                    : "border-rose-300 bg-rose-50/30"
+                    ? "border-rose-500 bg-rose-50 w-20 h-20 scale-110"
+                    : "border-rose-300 bg-white/95 w-16 h-16"
                 }`}
               >
-                <Trash2 className={`w-7 h-7 transition-all ${dragOverTrash ? "text-rose-600 scale-110" : "text-rose-400"}`} />
-                <span className="text-[10px] text-rose-500 font-medium">
-                  {dragOverTrash ? (t.products_drop_to_delete || "放開刪除") : (t.products_drag_to_delete || "拖拽到此刪除")}
+                <Trash2 className={`transition-all ${dragOverTrash ? "w-8 h-8 text-rose-600" : "w-6 h-6 text-rose-400"}`} />
+                <span className="text-[8px] text-rose-500 font-medium mt-0.5">
+                  {dragOverTrash ? (t.products_drop_to_delete || "刪除") : (t.products_drag_to_delete || "刪除")}
                 </span>
               </div>
             </>
@@ -1577,19 +1581,7 @@ function ProductsView() {
                         <Check className="w-3 h-3 text-white" strokeWidth={3} />
                       </div>
                     )}
-                    {/* 編輯按鈕 — 非多選模式時顯示 */}
-                    {!multiSelectMode && !isSelected && !isLongPressing && !sortMode && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEditProduct(p);
-                        }}
-                        className="absolute top-1 right-1 w-5 h-5 rounded-full bg-accent/15 flex items-center justify-center z-10 hover:bg-accent/30 transition"
-                        aria-label={t.products_edit_product}
-                      >
-                        <Pencil className="w-2.5 h-2.5 text-accent" />
-                      </button>
-                    )}
+                    {/* 移除編輯按鈕（筆圖示）— 用長按進入排序模式 */}
                     <p className={`text-xs font-medium leading-tight line-clamp-2 min-h-[28px] ${
                       isSelected || isLongPressing ? "text-rose-700" : "text-foreground"
                     }`}>
@@ -1652,20 +1644,7 @@ function ProductsView() {
                         </p>
                       </div>
                     </div>
-                    {/* 編輯按鈕 — 點擊進入編輯模式 */}
-                    {!multiSelectMode && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEditProduct(p);
-                        }}
-                        className="flex items-center gap-1 text-[11px] text-accent hover:text-foreground px-2 py-1.5 rounded-md hover:bg-accent/10 transition flex-shrink-0"
-                        aria-label={t.products_edit_product}
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                        {t.products_edit}
-                      </button>
-                    )}
+                    {/* 移除編輯按鈕 — 用長按進入排序模式 */}
                   </div>
                 );
               })}
