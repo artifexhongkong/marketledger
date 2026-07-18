@@ -246,7 +246,139 @@ function RecordView() {
         {/* ── 1. 支付方式 ── */}
         <PaymentSelector payment={payment} setPayment={setPayment} />
 
-        {/* ── 2. 手動記帳：可收合的進階區塊（移到最上方）── */}
+        {/* ── 2. 商品快捷按鈕（在支付方式下方）── */}
+        {products.length > 0 ? (
+          <div className="mt-4">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs text-muted-foreground font-medium">{t.record_tap_to_record}</p>
+              <div className="flex items-center gap-2">
+                {/* 每行數量選擇器 */}
+                <div className="flex items-center gap-1 bg-muted rounded-md p-0.5">
+                  {[2, 3, 4].map((n) => (
+                    <button
+                      key={n}
+                      onClick={() => setGridCols(n)}
+                      className={`px-1.5 py-0.5 text-[10px] rounded transition ${
+                        gridCols === n ? "bg-card shadow-sm text-foreground font-medium" : "text-muted-foreground"
+                      }`}
+                    >
+                      {n}
+                    </button>
+                  ))}
+                </div>
+                <span className="text-[10px] text-muted-foreground/70">{t.record_long_press_hint}</span>
+                {lastTx && (
+                  <button
+                    onClick={handleUndo}
+                    className="text-[10px] text-primary hover:text-primary/80 font-medium flex items-center gap-1"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    {t.record_undo_last}
+                  </button>
+                )}
+              </div>
+            </div>
+            <div className={`grid gap-2`} style={{ gridTemplateColumns: `repeat(${gridCols}, minmax(0, 1fr))` }}>
+              {products.map((p) => (
+                <ProductButton
+                  key={p.id}
+                  product={p}
+                  currency={currency}
+                  payment={payment}
+                  currentMarketId={currentMarketId}
+                  confirming={confirmId === p.id}
+                  onConfirm={(id) => { setConfirmId(id); setTimeout(() => setConfirmId(null), 600); }}
+                  onRecord={(txId, productName, amount, qty) => {
+                    setToast({
+                      id: `toast_${Date.now()}`,
+                      txId,
+                      productName,
+                      amount,
+                      currency,
+                      timestamp: Date.now(),
+                    });
+                    setLastTx({ txId, productName, amount });
+                    addOrderItem(txId, p, qty);
+                    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+                    toastTimerRef.current = setTimeout(() => setToast(null), 5000);
+                  }}
+                  onUndo={handleUndo}
+                  generateOrderId={generateOrderId}
+                />
+              ))}
+              {/* 快捷自定義商品按鈕 */}
+              <button
+                onClick={() => setShowQuickAdd(!showQuickAdd)}
+                className={`bg-card border-2 border-dashed border-primary/40 rounded-xl p-2.5 flex flex-col items-center justify-center gap-1 transition hover:border-primary hover:bg-primary/5 ${
+                  showQuickAdd ? "ring-2 ring-primary/20" : ""
+                }`}
+              >
+                <Plus className="w-5 h-5 text-primary" />
+                <span className="text-[10px] text-primary font-medium">{t.record_quick_add || "快捷記帳"}</span>
+              </button>
+            </div>
+            {/* 快捷自定義輸入區 */}
+            {showQuickAdd && (
+              <div className="mt-2 p-3 bg-card border border-border rounded-xl space-y-2">
+                <div className="flex gap-2">
+                  <Input
+                    placeholder={t.products_name}
+                    value={quickName}
+                    onChange={(e) => setQuickName(e.target.value)}
+                    className="h-9 text-xs flex-1"
+                  />
+                  <Input
+                    placeholder={t.record_amount}
+                    value={quickPrice}
+                    onChange={(e) => setQuickPrice(e.target.value)}
+                    inputMode="decimal"
+                    className="h-9 text-xs w-24"
+                  />
+                </div>
+                <Button onClick={handleQuickAdd} size="sm" className="w-full h-9 text-xs">
+                  {t.record_complete}
+                </Button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="mt-5 bg-muted/50 rounded-xl p-6 text-center border border-dashed border-border">
+            <p className="text-2xl mb-1">📦</p>
+            <p className="text-sm font-medium text-foreground">{t.record_no_products}</p>
+            <p className="text-xs text-muted-foreground mt-1">{t.record_create_products}</p>
+            {/* 無商品時也顯示快捷記帳 */}
+            <button
+              onClick={() => setShowQuickAdd(!showQuickAdd)}
+              className="mt-3 px-4 py-2 bg-primary text-white text-xs rounded-lg hover:bg-primary/90 transition"
+            >
+              {t.record_quick_add || "快捷記帳"}
+            </button>
+            {showQuickAdd && (
+              <div className="mt-2 p-3 bg-card border border-border rounded-xl space-y-2 text-left">
+                <div className="flex gap-2">
+                  <Input
+                    placeholder={t.products_name}
+                    value={quickName}
+                    onChange={(e) => setQuickName(e.target.value)}
+                    className="h-9 text-xs flex-1"
+                  />
+                  <Input
+                    placeholder={t.record_amount}
+                    value={quickPrice}
+                    onChange={(e) => setQuickPrice(e.target.value)}
+                    inputMode="decimal"
+                    className="h-9 text-xs w-24"
+                  />
+                </div>
+                <Button onClick={handleQuickAdd} size="sm" className="w-full h-9 text-xs">
+                  {t.record_complete}
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── 3. 手動記帳 ── */}
         <div className="mt-4">
           <button
             onClick={() => setShowAdvanced(!showAdvanced)}
@@ -553,138 +685,6 @@ function RecordView() {
                 </div>
               </div>
             )}
-
-        {/* ── 4. 商品快捷按鈕 ── */}
-        {products.length > 0 ? (
-          <div className="mt-4">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-xs text-muted-foreground font-medium">{t.record_tap_to_record}</p>
-              <div className="flex items-center gap-2">
-                {/* 每行數量選擇器 */}
-                <div className="flex items-center gap-1 bg-muted rounded-md p-0.5">
-                  {[2, 3, 4].map((n) => (
-                    <button
-                      key={n}
-                      onClick={() => setGridCols(n)}
-                      className={`px-1.5 py-0.5 text-[10px] rounded transition ${
-                        gridCols === n ? "bg-card shadow-sm text-foreground font-medium" : "text-muted-foreground"
-                      }`}
-                    >
-                      {n}
-                    </button>
-                  ))}
-                </div>
-                <span className="text-[10px] text-muted-foreground/70">{t.record_long_press_hint}</span>
-                {lastTx && (
-                  <button
-                    onClick={handleUndo}
-                    className="text-[10px] text-primary hover:text-primary/80 font-medium flex items-center gap-1"
-                  >
-                    <RotateCcw className="w-3 h-3" />
-                    {t.record_undo_last}
-                  </button>
-                )}
-              </div>
-            </div>
-            <div className={`grid gap-2`} style={{ gridTemplateColumns: `repeat(${gridCols}, minmax(0, 1fr))` }}>
-              {products.map((p) => (
-                <ProductButton
-                  key={p.id}
-                  product={p}
-                  currency={currency}
-                  payment={payment}
-                  currentMarketId={currentMarketId}
-                  confirming={confirmId === p.id}
-                  onConfirm={(id) => { setConfirmId(id); setTimeout(() => setConfirmId(null), 600); }}
-                  onRecord={(txId, productName, amount, qty) => {
-                    setToast({
-                      id: `toast_${Date.now()}`,
-                      txId,
-                      productName,
-                      amount,
-                      currency,
-                      timestamp: Date.now(),
-                    });
-                    setLastTx({ txId, productName, amount });
-                    addOrderItem(txId, p, qty);
-                    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-                    toastTimerRef.current = setTimeout(() => setToast(null), 5000);
-                  }}
-                  onUndo={handleUndo}
-                  generateOrderId={generateOrderId}
-                />
-              ))}
-              {/* 快捷自定義商品按鈕 */}
-              <button
-                onClick={() => setShowQuickAdd(!showQuickAdd)}
-                className={`bg-card border-2 border-dashed border-primary/40 rounded-xl p-2.5 flex flex-col items-center justify-center gap-1 transition hover:border-primary hover:bg-primary/5 ${
-                  showQuickAdd ? "ring-2 ring-primary/20" : ""
-                }`}
-              >
-                <Plus className="w-5 h-5 text-primary" />
-                <span className="text-[10px] text-primary font-medium">{t.record_quick_add || "快捷記帳"}</span>
-              </button>
-            </div>
-            {/* 快捷自定義輸入區 */}
-            {showQuickAdd && (
-              <div className="mt-2 p-3 bg-card border border-border rounded-xl space-y-2">
-                <div className="flex gap-2">
-                  <Input
-                    placeholder={t.products_name}
-                    value={quickName}
-                    onChange={(e) => setQuickName(e.target.value)}
-                    className="h-9 text-xs flex-1"
-                  />
-                  <Input
-                    placeholder={t.record_amount}
-                    value={quickPrice}
-                    onChange={(e) => setQuickPrice(e.target.value)}
-                    inputMode="decimal"
-                    className="h-9 text-xs w-24"
-                  />
-                </div>
-                <Button onClick={handleQuickAdd} size="sm" className="w-full h-9 text-xs">
-                  {t.record_complete}
-                </Button>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="mt-5 bg-muted/50 rounded-xl p-6 text-center border border-dashed border-border">
-            <p className="text-2xl mb-1">📦</p>
-            <p className="text-sm font-medium text-foreground">{t.record_no_products}</p>
-            <p className="text-xs text-muted-foreground mt-1">{t.record_create_products}</p>
-            {/* 無商品時也顯示快捷記帳 */}
-            <button
-              onClick={() => setShowQuickAdd(!showQuickAdd)}
-              className="mt-3 px-4 py-2 bg-primary text-white text-xs rounded-lg hover:bg-primary/90 transition"
-            >
-              {t.record_quick_add || "快捷記帳"}
-            </button>
-            {showQuickAdd && (
-              <div className="mt-2 p-3 bg-card border border-border rounded-xl space-y-2 text-left">
-                <div className="flex gap-2">
-                  <Input
-                    placeholder={t.products_name}
-                    value={quickName}
-                    onChange={(e) => setQuickName(e.target.value)}
-                    className="h-9 text-xs flex-1"
-                  />
-                  <Input
-                    placeholder={t.record_amount}
-                    value={quickPrice}
-                    onChange={(e) => setQuickPrice(e.target.value)}
-                    inputMode="decimal"
-                    className="h-9 text-xs w-24"
-                  />
-                </div>
-                <Button onClick={handleQuickAdd} size="sm" className="w-full h-9 text-xs">
-                  {t.record_complete}
-                </Button>
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
       {/* 動畫樣式 — Toast 從上方滑入，不偏左 */}
@@ -1411,18 +1411,18 @@ function ProductsView() {
     <div
       className="px-5 space-y-4"
       onClick={(e) => {
-        // 點擊空白處（非商品、非工具列、非按鈕）取消多選模式
-        if (multiSelectModeRef.current) {
+        // 點擊空白處取消排序模式
+        if (sortMode) {
           const target = e.target as HTMLElement;
-          // 排除：商品卡片、工具列、按鈕、輸入框
           if (
             !target.closest("[data-product-id]") &&
-            !target.closest(".bg-rose-50") &&  // 工具列
             !target.closest("button") &&
             !target.closest("input") &&
-            !target.closest("textarea")
+            !target.closest("select")
           ) {
-            handleCancelMultiSelect();
+            setSortMode(false);
+            setDragIndex(null);
+            setDragOverIndex(null);
           }
         }
       }}
@@ -1607,17 +1607,9 @@ function ProductsView() {
           {sortMode && (
             <>
               {/* 提示條 */}
-              <div className="bg-accent/10 rounded-lg px-3 py-2 text-xs text-accent flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-sm">↕️</span>
-                  <span>{t.record_sorting}</span>
-                </div>
-                <button
-                  onClick={() => { setSortMode(false); setDragIndex(null); setDragOverIndex(null); }}
-                  className="text-xs text-accent hover:text-accent/80 font-medium"
-                >
-                  {t.cancel}
-                </button>
+              <div className="bg-accent/10 rounded-lg px-3 py-2 text-xs text-accent flex items-center gap-1.5">
+                <span className="text-sm">↕️</span>
+                <span>{t.record_sorting} · {t.record_click_blank_to_cancel || "點擊空白處取消"}</span>
               </div>
               {/* 垃圾桶 — 固定在頂端浮現，不影響排版 */}
               <div
@@ -1642,8 +1634,6 @@ function ProductsView() {
           {viewMode === "grid" ? (
             <div className="grid grid-cols-3 gap-2">
               {products.map((p, index) => {
-                const isSelected = selectedIds.has(p.id);
-                const isLongPressing = longPressTarget === p.id;
                 return (
                   <div
                     key={p.id}
@@ -1659,30 +1649,17 @@ function ProductsView() {
                     onTouchStart={() => !sortMode && handleProductLongPress(p.id)}
                     onTouchEnd={handleProductPressEnd}
                     onClick={() => !sortMode && handleProductClick(p.id)}
-                    style={{ backgroundColor: (!isSelected && !isLongPressing && p.color) ? p.color : undefined }}
+                    style={{ backgroundColor: p.color || undefined }}
                     className={`relative bg-card border-2 rounded-xl p-2.5 cursor-pointer transition-all select-none ${
-                      isSelected || isLongPressing
-                        ? "border-rose-500 bg-rose-50 shake-once"
-                        : "border-border hover:border-primary/40"
-                    } ${multiSelectMode && isSelected ? "ring-2 ring-rose-300" : ""} ${
-                      dragIndex === index ? "opacity-30 scale-90" : ""
-                    } ${sortMode ? "cursor-move" : ""}`}
+                      "border-border hover:border-primary/40"
+                    } ${dragIndex === index ? "opacity-30 scale-90" : ""} ${
+                      sortMode ? "cursor-move" : ""
+                    }`}
                   >
-                    {/* 選中標記 */}
-                    {(isSelected || isLongPressing) && (
-                      <div className="absolute top-1 right-1 w-5 h-5 rounded-full bg-rose-500 flex items-center justify-center z-10 animate-[fadeIn_0.2s_ease-out]">
-                        <Check className="w-3 h-3 text-white" strokeWidth={3} />
-                      </div>
-                    )}
-                    {/* 移除編輯按鈕（筆圖示）— 用長按進入排序模式 */}
-                    <p className={`text-xs font-medium leading-tight line-clamp-2 min-h-[28px] ${
-                      isSelected || isLongPressing ? "text-rose-700" : "text-foreground"
-                    }`}>
+                    <p className="text-xs font-medium leading-tight line-clamp-2 min-h-[28px] text-foreground">
                       {resolveDemoText(p.name, t)}
                     </p>
-                    <p className={`text-sm font-bold tabular-nums mt-1 ${
-                      isSelected || isLongPressing ? "text-rose-600" : "text-primary"
-                    }`}>
+                    <p className="text-sm font-bold tabular-nums mt-1 text-primary">
                       {formatCurrency(p.price, currency)}
                     </p>
                     <p className="text-[10px] text-muted-foreground mt-0.5">/ {resolveDemoText(p.unit, t)}</p>
@@ -1694,8 +1671,6 @@ function ProductsView() {
             /* 列表模式 — 詳細資訊 */
             <div className="space-y-2">
               {products.map((p, index) => {
-                const isSelected = selectedIds.has(p.id);
-                const isLongPressing = longPressTarget === p.id;
                 return (
                   <div
                     key={p.id}
@@ -1711,25 +1686,13 @@ function ProductsView() {
                     onTouchStart={() => !sortMode && handleProductLongPress(p.id)}
                     onTouchEnd={handleProductPressEnd}
                     onClick={() => !sortMode && handleProductClick(p.id)}
-                    className={`bg-card border-2 rounded-xl p-3.5 flex items-center justify-between cursor-pointer transition-all select-none ${
-                      isSelected || isLongPressing
-                        ? "border-rose-500 bg-rose-50 shake-once"
-                        : "border-border hover:border-primary/40"
-                    } ${multiSelectMode && isSelected ? "ring-2 ring-rose-300" : ""} ${
+                    className={`bg-card border-2 rounded-xl p-3.5 flex items-center justify-between cursor-pointer transition-all select-none border-border hover:border-primary/40 ${
                       dragIndex === index ? "opacity-30 scale-90" : ""
                     } ${sortMode ? "cursor-move" : ""}`}
                   >
                     <div className="flex-1 min-w-0 flex items-center gap-3">
-                      {/* 選中標記 */}
-                      {(isSelected || isLongPressing) && (
-                        <div className="w-5 h-5 rounded-full bg-rose-500 flex items-center justify-center flex-shrink-0 animate-[fadeIn_0.2s_ease-out]">
-                          <Check className="w-3 h-3 text-white" strokeWidth={3} />
-                        </div>
-                      )}
                       <div className="flex-1 min-w-0">
-                        <p className={`text-sm font-semibold truncate ${
-                          isSelected || isLongPressing ? "text-rose-700" : "text-foreground"
-                        }`}>
+                        <p className="text-sm font-semibold truncate text-foreground">
                           {resolveDemoText(p.name, t)}
                         </p>
                         <p className="text-xs text-muted-foreground mt-0.5">
@@ -1737,7 +1700,6 @@ function ProductsView() {
                         </p>
                       </div>
                     </div>
-                    {/* 移除編輯按鈕 — 用長按進入排序模式 */}
                   </div>
                 );
               })}

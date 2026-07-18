@@ -392,6 +392,8 @@ export interface Translations {
   record_cancelled: string;
   record_sort_hint: string;
   record_sorting: string;
+  record_click_blank_to_cancel: string;
+  record_click_blank_to_cancel: string;
   record_grayscale: string;
   record_selected: string;
 
@@ -815,6 +817,7 @@ const zhTW: Translations = {
   record_cancelled: "已取消",
   record_sort_hint: "長按排序",
   record_sorting: "拖拽排序中",
+  record_click_blank_to_cancel: "點擊空白處取消",
   record_grayscale: "灰階",
   record_selected: "已選",
 
@@ -1188,6 +1191,7 @@ const zhCN: Translations = {
   record_cancelled: "已取消",
   record_sort_hint: "长按排序",
   record_sorting: "拖拽排序中",
+  record_click_blank_to_cancel: "点击空白处取消",
   record_grayscale: "灰阶",
   record_selected: "已选",
 
@@ -1617,6 +1621,7 @@ const en: Translations = {
   record_cancelled: "Cancelled",
   record_sort_hint: "Long press to sort",
   record_sorting: "Drag to sort",
+  record_click_blank_to_cancel: "Tap blank to cancel",
   record_grayscale: "Grayscale",
   record_selected: "Selected",
 
@@ -2032,6 +2037,7 @@ const ja: Translations = {
   record_cancelled: "キャンセル",
   record_sort_hint: "長押しで並べ替え",
   record_sorting: "ドラッグ中",
+  record_click_blank_to_cancel: "空白をタップでキャンセル",
   record_grayscale: "グレースケール",
   record_selected: "選択済み",
 
@@ -2446,6 +2452,7 @@ const ko: Translations = {
   record_cancelled: "취소됨",
   record_sort_hint: "길게 눌러 정렬",
   record_sorting: "드래그 정렬 중",
+  record_click_blank_to_cancel: "빈 곳을 탭하여 취소",
   record_grayscale: "그레이스케일",
   record_selected: "선택됨",
 
