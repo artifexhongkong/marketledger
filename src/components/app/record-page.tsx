@@ -150,7 +150,8 @@ function RecordView() {
   const handleSubmit = () => {
     const amt = parseFloat(amount);
     if (!amt || amt <= 0) return alert(t.record_amount_required);
-    addTransaction({
+    const orderId = generateOrderId();
+    const txId = addTransaction({
       type: txType,
       amount: amt,
       currency,
@@ -159,7 +160,10 @@ function RecordView() {
       note: note.trim() || undefined,
       marketId: currentMarketId || undefined,
       qty: 1,
+      orderId,
     });
+    // 加到本單明細
+    addOrderItem(txId, { id: `manual_${Date.now()}`, name: note.trim() || (txType === "income" ? t.cat_sales : t.cat_misc), price: amt }, 1);
     setAmount("");
     setNote("");
     setShowAdvanced(false);
@@ -202,56 +206,92 @@ function RecordView() {
         {/* ── 1. 支付方式 ── */}
         <PaymentSelector payment={payment} setPayment={setPayment} />
 
-        {/* ── 2. 商品快捷按鈕 ── */}
-        {products.length > 0 ? (
-          <div className="mt-4">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-xs text-muted-foreground font-medium">{t.record_tap_to_record}</p>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] text-muted-foreground/70">{t.record_long_press_hint}</span>
-                {lastTx && (
-                  <button
-                    onClick={handleUndo}
-                    className="text-[10px] text-primary hover:text-primary/80 font-medium flex items-center gap-1"
-                  >
-                    <RotateCcw className="w-3 h-3" />
-                    {t.record_undo_last}
-                  </button>
-                )}
+        {/* ── 2. 手動記帳：可收合的進階區塊（移到最上方）── */}
+        <div className="mt-4">
+          <button
+            onClick={() => setShowAdvanced(!showAdvanced)}
+            className="w-full bg-muted/60 rounded-xl px-4 py-3 flex items-center justify-between text-sm font-medium text-foreground hover:bg-muted transition"
+          >
+            <span className="flex items-center gap-2">
+              <SlidersHorizontal className="w-4 h-4 text-muted-foreground" />
+              {t.record_manual_entry}
+            </span>
+            <ChevronDown className={`w-4 h-4 text-muted-foreground transition ${showAdvanced ? "rotate-180" : ""}`} />
+          </button>
+
+          {showAdvanced && (
+            <div className="mt-3 space-y-4 p-4 bg-card border border-border rounded-xl">
+              {/* 收入/支出切換 */}
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => { setTxType("expense"); setCategory("misc"); }}
+                  className={`py-2.5 rounded-lg text-sm font-semibold transition ${
+                    txType === "expense" ? "bg-rose-600 text-white" : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  {t.record_expense}
+                </button>
+                <button
+                  onClick={() => { setTxType("income"); setCategory("sales"); }}
+                  className={`py-2.5 rounded-lg text-sm font-semibold transition ${
+                    txType === "income" ? "bg-emerald-600 text-white" : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  {t.record_income}
+                </button>
               </div>
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              {products.map((p) => (
-                <ProductButton
-                  key={p.id}
-                  product={p}
-                  currency={currency}
-                  payment={payment}
-                  currentMarketId={currentMarketId}
-                  confirming={confirmId === p.id}
-                  onConfirm={(id) => { setConfirmId(id); setTimeout(() => setConfirmId(null), 600); }}
-                  onRecord={(txId, productName, amount, qty) => {
-                    setToast({
-                      id: `toast_${Date.now()}`,
-                      txId,
-                      productName,
-                      amount,
-                      currency,
-                      timestamp: Date.now(),
-                    });
-                    setLastTx({ txId, productName, amount });
-                    // 加到當前訂單清單
-                    addOrderItem(txId, p, qty);
-                    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-                    toastTimerRef.current = setTimeout(() => setToast(null), 5000);
-                  }}
-                  onUndo={handleUndo}
-                  generateOrderId={generateOrderId}
+
+              {/* 金額輸入 */}
+              <div>
+                <p className="text-xs text-muted-foreground mb-1.5 font-medium">{t.record_amount}</p>
+                <Input
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  inputMode="decimal"
+                  placeholder={t.record_amount_placeholder}
+                  className="bg-background text-lg font-bold h-12"
                 />
-              ))}
+              </div>
+
+              {/* 分類選擇 */}
+              <div>
+                <p className="text-xs text-muted-foreground mb-1.5 font-medium">{t.record_category}</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {CATEGORIES.filter(c => c.type === txType).map((cat) => (
+                    <button
+                      key={cat.id}
+                      onClick={() => setCategory(cat.id)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
+                        category === cat.id ? "bg-primary text-white" : "bg-muted text-muted-foreground hover:bg-muted/80"
+                      }`}
+                    >
+                      {cat.icon} {(t as any)[cat.labelKey] || cat.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 備註 */}
+              <div>
+                <p className="text-xs text-muted-foreground mb-1.5 font-medium">{t.record_note_optional}</p>
+                <Textarea
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder={t.record_note_placeholder || "備註…"}
+                  className="bg-background text-xs min-h-[50px] resize-none"
+                  maxLength={100}
+                />
+              </div>
+
+              <Button onClick={handleSubmit} className="w-full h-11 font-semibold">
+                {t.record_complete}
+              </Button>
             </div>
-            {/* 訂單清單 — 顯示這一單已點的商品 + 合計 */}
-            {currentOrder.length > 0 && (
+          )}
+        </div>
+
+        {/* ── 3. 本單明細（獨立區塊，不嵌套在商品區）── */}
+        {currentOrder.length > 0 && (
               <div className="mt-2 bg-card border border-border rounded-xl overflow-hidden">
                 {/* 清單標題 + 整單備註(2項以上) + 新一單按鈕 */}
                 <div className="flex items-center justify-between px-3 py-2 bg-muted/40 border-b border-border">
@@ -260,6 +300,26 @@ function RecordView() {
                     <span className="text-[10px] text-muted-foreground">({currentOrder.length} 項)</span>
                   </div>
                   <div className="flex items-center gap-2">
+                    {/* 整單付款方式 */}
+                    <select
+                      value={payment}
+                      onChange={(e) => {
+                        const newPayment = e.target.value as PaymentMethod;
+                        setPayment(newPayment);
+                        // 更新本單所有交易的付款方式
+                        currentOrder.forEach((item) => {
+                          updateTransaction(item.txId, { paymentMethod: newPayment });
+                        });
+                      }}
+                      className="text-[10px] h-7 rounded-md border border-input bg-background px-1"
+                    >
+                      {Object.entries(PAYMENT_METHODS).map(([key, info]) => (
+                        <option key={key} value={key}>{(t as any)[info.labelKey] || info.label}</option>
+                      ))}
+                      {customPaymentMethods.map((m) => (
+                        <option key={m.id} value={m.id}>{m.label}</option>
+                      ))}
+                    </select>
                     {/* 備註與折扣 — 2個商品以上才顯示 */}
                     {currentOrder.length >= 2 && (
                       <button
@@ -430,23 +490,7 @@ function RecordView() {
                             autoFocus
                           />
                         </div>
-                        {/* 付款方式 */}
-                        <div>
-                          <label className="text-[11px] text-muted-foreground mb-1 block">{t.record_payment_method}</label>
-                          <select
-                            value={payment}
-                            onChange={(e) => setPayment(e.target.value as PaymentMethod)}
-                            className="w-full bg-background text-xs h-9 rounded-md border border-input px-2"
-                          >
-                            {Object.entries(PAYMENT_METHODS).map(([key, info]) => (
-                              <option key={key} value={key}>{(t as any)[info.labelKey] || info.label}</option>
-                            ))}
-                            {customPaymentMethods.map((m) => (
-                              <option key={m.id} value={m.id}>{m.label}</option>
-                            ))}
-                          </select>
-                        </div>
-                        {/* 移除單一商品打折 — 打折已移至整單「備註與折扣」 */}
+                        {/* 移除單一商品付款方式 — 改為整單修改 */}
                         <p className="text-[11px] text-muted-foreground text-center">
                           {t.subtotal}：{formatCurrency(item.price * qty, currency)}
                         </p>
@@ -469,6 +513,54 @@ function RecordView() {
                 </div>
               </div>
             )}
+
+        {/* ── 4. 商品快捷按鈕 ── */}
+        {products.length > 0 ? (
+          <div className="mt-4">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs text-muted-foreground font-medium">{t.record_tap_to_record}</p>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-muted-foreground/70">{t.record_long_press_hint}</span>
+                {lastTx && (
+                  <button
+                    onClick={handleUndo}
+                    className="text-[10px] text-primary hover:text-primary/80 font-medium flex items-center gap-1"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    {t.record_undo_last}
+                  </button>
+                )}
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {products.map((p) => (
+                <ProductButton
+                  key={p.id}
+                  product={p}
+                  currency={currency}
+                  payment={payment}
+                  currentMarketId={currentMarketId}
+                  confirming={confirmId === p.id}
+                  onConfirm={(id) => { setConfirmId(id); setTimeout(() => setConfirmId(null), 600); }}
+                  onRecord={(txId, productName, amount, qty) => {
+                    setToast({
+                      id: `toast_${Date.now()}`,
+                      txId,
+                      productName,
+                      amount,
+                      currency,
+                      timestamp: Date.now(),
+                    });
+                    setLastTx({ txId, productName, amount });
+                    addOrderItem(txId, p, qty);
+                    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+                    toastTimerRef.current = setTimeout(() => setToast(null), 5000);
+                  }}
+                  onUndo={handleUndo}
+                  generateOrderId={generateOrderId}
+                />
+              ))}
+            </div>
           </div>
         ) : (
           <div className="mt-5 bg-muted/50 rounded-xl p-6 text-center border border-dashed border-border">
@@ -477,133 +569,6 @@ function RecordView() {
             <p className="text-xs text-muted-foreground mt-1">{t.record_create_products}</p>
           </div>
         )}
-
-        {/* ── 3. 手動記帳：可收合的進階區塊 ── */}
-        <div className="mt-5">
-          <button
-            onClick={() => setShowAdvanced(!showAdvanced)}
-            className="w-full bg-muted/60 rounded-xl px-4 py-3 flex items-center justify-between text-sm font-medium text-foreground hover:bg-muted transition"
-          >
-            <span className="flex items-center gap-2">
-              <SlidersHorizontal className="w-4 h-4 text-muted-foreground" />
-              {t.record_manual_entry}
-            </span>
-            <ChevronDown className={`w-4 h-4 text-muted-foreground transition ${showAdvanced ? "rotate-180" : ""}`} />
-          </button>
-
-          {showAdvanced && (
-            <div className="mt-3 space-y-4 p-4 bg-card border border-border rounded-xl">
-              {/* 收入/支出切換 */}
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => { setTxType("expense"); setCategory("misc"); }}
-                  className={`py-2.5 rounded-lg text-sm font-semibold transition ${
-                    txType === "expense" ? "bg-rose-600 text-white" : "bg-muted text-muted-foreground"
-                  }`}
-                >
-                  {t.record_expense}
-                </button>
-                <button
-                  onClick={() => { setTxType("income"); setCategory("sales"); }}
-                  className={`py-2.5 rounded-lg text-sm font-semibold transition ${
-                    txType === "income" ? "bg-emerald-600 text-white" : "bg-muted text-muted-foreground"
-                  }`}
-                >
-                  {t.record_income}
-                </button>
-              </div>
-
-              {/* 金額 */}
-              <div>
-                <p className="text-xs text-muted-foreground mb-1.5 font-medium">{t.record_amount}</p>
-                <div className="bg-background border border-border rounded-lg flex items-center px-3 h-12">
-                  <span className="text-base text-muted-foreground mr-2">{CURRENCIES[currency as keyof typeof CURRENCIES]?.symbol || "$"}</span>
-                  <Input
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    placeholder="0.00"
-                    type="decimal"
-                    inputMode="decimal"
-                    className="border-0 bg-transparent text-xl font-bold p-0 h-auto focus-visible:ring-0 tabular-nums"
-                  />
-                </div>
-              </div>
-
-              {/* 分類 */}
-              <div>
-                <p className="text-xs text-muted-foreground mb-1.5 font-medium">{t.record_category}</p>
-                <div className="flex gap-1.5 flex-wrap">
-                  {CATEGORIES.filter((c) => c.type === txType).map((c) => (
-                    <button
-                      key={c.id}
-                      onClick={() => setCategory(c.id)}
-                      className={`flex items-center gap-1 px-3 py-1.5 rounded-full border text-xs font-medium transition ${
-                        category === c.id
-                          ? "border-primary bg-primary/8 text-primary"
-                          : "border-border bg-background text-foreground"
-                      }`}
-                    >
-                      <span>{c.icon}</span>
-                      {(t as any)[c.labelKey] || c.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* 市集 */}
-              <div>
-                <p className="text-xs text-muted-foreground mb-1.5 font-medium">{t.record_market}</p>
-                <button
-                  onClick={() => setShowMarketPicker(!showMarketPicker)}
-                  className="w-full bg-background border border-border rounded-lg px-3 py-2.5 flex items-center justify-between text-sm"
-                >
-                  <span className="flex items-center gap-2 text-foreground">
-                    <Store className="w-4 h-4 text-muted-foreground" />
-                    {currentMarket ? currentMarket.name : t.record_no_market}
-                  </span>
-                  <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                </button>
-                {showMarketPicker && (
-                  <Card className="mt-2 p-2 max-h-48 overflow-y-auto">
-                    <button
-                      onClick={() => { setCurrentMarket(null); setShowMarketPicker(false); }}
-                      className="w-full text-left p-2 hover:bg-muted rounded-lg text-sm"
-                    >
-                      {t.record_no_market}
-                    </button>
-                    {markets.map((m) => (
-                      <button
-                        key={m.id}
-                        onClick={() => { setCurrentMarket(m.id); setShowMarketPicker(false); }}
-                        className={`w-full text-left p-2 hover:bg-muted rounded-lg text-sm ${
-                          currentMarketId === m.id ? "bg-primary/8 text-primary font-medium" : ""
-                        }`}
-                      >
-                        🏪 {m.name}
-                      </button>
-                    ))}
-                  </Card>
-                )}
-              </div>
-
-              {/* 備註 */}
-              <div>
-                <p className="text-xs text-muted-foreground mb-1.5 font-medium">{t.record_note_optional}</p>
-                <Textarea
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  placeholder="例如：客人買兩份、補貨..."
-                  className="bg-background resize-none min-h-[50px] text-sm"
-                  maxLength={100}
-                />
-              </div>
-
-              <Button onClick={handleSubmit} className="w-full h-11 font-semibold">
-                {t.record_complete}
-              </Button>
-            </div>
-          )}
-        </div>
       </div>
 
       {/* 動畫樣式 — Toast 從上方滑入，不偏左 */}
