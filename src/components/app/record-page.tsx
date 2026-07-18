@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Store, X, ChevronDown, Undo2, Check, RotateCcw, SlidersHorizontal, LayoutGrid, List, Trash2, FileText } from "lucide-react";
+import { Plus, Store, X, ChevronDown, Undo2, Check, RotateCcw, SlidersHorizontal, LayoutGrid, List, Trash2, Pencil, FileText } from "lucide-react";
 import type { TransactionType, CategoryId, PaymentMethod, Product, CurrencyCode } from "@/lib/store";
 import { TOP_PAYMENTS, PRODUCT_COLORS, EXTENDED_COLORS, COLOR_FAMILIES, GRAYSCALE, PAYMENT_ICONS, PAYMENT_COLORS, type ToastState } from "@/components/app/record-constants";
 import { AddPaymentModal } from "@/components/app/add-payment-modal";
