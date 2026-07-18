@@ -51,6 +51,7 @@ export interface Translations {
   record_undo: string;
   record_undo_last: string;
   record_manual_entry: string;
+  record_quick_add: string;
   record_expense: string;
   record_income: string;
   record_amount: string;
@@ -489,6 +490,7 @@ const zhTW: Translations = {
   record_undo_last: "撤銷上筆",
   record_enter_qty: "輸入數量",
   record_manual_entry: "手動記帳（自訂金額 / 支出 / 分類）",
+  record_quick_add: "快捷記帳",
   record_expense: "💸 支出",
   record_income: "💰 收入",
   record_amount: "金額",
@@ -886,6 +888,7 @@ const zhCN: Translations = {
   record_undo_last: "撤销上笔",
   record_enter_qty: "输入数量",
   record_manual_entry: "手动记账（自订金额 / 支出 / 分类）",
+  record_quick_add: "快捷记账",
   record_expense: "💸 支出",
   record_income: "💰 收入",
   record_amount: "金额",
@@ -1294,6 +1297,7 @@ const en: Translations = {
   record_undo_last: "Undo last",
   record_enter_qty: "Enter quantity",
   record_manual_entry: "Manual entry (custom amount / expense / category)",
+  record_quick_add: "Quick Add",
   record_expense: "💸 Expense",
   record_income: "💰 Income",
   record_amount: "Amount",
@@ -1708,6 +1712,7 @@ const ja: Translations = {
   record_undo_last: "前の取引を取り消す",
   record_enter_qty: "数量入力",
   record_manual_entry: "手動入力（カスタム金額 / 支出 / カテゴリー）",
+  record_quick_add: "クイック追加",
   record_expense: "💸 支出",
   record_income: "💰 収入",
   record_amount: "金額",
@@ -2121,6 +2126,7 @@ const ko: Translations = {
   record_undo_last: "이전 거래 취소",
   record_enter_qty: "수량 입력",
   record_manual_entry: "수동 입력 (사용자 정의 금액 / 지출 / 카테고리)",
+  record_quick_add: "빠른 추가",
   record_expense: "💸 지출",
   record_income: "💰 수입",
   record_amount: "금액",

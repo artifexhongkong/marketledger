@@ -63,6 +63,46 @@ function RecordView() {
   const [toast, setToast] = useState<ToastState | null>(null);
   const [lastTx, setLastTx] = useState<{ txId: string; productName: string; amount: number } | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  // 商品按鈕每行數量（用戶可自定義）
+  const [gridCols, setGridCols] = useState(3);
+  // 快捷自定義商品（名稱+價格）
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [quickName, setQuickName] = useState("");
+  const [quickPrice, setQuickPrice] = useState("");
+
+  // 快捷添加商品並記帳
+  const handleQuickAdd = () => {
+    const p = parseFloat(quickPrice);
+    if (!p || p <= 0) return alert(t.record_amount_required);
+    const orderId = generateOrderId();
+    const txId = addTransaction({
+      type: "income",
+      amount: p,
+      currency,
+      category: "sales",
+      paymentMethod: payment,
+      marketId: currentMarketId || undefined,
+      orderId,
+      qty: 1,
+    });
+    const productName = quickName.trim() || t.cat_sales;
+    addOrderItem(txId, { id: `quick_${Date.now()}`, name: productName, price: p }, 1);
+    setToast({
+      id: `toast_${Date.now()}`,
+      txId,
+      productName,
+      amount: p,
+      currency,
+      timestamp: Date.now(),
+    });
+    setLastTx({ txId, productName, amount: p });
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => setToast(null), 5000);
+    haptic("success");
+    setQuickName("");
+    setQuickPrice("");
+    setShowQuickAdd(false);
+  };
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // 修改數量的訂單項目 ID
   const [editingOrderItem, setEditingOrderItem] = useState<string | null>(null);
@@ -520,6 +560,20 @@ function RecordView() {
             <div className="flex items-center justify-between mb-2">
               <p className="text-xs text-muted-foreground font-medium">{t.record_tap_to_record}</p>
               <div className="flex items-center gap-2">
+                {/* 每行數量選擇器 */}
+                <div className="flex items-center gap-1 bg-muted rounded-md p-0.5">
+                  {[2, 3, 4].map((n) => (
+                    <button
+                      key={n}
+                      onClick={() => setGridCols(n)}
+                      className={`px-1.5 py-0.5 text-[10px] rounded transition ${
+                        gridCols === n ? "bg-card shadow-sm text-foreground font-medium" : "text-muted-foreground"
+                      }`}
+                    >
+                      {n}
+                    </button>
+                  ))}
+                </div>
                 <span className="text-[10px] text-muted-foreground/70">{t.record_long_press_hint}</span>
                 {lastTx && (
                   <button
@@ -532,7 +586,7 @@ function RecordView() {
                 )}
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-2">
+            <div className={`grid gap-2`} style={{ gridTemplateColumns: `repeat(${gridCols}, minmax(0, 1fr))` }}>
               {products.map((p) => (
                 <ProductButton
                   key={p.id}
@@ -560,13 +614,75 @@ function RecordView() {
                   generateOrderId={generateOrderId}
                 />
               ))}
+              {/* 快捷自定義商品按鈕 */}
+              <button
+                onClick={() => setShowQuickAdd(!showQuickAdd)}
+                className={`bg-card border-2 border-dashed border-primary/40 rounded-xl p-2.5 flex flex-col items-center justify-center gap-1 transition hover:border-primary hover:bg-primary/5 ${
+                  showQuickAdd ? "ring-2 ring-primary/20" : ""
+                }`}
+              >
+                <Plus className="w-5 h-5 text-primary" />
+                <span className="text-[10px] text-primary font-medium">{t.record_quick_add || "快捷記帳"}</span>
+              </button>
             </div>
+            {/* 快捷自定義輸入區 */}
+            {showQuickAdd && (
+              <div className="mt-2 p-3 bg-card border border-border rounded-xl space-y-2">
+                <div className="flex gap-2">
+                  <Input
+                    placeholder={t.products_name}
+                    value={quickName}
+                    onChange={(e) => setQuickName(e.target.value)}
+                    className="h-9 text-xs flex-1"
+                  />
+                  <Input
+                    placeholder={t.record_amount}
+                    value={quickPrice}
+                    onChange={(e) => setQuickPrice(e.target.value)}
+                    inputMode="decimal"
+                    className="h-9 text-xs w-24"
+                  />
+                </div>
+                <Button onClick={handleQuickAdd} size="sm" className="w-full h-9 text-xs">
+                  {t.record_complete}
+                </Button>
+              </div>
+            )}
           </div>
         ) : (
           <div className="mt-5 bg-muted/50 rounded-xl p-6 text-center border border-dashed border-border">
             <p className="text-2xl mb-1">📦</p>
             <p className="text-sm font-medium text-foreground">{t.record_no_products}</p>
             <p className="text-xs text-muted-foreground mt-1">{t.record_create_products}</p>
+            {/* 無商品時也顯示快捷記帳 */}
+            <button
+              onClick={() => setShowQuickAdd(!showQuickAdd)}
+              className="mt-3 px-4 py-2 bg-primary text-white text-xs rounded-lg hover:bg-primary/90 transition"
+            >
+              {t.record_quick_add || "快捷記帳"}
+            </button>
+            {showQuickAdd && (
+              <div className="mt-2 p-3 bg-card border border-border rounded-xl space-y-2 text-left">
+                <div className="flex gap-2">
+                  <Input
+                    placeholder={t.products_name}
+                    value={quickName}
+                    onChange={(e) => setQuickName(e.target.value)}
+                    className="h-9 text-xs flex-1"
+                  />
+                  <Input
+                    placeholder={t.record_amount}
+                    value={quickPrice}
+                    onChange={(e) => setQuickPrice(e.target.value)}
+                    inputMode="decimal"
+                    className="h-9 text-xs w-24"
+                  />
+                </div>
+                <Button onClick={handleQuickAdd} size="sm" className="w-full h-9 text-xs">
+                  {t.record_complete}
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </div>
